@@ -29,7 +29,7 @@
 % Pacotes utilizados
 \usepackage{times}   % Usa a fonte Times
 \usepackage[utf8]{inputenc}   % Codificacao do documento (conversão automática dos acentos)
-\usepackage[brazil]{babel}   % Idioma
+% babel is loaded by abntex2, so we don't need to load it here
 \usepackage[T1]{fontenc}   % Selecao de codigos de fonte
 \usepackage{graphicx}   % Inclusão de gráficos
 \usepackage{algorithm2e}   % Para trabalhar com algoritmos
@@ -53,15 +53,12 @@
 
 %===========%===================%===================%
 
-\usepackage[abnt-repeated-author-omit=yes, abnt-nbr10520=1988,alf,abnt-etal-cite=3,abnt-etal-list=0,abnt-etal-text=it, bibjustif, abnt-url-package=url,abnt-emphasize=bf, abnt-and-type=e]{abntex2cite}
-% \usepackage[
-%     style=abnt,
-%     hyperref,
-%     noslsn,
-%     backend=biber,
-%     sorting=nyt,
-%     defernumbers=true
-% ]{biblatex}
+% Using traditional bibliography approach for compatibility
+\usepackage[numbers,sort&compress]{natbib}
+\bibliographystyle{IEEEtran}
+% Alternative: use biblatex (commented out for compatibility)
+% \usepackage{csquotes}
+% \usepackage[style=numeric,sorting=none,backend=biber]{biblatex}
 
  %===========%===================%===================%
 

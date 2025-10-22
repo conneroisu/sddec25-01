@@ -1,0 +1,368 @@
+\chapter{Design}\label{chap:design}
+
+\section{Design Context}\label{sec:design-context}
+
+\subsection{Broader Context}\label{subsec:broader-context}
+
+Our Semantic Segmentation Optimization project is situated in the healthcare and assistive technology domain, specifically addressing the needs of individuals with mobility disabilities who require eye-tracking systems for communication and control of assistive devices. We are designing for healthcare professionals, caregivers, and most importantly, individuals with conditions such as cerebral palsy who depend on efficient and responsive eye tracking for daily activities and medical monitoring.
+
+\begin{table}[H]
+\centering
+\caption{Design Context Analysis}
+\begin{tabular}{|p{3cm}|p{5cm}|p{6cm}|}
+\hline
+\textbf{Area} & \textbf{Description} & \textbf{Examples} \\
+\hline
+Public health, safety, and welfare &
+Our project directly improves the safety and well-being of individuals with mobility impairments by enhancing the responsiveness of eye-tracking medical monitoring systems. &
+Faster response times to potential medical issues, more reliable detection of eye movements for wheelchair control, reduced risk of incidents for users \\
+\hline
+Global, cultural, and social &
+The solution respects the values of independence and dignity for people with disabilities while acknowledging the cultural practices around care and assistance. &
+Supports the right to autonomy for people with disabilities, aligns with medical ethics of beneficence, works within existing healthcare frameworks \\
+\hline
+Environmental &
+By optimizing software rather than requiring new hardware, our solution extends the useful life of existing devices and reduces electronic waste. &
+Reduced need for frequent hardware replacement, lower energy consumption through optimized processing \\
+\hline
+Economic &
+Our optimization approach provides significant performance improvements while keeping costs accessible for healthcare providers and individuals. &
+Affordable enhancement to existing assistive technology systems, more efficient use of available computing resources, potential reduction in healthcare costs through preventative monitoring \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Prior Work and Solutions}\label{subsec:prior-work}
+
+Several approaches have been used to implement semantic segmentation for eye tracking, but most face limitations when deployed on resource-constrained edge devices:
+
+\begin{enumerate}
+\item \textbf{Wang et al. (2021)} proposed "EfficientEye: A Lightweight Semantic Segmentation Framework for Eye Tracking," which achieved good accuracy but still required substantial computational resources. Their approach reduced model size but processing speed remained at approximately 120 ms per frame.
+
+\item \textbf{Previous Project Iteration} implemented a standard U-Net architecture on the Kria KV260 board with an accuracy of 99.8\% IoU but could only process a single frame every 160ms, which is insufficient for real-time application needs.
+
+\item \textbf{Commercial Solutions} like Tobii Pro Fusion offer high-speed eye tracking (250 Hz) but require dedicated hardware and specialized processors, making them expensive and difficult to integrate into existing assistive devices.
+\end{enumerate}
+
+\subsubsection{Advantages of Our Approach}
+\begin{itemize}
+\item Maintains high accuracy (99.8\% IoU) while significantly improving processing speed
+\item Utilizes existing hardware (Kria KV260) without requiring costly upgrades
+\item Implements a parallelized approach that can process multiple frames concurrently
+\item Integrates with existing assistive wheelchair technology ecosystem
+\end{itemize}
+
+\subsubsection{Limitations of Our Approach}
+\begin{itemize}
+\item Requires careful optimization of memory and DPU resources
+\item Complexity in thread synchronization and pipeline management
+\item Dependent on specific hardware architecture (Kria KV260)
+\end{itemize}
+
+\subsection{Technical Complexity}\label{subsec:technical-complexity}
+
+Our project demonstrates significant technical complexity in both its components and requirements:
+
+\begin{enumerate}
+\item \textbf{Multiple Components with Distinct Scientific Principles:}
+   \begin{itemize}
+   \item \textbf{Neural Network Architecture:} The U-Net semantic segmentation algorithm incorporates complex convolutional neural network principles with encoder-decoder architecture
+   \item \textbf{Parallel Computing:} Implementation of multi-threading and pipeline parallelism leverages computer architecture principles
+   \item \textbf{Memory Management:} Developing efficient memory allocation strategies based on computer systems principles
+   \item \textbf{Real-time Systems:} Balancing processing load to meet strict timing constraints based on real-time systems theory
+   \item \textbf{Resource Scheduling:} Creating optimal DPU sharing mechanisms based on operating systems principles
+   \end{itemize}
+
+\item \textbf{Challenging Requirements:}
+   \begin{itemize}
+   \item \textbf{Speed Improvement:} Increasing throughput (from 160ms to 33.2ms for 4 frames) exceeds typical optimization gains in the industry
+   \item \textbf{Accuracy Maintenance:} Preserving 99.8\% IoU accuracy while dividing the algorithm is significantly more challenging than standard parallelization
+   \item \textbf{Resource Constraints:} Working within the limited memory (4GB) and processing resources of the Kria board requires innovative solutions
+   \item \textbf{Real-time Performance:} Meeting the 60 frames per second requirement is at the upper end of what is possible with current embedded AI systems
+   \end{itemize}
+\end{enumerate}
+
+The combination of these elements, particularly maintaining mathematical consistency while dividing a complex neural network for parallel execution, represents technical complexity beyond standard engineering solutions.
+
+\section{Design Exploration}\label{sec:design-exploration}
+
+\subsection{Design Decisions}\label{subsec:design-decisions}
+
+We have identified the following key design decisions that are critical to the success of our Semantic Segmentation Optimization project:
+
+\begin{enumerate}
+\item \textbf{Resource Scheduling Approach}
+   \begin{itemize}
+   \item \textbf{Decision:} Instead of dividing the U-Net semantic segmentation algorithm (which would increase overhead and slow the system), implement an efficient round-robin scheduling system for DPU access.
+   \item \textbf{Importance:} This is fundamental to achieving our throughput goal while ensuring Algorithms 1, 2, and 3 can collect their required periodic data. Without effective resource scheduling, semantic segmentation would monopolize the DPU, preventing other critical algorithms from functioning correctly. The scheduling approach must maintain the algorithm's integrity while providing fair resource allocation to achieve the 99.8\% IoU accuracy target.
+   \end{itemize}
+
+\item \textbf{DPU Access Management}
+   \begin{itemize}
+   \item \textbf{Decision:} Implement a fair access scheduling approach that prevents semantic segmentation from 'starving' other algorithms of DPU resources.
+   \item \textbf{Importance:} The Kria board has four DDR4 memory banks (1GB each), but the single DPU is a shared resource that must be carefully managed. Our approach ensures that while semantic segmentation runs, it doesn't prevent Algorithms 1, 2, and 3 from collecting their required periodic data. This strategy prevents scenarios where the information gathered becomes incorrect due to delayed or missed data collection cycles.
+   \end{itemize}
+
+\item \textbf{Resource Allocation Strategy}
+   \begin{itemize}
+   \item \textbf{Decision:} Develop a resource management system that coordinates access to the DPU and ensures each algorithm receives appropriate processing time.
+   \item \textbf{Importance:} With multiple algorithms needing DPU access (semantic segmentation, Algorithms 1, 2, and 3), proper resource allocation is essential to maintain data integrity and prevent starvation. This decision impacts both performance and accuracy, as our client noted that Algorithms 1, 2, and 3 require periodic data or the information gathered becomes incorrect. Our scheduling system must ensure that semantic segmentation doesn't monopolize resources while maintaining overall system efficiency.
+   \end{itemize}
+\end{enumerate}
+
+\subsection{Ideation}\label{subsec:ideation}
+
+For our resource scheduling approach, we explored several potential scheduling strategies through a structured ideation process:
+
+\begin{enumerate}
+\item \textbf{Round-Robin Scheduling}
+   \begin{itemize}
+   \item Allocate DPU time in equal slices to each algorithm in circular order
+   \item Simple to implement and ensures each algorithm gets fair access
+   \item May not be optimal for variable processing requirements
+   \end{itemize}
+
+\item \textbf{Priority-Based Scheduling}
+   \begin{itemize}
+   \item Assign priority levels to algorithms based on urgency of data collection needs
+   \item Higher priority tasks preempt lower priority ones when necessary
+   \item Could be tuned to ensure periodic data collection requirements are met
+   \end{itemize}
+
+\item \textbf{Time-Division Multiplexing}
+   \begin{itemize}
+   \item Allocate specific time windows for each algorithm to access the DPU
+   \item Synchronize windows with periodic data collection requirements
+   \item Optimizes for predictable execution patterns
+   \end{itemize}
+\end{enumerate}
+
+These options were generated through team brainstorming sessions, a literature review of resource scheduling techniques, and an analysis of the periodic data requirements of the algorithms.
+
+\subsection{Decision-Making and Trade-Off}\label{subsec:decision-making}
+
+Our client requires absolutely no decrease in accuracy due to the sensitive medical nature of the product. Additionally, Algorithms 1, 2, and 3 require periodic data collection or the information gathered becomes incorrect. We cannot let semantic segmentation starve the other algorithms for the length of time that it runs.
+
+Our design prioritizes balanced system performance while ensuring all components can meet their operational requirements. The approach maintains critical timing needs for essential functions while enabling the performance improvements necessary to achieve our target throughput.
+
+The resource management strategy ensures that all system components receive appropriate computational resources based on their operational importance and timing requirements.
+
+Because of our embedded deployment environment, an analysis of the memory access is necessary. We selected a scheduling approach that minimizes memory transfer overhead while ensuring all algorithms meet their periodic data collection needs. This approach is feasible because our model uses fixed memory access patterns, and we can predict resource requirements for each algorithm.
+
+Another important note is that the scheduling system must account for operating system tasks and several other ML algorithms (not the focus of our project). The system allocates appropriate DPU time slices to accommodate these additional workloads.
+
+\section{Proposed Design}\label{sec:proposed-design}
+
+\subsection{Overview}\label{subsec:overview}
+
+Our Semantic Segmentation Optimization project aims to enhance the performance of a U-Net-based eye tracking system for individuals with disabilities, particularly those with cerebral palsy. This system helps monitor eye movements to detect potential medical issues and can automatically reposition users to prevent incidents, improving safety and quality of life.
+
+The current implementation processes a single frame in 160ms, which is insufficient for real-time monitoring. Our optimized design divides the U-Net algorithm across multiple cores and utilizes the Memory Processing Unit (MPU) to achieve a throughput of 33.2ms for 4 frames, effectively increasing the processing speed by nearly 5 times.
+
+At a high level, our system:
+
+\begin{enumerate}
+\item Captures eye movement images through a camera
+\item Processes these images using a parallelized semantic segmentation algorithm to remove reflections and identify the pupil
+\item Tracks the eye's position and detects blinks in real-time
+\item Provides this information to the assistive wheelchair technology for appropriate response
+\end{enumerate}
+
+The key innovation in our design is the approach to parallelism and resource utilization on the AMD Kria KV260 board, which has limited memory and processing resources but powerful acceleration capabilities when properly leveraged.
+
+\subsection{Detailed Design}\label{subsec:detailed-design}
+
+Our semantic segmentation optimization system consists of the following key components:
+
+\subsubsection{Hardware Platform}
+\begin{itemize}
+\item \textbf{AMD Kria KV260 Development Board}
+  \begin{itemize}
+  \item System-on-Module (SoM) with programmable logic
+  \item Quad-core ARM processor
+  \item Deep Processing Unit (DPU) for accelerating neural network inference
+  \item Four 1GB DDR4 memory banks
+  \item Various I/O interfaces for camera input and system communication
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{Software Components}
+\begin{enumerate}
+\item \textbf{U-Net Semantic Segmentation Algorithm}
+   \begin{itemize}
+   \item \textbf{Purpose:} Processes eye images to create pixel-level segmentation for pupil identification
+   \item \textbf{Capabilities:} Achieves 99.8\% IoU accuracy while meeting performance requirements
+   \item \textbf{Function:} Enables reliable eye tracking by producing high-quality segmentation maps
+   \end{itemize}
+
+\item \textbf{Preprocessing Module}
+   \begin{itemize}
+   \item Handles image normalization, scaling, and initial filtering
+   \item Prepares raw camera input for semantic segmentation
+   \item Implemented as part of the pipeline before U-Net processing
+   \end{itemize}
+
+\item \textbf{Blink Detection Algorithm}
+   \begin{itemize}
+   \item Lightweight neural network running alongside eye tracking
+   \item Detects eye closure states to identify blinks
+   \item Provides additional user intent information for the control system
+   \end{itemize}
+
+\item \textbf{Thread Management System}
+   \begin{itemize}
+   \item Coordinates execution across multiple threads
+   \item Ensures proper synchronization between pipeline stages
+   \item Manages resource allocation and conflict resolution
+   \end{itemize}
+\end{enumerate}
+
+\subsubsection{Processing Pipeline}
+Our system implements a four-stage processing pipeline:
+
+\begin{enumerate}
+\item \textbf{Image Capture and Preprocessing}
+   \begin{itemize}
+   \item Raw camera input acquisition
+   \item Image normalization and filtering
+   \item Preparation for neural network processing
+   \end{itemize}
+
+\item \textbf{Parallel Semantic Segmentation}
+   \begin{itemize}
+   \item Division of U-Net algorithm across multiple cores
+   \item Concurrent processing of four image frames
+   \item DPU resource scheduling and management
+   \end{itemize}
+
+\item \textbf{Feature Extraction and Analysis}
+   \begin{itemize}
+   \item Pupil identification and tracking
+   \item Blink detection and classification
+   \item Integration with assistive control systems
+   \end{itemize}
+
+\item \textbf{Output Generation and Response}
+   \begin{itemize}
+   \item Real-time position calculation
+   \item Medical distress detection
+   \item Autonomous wheelchair control responses
+   \end{itemize}
+\end{enumerate}
+
+\subsubsection{Memory Allocation Strategy}
+\begin{itemize}
+\item \textbf{Distributed Memory Usage:} Utilize all four DDR4 memory banks efficiently
+\item \textbf{Buffer Management:} Implement circular buffers for smooth data flow
+\item \textbf{Cache Optimization:} Minimize memory transfers between processing stages
+\item \textbf{Thread-Local Storage:} Allocate dedicated memory regions for each processing thread
+\end{itemize}
+
+\subsection{Functionality}\label{subsec:functionality}
+
+\subsubsection{Initial Setup:}
+\begin{itemize}
+\item System initialization and hardware configuration
+\item Neural network model loading and DPU programming
+\item Thread creation and synchronization primitive setup
+\item Memory allocation and buffer initialization
+\end{itemize}
+
+\subsubsection{Normal Operation:}
+\begin{itemize}
+\item Continuous image capture at required frame rate
+\item Parallel processing through optimized pipeline
+\item Real-time eye tracking and position calculation
+\item Periodic data collection for auxiliary algorithms
+\end{itemize}
+
+\subsubsection{Response to Detected Issues:}
+\begin{itemize}
+\item Automatic error detection and recovery mechanisms
+\item Graceful degradation under resource constraints
+\item User alert system for detected medical issues
+\item Safe positioning and emergency response protocols
+\end{itemize}
+
+\subsubsection{User Control Mode:}
+\begin{itemize}
+\item Manual override capabilities for caregivers
+\item Adjustable sensitivity and response parameters
+\item System status monitoring and diagnostics
+\item Configuration interface for personalization
+\end{itemize}
+
+\subsection{Areas of Concern and Development}\label{subsec:areas-concern}
+
+\begin{itemize}
+\item \textbf{Performance Optimization:} Achieving target throughput while maintaining accuracy
+\item \textbf{Resource Management:} Efficient DPU utilization across multiple algorithms
+\item \textbf{Thread Synchronization:} Preventing race conditions and deadlocks
+\item \textbf{Memory Efficiency:} Minimizing memory footprint and transfer overhead
+\item \textbf{Error Handling:} Robust recovery from system failures
+\item \textbf{Real-time Constraints:} Meeting strict timing requirements
+\end{itemize}
+
+\section{Technology Considerations}\label{sec:technology-considerations}
+
+\subsection{Kria Board KV260}
+The AMD Kria KV260 provides an excellent balance of performance and power efficiency for our application:
+
+\begin{itemize}
+\item \textbf{Processing Power:} Quad-core ARM Cortex-A53 with 1.5 GHz clock speed
+\item \textbf{AI Acceleration:} Integrated Deep Learning Processing Unit (DPU) for neural network inference
+\item \textbf{Memory System:} 4GB DDR4 memory with four banks for parallel access
+\item \textbf{Connectivity:} Multiple I/O interfaces for camera integration and system communication
+\item \textbf{Power Efficiency:} Low power consumption suitable for mobile applications
+\end{itemize}
+
+\subsection{U-Net Semantic Segmentation Algorithm}
+The U-Net architecture is particularly well-suited for our eye tracking application:
+
+\begin{itemize}
+\item \textbf{Encoder-Decoder Structure:} Provides both high-level context and detailed localization
+\item \textbf{Skip Connections:} Preserves fine-grained spatial information crucial for pupil detection
+\item \textbf{Proven Performance:} Demonstrated 99.8\% IoU accuracy in our current implementation
+\item \textbf{Modular Design:} Amenable to division across multiple processing cores
+\end{itemize}
+
+\subsection{Vitis-AI and Vitas-Runtime}
+The Xilinx Vitis-AI development ecosystem provides essential tools for our optimization:
+
+\begin{itemize}
+\item \textbf{Model Optimization:} Quantization and pruning capabilities for performance improvement
+\item \textbf{DPU Integration:} Seamless interface with hardware acceleration resources
+\item \textbf{Performance Profiling:} Detailed analysis tools for bottleneck identification
+\item \textbf{Memory Management:} Efficient buffer allocation and transfer optimization
+\end{itemize}
+
+\subsection{Alternative Technologies Considered}
+During our design process, we evaluated several alternative approaches:
+
+\begin{itemize}
+\item \textbf{Cloud-Based Processing:} Rejected due to latency and connectivity requirements
+\item \textbf{Hardware Upgrades:} Considered but would increase system cost and complexity
+\item \textbf{Model Simplification:} Would compromise accuracy below medical requirements
+\item \textbf{Alternative Neural Networks:} U-Net provides optimal balance of accuracy and performance
+\end{itemize}
+
+\section{Design Analysis}\label{sec:design-analysis}
+
+\subsection{Current Implementation Status:}
+Our current system achieves 98.8\% IoU accuracy with single-frame processing in 160ms. While accuracy is within acceptable range, performance falls significantly short of our target throughput requirements.
+
+\subsection{Implementation Challenges:}
+\begin{itemize}
+\item Limited DPU availability for concurrent algorithm execution
+\item Memory bandwidth constraints affecting data flow between processing stages
+\item Thread synchronization overhead in parallel processing
+\item Balancing resource allocation between multiple algorithms
+\end{itemize}
+
+\subsection{Future Implementation Plans:}
+\begin{itemize}
+\item Complete mathematical division of U-Net algorithm for parallel processing
+\item Implement comprehensive DPU scheduling system
+\item Optimize memory access patterns and buffer management
+\item Develop robust testing and validation framework
+\end{itemize}

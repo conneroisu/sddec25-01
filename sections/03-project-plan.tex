@@ -1,0 +1,312 @@
+\chapter{Project Plan}\label{chap:project-plan}
+
+\section{Project Management and Tracking Procedures}\label{sec:management-procedures}
+
+Our team has adopted a hybrid Waterfall + Agile project management approach for this project. This methodology provides us with both the structured framework of Waterfall for critical path activities and the flexibility of Agile for iterative development and testing. This hybrid approach is particularly well-suited for this project because:
+
+\begin{enumerate}
+\item The semantic segmentation optimization has clearly defined phases (mathematical division, implementation, testing) that benefit from Waterfall planning
+\item The technical nature of implementing parallelism and optimizing algorithms requires adaptive iterations that benefit from Agile sprints
+\item Working with specialized hardware (Kria Board KV260) requires careful planning of resource allocation and access
+\end{enumerate}
+
+For project tracking, the team will utilize the following tools:
+
+\begin{itemize}
+\item \textbf{GitHub}: Primary code repository for version control, documentation, and collaboration. Our client also has access to this repository to track progress in real-time.
+\item \textbf{Telegram}: Main communication channel with our client and previous years' team members for quick updates and questions.
+\item \textbf{Discord}: Team communication for internal discussions and virtual meetings.
+\end{itemize}
+
+Weekly team meetings will be held to review sprint progress, address blockers, and plan upcoming work. Monthly meetings with the client will ensure alignment with project goals and requirements.
+
+\section{Task Decomposition}\label{sec:task-decomposition}
+
+Our project involves optimizing the semantic segmentation U-Net algorithm by implementing parallelism across multiple cores and the MPU. The key objective is to increase throughput from 160 ms per frame to 33.2ms across 4 frames. The following tasks and subtasks have been identified:
+
+\subsection{Task 1: Algorithm Performance Optimization}
+\begin{itemize}
+\item Subtask 1.1: Analyze U-Net architecture for optimization opportunities
+\item Subtask 1.2: Develop performance enhancement approach
+\item Subtask 1.3: Validate that accuracy requirements (99.8\% IoU) are maintained
+\end{itemize}
+
+\subsection{Task 2: Implementation of Core Components}
+\begin{itemize}
+\item Subtask 2.1: Implement image pre-processing using semantic segmentation
+\item Subtask 2.2: Implement eye tracking algorithm with pre-processed images
+\item Subtask 2.3: Implement blink detection algorithm
+\item Subtask 2.4: Implement DPU sharing mechanism for resource optimization
+\end{itemize}
+
+\subsection{Task 3: Thread Management}
+\begin{itemize}
+\item Subtask 3.1: Implement memory sharing between threads (non-DDR)
+\item Subtask 3.2: Configure thread allocation to specific memory locations
+\item Subtask 3.3: Implement thread synchronization and communication
+\item Subtask 3.4: Test thread operation with matrix operations
+\end{itemize}
+
+\subsection{Task 4: Multicore Processing}
+\begin{itemize}
+\item Subtask 4.1: Configure Docker environment for efficiency
+\item Subtask 4.2: Develop multi-core loading method for split ONNX model
+\item Subtask 4.3: Implement pipelined passing of data through threads
+\item Subtask 4.4: Optimize data flow between processing units
+\end{itemize}
+
+\subsection{Task 5: Integration and Testing}
+\begin{itemize}
+\item Subtask 5.1: Integrate all components into a unified system
+\item Subtask 5.2: Benchmark performance against target metrics
+\item Subtask 5.3: Identify and resolve bottlenecks
+\item Subtask 5.4: Validate accuracy of results and compare to baseline system
+\end{itemize}
+
+\subsection{Task 6: Documentation and Delivery}
+\begin{itemize}
+\item Subtask 6.1: Document implementation details and architecture
+\item Subtask 6.2: Prepare user guides and technical documentation
+\item Subtask 6.3: Develop demonstration materials
+\item Subtask 6.4: Prepare final project presentation
+\end{itemize}
+
+These tasks will be further broken down into sprint activities with specific team members assigned based on their expertise, as outlined in the personnel effort requirements section.
+
+\section{Project Milestones, Metrics, and Evaluation Criteria}\label{sec:milestones}
+
+The following key milestones have been identified for the project, along with their associated metrics and evaluation criteria:
+
+\subsection{Milestone 1: Mathematical Division of the Algorithm}
+\begin{itemize}
+\item \textbf{Completion Date}: Week 8
+\item \textbf{Metrics}: Validated mathematical approach for dividing U-Net algorithm
+\item \textbf{Evaluation Criteria}: Division maintains output accuracy equivalent to original algorithm
+\end{itemize}
+
+\subsection{Milestone 2: Loading of Split Algorithm Weights onto MPU}
+\begin{itemize}
+\item \textbf{Completion Date}: Week 12
+\item \textbf{Metrics}: Successful loading of model segments into appropriate memory locations
+\item \textbf{Evaluation Criteria}: Each model segment loads correctly with optimal memory utilization (<90\% of allocated memory)
+\end{itemize}
+
+\subsection{Milestone 3: Thread Testing with Matrix Operations}
+\begin{itemize}
+\item \textbf{Completion Date}: Week 16
+\item \textbf{Metrics}: Successful parallel operation of multiple threads
+\item \textbf{Evaluation Criteria}: All threads operate concurrently without memory conflicts
+\end{itemize}
+
+\subsection{Milestone 4: Docker Environment Configuration}
+\begin{itemize}
+\item \textbf{Completion Date}: Week 16
+\item \textbf{Metrics}: Streamlined processing environment
+\item \textbf{Evaluation Criteria}: Environment supports all required libraries and tools with minimal overhead
+\end{itemize}
+
+\subsection{Milestone 5: Pipelined Implementation of Semantic Segmentation}
+\begin{itemize}
+\item \textbf{Completion Date}: Week 16
+\item \textbf{Metrics}: Functional parallelized semantic segmentation algorithm
+\item \textbf{Evaluation Criteria}: Algorithm processes multiple frames concurrently with accuracy equal to or greater than original implementation (99.8\% accuracy)
+\end{itemize}
+
+\subsection{Milestone 6: Increased Throughput Demonstration}
+\begin{itemize}
+\item \textbf{Completion Date}: Week 16
+\item \textbf{Metrics}: Processing speed of multiple frames
+\item \textbf{Evaluation Criteria}: Achieve target throughput of 33.2ms for 4 frames (vs. current 160ms for 1 frame)
+\end{itemize}
+
+For each milestone, our team will track progress using the following quantifiable metrics:
+
+\begin{itemize}
+\item \textbf{Processing time}: Measured in milliseconds per frame
+\item \textbf{Accuracy}: Comparison of segmentation results with ground truth data
+\item \textbf{Resource utilization}: CPU, memory, and DPU usage percentages
+\item \textbf{Throughput}: Frames processed per second
+\end{itemize}
+
+\section{Project Timeline and Schedule}\label{sec:timeline}
+
+The project will span approximately 16 weeks, with work organized into sprints. The project timeline follows a structured approach with major milestones and deliverable dates:
+
+\subsection{Key Deliverable Dates}
+\begin{itemize}
+\item \textbf{Week 8}: Mathematical division proposal document
+\item \textbf{Week 12}: Thread testing results and documentation
+\item \textbf{Week 16}: Preliminary performance report
+\end{itemize}
+
+\subsection{Critical Path}
+The critical path for this project follows the mathematical division of the algorithm, implementation of the eye-tracking components, integration of the parallelization framework, and final optimization of throughput.
+
+\subsection{Sprint Organization}
+\begin{itemize}
+\item \textbf{Sprints 1-4 (Weeks 1-8)}: Focus on mathematical algorithm analysis and division
+\item \textbf{Sprints 5-8 (Weeks 9-12)}: Core component implementation and thread management
+\item \textbf{Sprints 9-12 (Weeks 13-16)}: Integration, testing, and optimization
+\end{itemize}
+
+\section{Risks and Risk Management}\label{sec:risk-management}
+
+\subsection{Risk 1: Completion Delays}
+\begin{itemize}
+\item \textbf{Probability}: 10\%
+\item \textbf{Severity}: High
+\item \textbf{Mitigation Strategies}:
+  \begin{itemize}
+  \item Regular sprint reviews to identify potential delays early
+  \item Team members will work collaboratively on serialized tasks to avoid bottlenecks
+  \item Maintain buffer time in the schedule for unexpected challenges
+  \end{itemize}
+\end{itemize}
+
+\subsection{Risk 2: Hardware Damage}
+\begin{itemize}
+\item \textbf{Probability}: 5\%
+\item \textbf{Severity}: Very High
+\item \textbf{Mitigation Strategies}:
+  \begin{itemize}
+  \item Store hardware in secure locations away from environmental contaminants
+  \item Implement proper handling procedures for all team members
+  \item Create regular backups of all work and configurations
+  \end{itemize}
+\end{itemize}
+
+\subsection{Risk 3: Data Security}
+\begin{itemize}
+\item \textbf{Probability}: 15\%
+\item \textbf{Severity}: Medium
+\item \textbf{Mitigation Strategies}:
+  \begin{itemize}
+  \item Utilize US-based distributed data storage (S3-compatible)
+  \item Implement Git-based source and data version control
+  \item Restrict access to sensitive data and systems
+  \end{itemize}
+\end{itemize}
+
+\subsection{Risk 4: Algorithm Complexity}
+\begin{itemize}
+\item \textbf{Probability}: 30\%
+\item \textbf{Severity}: Medium
+\item \textbf{Mitigation Strategies}:
+  \begin{itemize}
+  \item Implement modular design principles for better maintainability
+  \item Conduct thorough code reviews to ensure clarity and efficiency
+  \item Utilize comprehensive testing methodologies to validate integration
+  \end{itemize}
+\end{itemize}
+
+\subsection{Risk 5: Parallelism Implementation Challenges}
+\begin{itemize}
+\item \textbf{Probability}: 40\%
+\item \textbf{Severity}: High
+\item \textbf{Mitigation Strategies}:
+  \begin{itemize}
+  \item Employ effective parallel programming paradigms
+  \item Utilize synchronization primitives to avoid resource contention
+  \item Profile and optimize critical code sections to maximize performance
+  \end{itemize}
+\end{itemize}
+
+\subsection{Risk 6: Image Processing Speed Limitations}
+\begin{itemize}
+\item \textbf{Probability}: 25\%
+\item \textbf{Severity}: Medium
+\item \textbf{Mitigation Strategies}:
+  \begin{itemize}
+  \item Continuously optimize machine learning algorithms for semantic segmentation
+  \item Implement data preprocessing optimizations
+  \item Investigate model compression techniques to improve inference time
+  \end{itemize}
+\end{itemize}
+
+For risks with probability exceeding 30\%, our team will develop detailed contingency plans, including alternative implementation approaches and resource reallocation strategies.
+
+\section{Personnel Effort Requirements}\label{sec:personnel-requirements}
+
+\begin{table}[H]
+\centering
+\caption{Personnel Effort Requirements by Task}
+\begin{tabular}{|l|l|p{6cm}|c|}
+\hline
+\textbf{Team Member} & \textbf{Task Area} & \textbf{Specific Tasks} & \textbf{Hours} \\
+\hline
+Tyler & Mathematical Division &
+\begin{minipage}{5.5cm}
+\begin{itemize}
+\item Optimize and divide algorithm into 4 parts
+\item Pipeline U-Net into 4 roughly equal parts while maintaining accuracy
+\item Code implementation
+\item Testing and validation
+\end{itemize}
+\end{minipage} & 35 \\
+\hline
+Aidan & Algorithm Implementation &
+\begin{minipage}{5.5cm}
+\begin{itemize}
+\item Integrate with codebase
+\item Implement into current codebase with 4 pipelines
+\item Thread management configuration
+\item Implementation testing
+\end{itemize}
+\end{minipage} & 30 \\
+\hline
+Conner & OS and Environment &
+\begin{minipage}{5.5cm}
+\begin{itemize}
+\item Docker configuration optimization
+\item ONNX splitting for MPU loading
+\item OS scheduler optimization
+\item Data version control system demonstration
+\end{itemize}
+\end{minipage} & 30 \\
+\hline
+Joey & Hardware Management &
+\begin{minipage}{5.5cm}
+\begin{itemize}
+\item Kria board benchmarking
+\item Research and document hardware capabilities
+\item Hardware performance optimization
+\end{itemize}
+\end{minipage} & 20 \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Resource Requirements}\label{sec:resource-requirements}
+
+\subsection{Hardware Resources}
+\begin{itemize}
+\item AMD Kria KV260 development board
+\item Compatible display devices for testing
+\item Storage for data backups and version control
+\item Network infrastructure for team collaboration
+\end{itemize}
+
+\subsection{Software Resources}
+\begin{itemize}
+\item Vitis-AI development suite
+\item Docker runtime environment
+\item Development tools (GCC, GDB, etc.)
+\item ONNX runtime libraries
+\item Testing and benchmarking tools
+\end{itemize}
+
+\subsection{Development Tools}
+\begin{itemize}
+\item Version control (Git/GitHub)
+\item Communication platforms (Discord, Telegram)
+\item Documentation tools (LaTeX, Markdown editors)
+\item Performance profiling and analysis tools
+\end{itemize}
+
+\subsection{Data Resources}
+\begin{itemize}
+\item Eye-tracking datasets for training and validation
+\item Ground truth data for accuracy measurement
+\item Performance benchmark datasets
+\item Medical episode data for distress detection validation
+\end{itemize}

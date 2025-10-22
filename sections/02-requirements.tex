@@ -1,0 +1,144 @@
+\chapter{Requirements, Constraints, and Standards}\label{chap:requirements}
+
+\section{Requirements and Constraints}\label{sec:requirements-constraints}
+
+\subsection{Functional Requirements}\label{subsec:functional-requirements}
+
+\begin{enumerate}
+\item \textbf{Algorithm Splitting and Pipelining:}
+   \begin{itemize}
+   \item Split the U-Net semantic segmentation algorithm into four equal parts to enable parallel processing across multiple cores.
+   \item Implement a pipelined architecture to allow concurrent execution of the split U-Net segments and other algorithms (e.g., image preprocessing, blink detection, eye tracking).
+   \item Ensure the pipeline maintains data consistency and synchronization between stages.
+   \end{itemize}
+
+\item \textbf{System Throughput:}
+   \begin{itemize}
+   \item Achieve a system throughput of less than 33.2 ms per frame when processing four frames concurrently.
+   \item Ensure real-time processing capabilities are maintained for the assistive wheelchair application.
+   \end{itemize}
+
+\item \textbf{Resource Efficiency:}
+   \begin{itemize}
+   \item Optimize memory and FPGA resource usage to accommodate the additional overhead of pipelining and parallel execution.
+   \item Ensure efficient sharing of the DPU between the split U-Net segments and other algorithms.
+   \end{itemize}
+
+\item \textbf{Error Handling in Pipeline:}
+   \begin{itemize}
+   \item Implement robust error handling mechanisms to detect and recover from pipeline stalls, frame drops, or data corruption.
+   \end{itemize}
+\end{enumerate}
+
+\subsection{User Interface (UI) Requirements}\label{subsec:ui-requirements}
+
+\begin{enumerate}
+\item \textbf{Command Line Interface (CLI):}
+   \begin{itemize}
+   \item Retain the existing user-friendly CLI for both technical and non-technical users.
+   \item Add new commands to allow users to:
+      \begin{enumerate}
+      \item Configure pipeline settings (e.g., number of threads, buffer sizes).
+      \item Monitor pipeline performance (e.g., throughput, latency, resource usage).
+      \end{enumerate}
+   \item Include help commands to describe new pipeline-related functionalities.
+   \end{itemize}
+
+\item \textbf{Command Feedback:}
+   \begin{itemize}
+   \item Provide real-time feedback on pipeline performance, including throughput, latency, and error rates.
+   \item Display warnings or errors if the pipeline encounters issues (e.g., buffer overflow, frame drops).
+   \end{itemize}
+
+\item \textbf{Error Handling and Logging:}
+   \begin{itemize}
+   \item Enhance error logging to include pipeline-specific issues (e.g., stage delays, synchronization errors).
+   \item Provide detailed logs to assist users in debugging pipeline performance and resource allocation.
+   \end{itemize}
+\end{enumerate}
+
+\subsection{Physical and Economic Requirements}\label{subsec:physical-economic}
+
+\begin{enumerate}
+\item \textbf{Hardware Compatibility:}
+   \begin{itemize}
+   \item Ensure that the pipelined architecture remains compatible with the Xilinx Kria KV260 board.
+   \item Minimize additional hardware requirements to keep costs low.
+   \end{itemize}
+
+\item \textbf{Cost-Effectiveness:}
+   \begin{itemize}
+   \item Design the pipeline to maximize throughput without requiring significant hardware upgrades.
+   \item Ensure that future maintenance and updates remain economical.
+   \end{itemize}
+\end{enumerate}
+
+\subsection{System Constraints}\label{subsec:system-constraints}
+
+\begin{enumerate}
+\item \textbf{Memory Limitations:}
+   \begin{itemize}
+   \item The Xilinx Kria K26 board has 4GB of DDR memory, which must be shared among the pipeline stages.
+   \item Optimize memory usage to avoid contention between stages and ensure smooth data flow.
+   \end{itemize}
+
+\item \textbf{FPGA Resource Allocation:}
+   \begin{itemize}
+   \item The available FPGA resources are limited and must be efficiently allocated to accommodate the additional logic required for pipelining.
+   \item Ensure that the Deep Learning Processing Unit (DPU) is shared effectively between blink detection and eye-tracking submodules.
+   \end{itemize}
+
+\item \textbf{DPU Utilization:}
+   \begin{itemize}
+   \item Develop a scheduling strategy to allow the DPU to be shared between blink detection and eye-tracking submodules without causing bottlenecks.
+   \end{itemize}
+\end{enumerate}
+
+\subsection{Additional Considerations}\label{subsec:additional-considerations}
+
+\begin{enumerate}
+\item \textbf{Deployment Options:}
+   \begin{itemize}
+   \item The system will continue to be deployed on the Xilinx Kria KV260 board, with no immediate plans for expansion to other platforms.
+   \item Ensure that the pipelined architecture is portable and can be adapted to future hardware upgrades if needed.
+   \end{itemize}
+
+\item \textbf{Data Handling and Privacy:}
+   \begin{itemize}
+   \item Maintain strict data privacy and security measures, especially when handling sensitive user data in the pipeline.
+   \item Ensure that intermediate data between pipeline stages is securely managed and not exposed to unauthorized access.
+   \end{itemize}
+
+\item \textbf{Scalability:}
+   \begin{itemize}
+   \item Design the pipeline to be scalable, allowing for the addition of new algorithms or submodules in the future.
+   \item Ensure that the architecture can handle increased workloads (e.g., higher frame rates or additional features) without significant rework.
+   \end{itemize}
+\end{enumerate}
+
+\section{Engineering Standards}\label{sec:engineering-standards}
+
+The following IEEE standards are applicable to this project and guide the development and evaluation processes:
+
+\begin{description}
+\item[IEEE 2952-2023] \textit{IEEE Standard for Secure Computing Based on Trusted Execution Environment} \\
+Trusted Execution Environments (TEEs) are used to protect sensitive data and computations. This standard ensures that systems using TEEs follow security best practices, reducing the risk of unauthorized access or tampering.
+
+\item[IEEE 2802-2022] \textit{IEEE Standard for Performance and Safety Evaluation of AI-Based Medical Devices: Terminology} \\
+This standard provides clear terms and definitions for evaluating the performance and safety of AI-based medical devices. It helps ensure these devices are reliable and effective in real-world medical settings.
+
+\item[IEEE 7002-2022] \textit{IEEE Standard for Data Privacy Process} \\
+This standard outlines best practices for protecting user data and ensuring privacy. It helps organizations comply with regulations and build trust with users when handling sensitive information.
+
+\item[IEEE 3129-2023] \textit{IEEE Standard for Robustness Testing and Evaluation of AI-Based Image Recognition Services} \\
+This standard provides guidelines for testing AI-based image recognition systems to ensure they work reliably under different conditions. It helps identify and fix issues that could arise from unexpected inputs or scenarios.
+
+\item[IEEE 3156-2023] \textit{IEEE Standard for Requirements of Privacy-Preserving Computation Integrated Platforms} \\
+Privacy-preserving computation allows data to be processed without exposing sensitive information. This standard defines the requirements for platforms that support such computations, ensuring they protect user privacy.
+
+\item[IEEE 2842-2021] \textit{IEEE Recommended Practice for Secure Multi-Party Computation} \\
+Secure multi-party computation lets multiple parties work together on shared data without revealing their individual inputs. This standard provides guidance for implementing these protocols, making collaborative computing safer for sensitive applications like healthcare and finance.
+
+\item[IEEE 1484.1-2003] \textit{IEEE Standard for Learning Technology - Learning Technology Systems Architecture (LTSA)} \\
+This standard defines a framework for designing and integrating educational software and systems. It ensures that learning technologies can work together seamlessly, supporting innovation in online education.
+\end{description}

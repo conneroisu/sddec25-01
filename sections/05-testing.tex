@@ -1,0 +1,271 @@
+\chapter{Testing}\label{chap:testing}
+
+\section{Testing Strategy Overview}\label{sec:testing-overview}
+
+Testing is key to our Semantic Segmentation project. We need to make sure our system meets our goals of fast processing (<16.6ms between frames) while keeping good accuracy (99.8\%).
+
+\note{Numerical values are representative placeholders due to NDA restrictions.}
+
+\subsection{Testing Philosophy}\label{subsec:testing-philosophy}
+
+We test early and often. This helps us catch problems quickly and fix them before they get worse. For our project, this means:
+
+\begin{itemize}
+\item Testing each part of the divided U-Net algorithm as we create it
+\item Checking memory use before building the full system
+\item Testing how we share DPU resources as we develop
+\end{itemize}
+
+\subsection{Testing Challenges}\label{subsec:testing-challenges}
+
+Our project has some tough testing challenges:
+
+\begin{itemize}
+\item Testing on FPGA hardware is different from normal software testing
+\item Making sure our parallel threads work together correctly
+\item Balancing speed and accuracy
+\item Checking that memory is used correctly
+\end{itemize}
+
+\subsection{Testing Schedule}\label{subsec:testing-schedule}
+
+\begin{itemize}
+\item \textbf{Weeks 1-2}: Test individual parts
+\item \textbf{Weeks 3-4}: Test how parts connect
+\item \textbf{Weeks 5-6}: Test complete system
+\item \textbf{Weeks 7-8}: Test under different conditions
+\item \textbf{Weeks 9-10}: Final testing
+\end{itemize}
+
+\section{Unit Testing}\label{sec:unit-testing}
+
+\subsection{Feature Map Testing}\label{subsec:feature-map-testing}
+
+\begin{itemize}
+\item Comprehensive validation that feature maps match between unified and scheduled implementations
+\item Layer-by-layer comparison to ensure mathematical consistency throughout the network
+\item Statistical analysis of feature map similarity using 80-20 training/testing dataset split
+\item Verification of feature activation patterns across diverse input conditions
+\end{itemize}
+
+\subsection{Algorithm Testing}\label{subsec:algorithm-testing}
+
+\begin{itemize}
+\item Resource allocation verification to confirm fair DPU access distribution
+\item Temporal analysis of periodic data collection to ensure deadlines are consistently met
+\item Controlled stress testing to verify scheduling robustness under varying load conditions
+\item Validation that algorithms 1, 2, and 3 can reliably collect data without interruption
+\end{itemize}
+
+\subsection{System Coordination Testing}\label{subsec:system-coordination-testing}
+
+\begin{itemize}
+\item \textbf{Operational Timing}: Verify system meets timing requirements for all components
+\item \textbf{Resource Utilization}: Validate efficient use of system resources
+\item \textbf{System Stability}: Ensure reliable operation under various conditions
+\end{itemize}
+
+\subsection{Success Goals}\label{subsec:success-goals}
+
+\begin{itemize}
+\item 100\% feature map consistency between unified algorithm and scheduled implementation
+\item Zero missed periodic data collection deadlines across extended operation periods
+\item Resource utilization efficiency improvement of at least 30\% compared to sequential approach
+\end{itemize}
+
+\section{Interface Testing}\label{sec:interface-testing}
+
+\subsection{Key Interfaces}\label{subsec:key-interfaces}
+
+\begin{enumerate}
+\item \textbf{Between Algorithms and Scheduler:}
+   \begin{itemize}
+   \item Verification of request handling under varying load conditions and priorities
+   \item Validation of preemption mechanisms when periodic collection deadlines approach
+   \item Confirmation that all algorithms receive their guaranteed resource allocation minimums
+   \item Analysis of scheduling fairness across extended operational periods
+   \end{itemize}
+
+\item \textbf{Between Semantic Segmentation and DPU:}
+   \begin{itemize}
+   \item Detailed profiling of resource utilization patterns during algorithm execution
+   \item Verification that feature map integrity is maintained despite scheduled access
+   \item Measurement of context switching overhead to ensure minimal performance impact
+   \item Confirmation that unified algorithm behavior remains consistent
+   \end{itemize}
+
+\item \textbf{Memory Management:}
+   \begin{itemize}
+   \item Test how each algorithm accesses its assigned memory
+   \item Verify that memory access patterns are efficient and minimize contention
+   \item Validate that shared memory regions are properly protected
+   \end{itemize}
+
+\item \textbf{Thread Coordination:}
+   \begin{itemize}
+   \item Test how the scheduler manages resource allocation
+   \item Verify that priority escalation works properly for deadline-sensitive operations
+   \item Validate synchronization between algorithms with interdependencies
+   \end{itemize}
+\end{enumerate}
+
+\subsection{Test Cases}\label{subsec:test-cases}
+
+\begin{enumerate}
+\item \textbf{Data Processing Validation:}
+   \begin{itemize}
+   \item \textbf{Purpose}: Ensure accurate image processing under various operating conditions
+   \item \textbf{Expected outcome}: Consistent processing quality matching baseline performance
+   \item \textbf{Validation method}: Comparison against established accuracy metrics
+   \end{itemize}
+
+\item \textbf{Resource Management Validation:}
+   \begin{itemize}
+   \item \textbf{Purpose}: Verify system stability under concurrent processing demands
+   \item \textbf{Expected outcome}: Reliable operation without resource conflicts
+   \item \textbf{Validation method}: Performance monitoring during multi-algorithm execution
+   \end{itemize}
+
+\item \textbf{Periodic Collection Test:}
+   \begin{itemize}
+   \item \textbf{What we do}: Run system under load with varying periodic collection requirements
+   \item \textbf{What should happen}: All algorithms meet their collection deadlines
+   \item \textbf{How we check}: Log collection times and verify against requirements
+   \end{itemize}
+\end{enumerate}
+
+\section{System Testing}\label{sec:system-testing}
+
+\subsection{Test Plan}\label{subsec:test-plan}
+
+\begin{enumerate}
+\item \textbf{Continuous Running Test:}
+   \begin{itemize}
+   \item \textbf{What we do}: Feed many eye images continuously
+   \item \textbf{Tool}: Image generator with logging
+   \item \textbf{Goal}: Keep 16.6 ms between frames for over 30 minutes
+   \end{itemize}
+
+\item \textbf{Lighting Test:}
+   \begin{itemize}
+   \item \textbf{What we do}: Test with images in different lighting
+   \item \textbf{Tool}: Dataset with lighting variations
+   \item \textbf{Goal}: Keep accuracy above 98\% in all conditions
+   \end{itemize}
+
+\item \textbf{Stress Test:}
+   \begin{itemize}
+   \item \textbf{What we do}: Push memory and processing limits
+   \item \textbf{Tool}: Stress testing scripts
+   \item \textbf{Goal}: System stays running without failing
+   \end{itemize}
+
+\item \textbf{Long-Term Test:}
+   \begin{itemize}
+   \item \textbf{What we do}: Run system for 24+ hours
+   \item \textbf{Tool}: Automated testing with monitoring
+   \item \textbf{Goal}: No crashes or slowdowns over time
+   \end{itemize}
+\end{enumerate}
+
+\note{Numerical values are representative placeholders due to NDA restrictions.}
+
+\subsection{Test Measurements}\label{subsec:test-measurements}
+
+\begin{itemize}
+\item \textbf{Speed}: Frames per second (goal: >60)
+\item \textbf{Accuracy}: Correct pupil tracking (goal: >98\%)
+\item \textbf{Time}: Input to output delay (goal: 60 frames per second)
+\item \textbf{Memory}: How much memory is used over time
+\item \textbf{Stability}: How long the system runs without problems
+\end{itemize}
+
+\section{Regression Testing}\label{sec:regression-testing}
+
+\subsection{Automated Testing}\label{subsec:automated-testing}
+
+We'll create tests that run after code changes to make sure nothing breaks:
+
+\begin{enumerate}
+\item \textbf{Performance Check}: Compare speed to previous tests
+   \begin{itemize}
+   \item \textbf{Tool}: Test runner with history database
+   \end{itemize}
+
+\item \textbf{Accuracy Check}: Make sure algorithm changes don't hurt accuracy
+   \begin{itemize}
+   \item \textbf{Tool}: Test dataset with known answers
+   \end{itemize}
+
+\item \textbf{Resource Check}: Make sure changes don't use more memory or CPU
+   \begin{itemize}
+   \item \textbf{Tool}: Vitis AI Profiler with logging
+   \end{itemize}
+\end{enumerate}
+
+\subsection{Monitoring}\label{subsec:monitoring}
+
+\textbf{Performance Tracking}: Use Vitis AI Profiler to watch:
+\begin{itemize}
+\item Running time
+\item DPU use
+\item Memory use
+\item Thread timing
+\end{itemize}
+
+\section{Integration Testing}\label{sec:integration-testing}
+
+\subsection{Multi-Algorithm Integration}\label{subsec:multi-algorithm-integration}
+
+\begin{itemize}
+\item Verify all algorithms (1, 2, 3, and semantic segmentation) work together without conflicts
+\item Test priority escalation and resource reallocation under deadline pressure
+\item Validate end-to-end data flow from image capture to assistive response
+\end{itemize}
+
+\subsection{Hardware-Software Integration}\label{subsec:hardware-software-integration}
+
+\begin{itemize}
+\item Test camera integration and image capture reliability
+\item Verify DPU scheduling works correctly with FPGA programming
+\item Validate memory management across hardware and software boundaries
+\end{itemize}
+
+\section{Performance Testing}\label{sec:performance-testing}
+
+\subsection{Benchmarking}\label{subsec:benchmarking}
+
+\begin{itemize}
+\item Compare optimized performance against baseline implementation
+\item Measure throughput improvements across different input conditions
+\item Validate resource utilization efficiency improvements
+\end{itemize}
+
+\subsection{Stress Testing}\label{subsec:stress-testing}
+
+\begin{itemize}
+\item Maximum load testing with concurrent algorithm execution
+\item Memory stress testing with limited resource conditions
+\item Extended duration testing for stability validation
+\end{itemize}
+
+\section{Quality Assurance}\label{sec:quality-assurance}
+
+\subsection{IEEE Standards Compliance}\label{subsec:ieee-compliance}
+
+Our testing methodology aligns with applicable IEEE standards:
+
+\begin{itemize}
+\item \textbf{IEEE 3129-2023}: Robustness testing and evaluation of AI-based image recognition services
+\item \textbf{IEEE 2802-2022}: Performance and safety evaluation of AI-based medical devices
+\item \textbf{IEEE 7002-2022}: Data privacy process compliance validation
+\end{itemize}
+
+\subsection{Test Documentation}\label{subsec:test-documentation}
+
+\begin{itemize}
+\item Comprehensive test case documentation with expected results
+\item Performance baseline establishment and tracking
+\item Issue tracking and resolution documentation
+\item Regression test maintenance and evolution
+\end{itemize}

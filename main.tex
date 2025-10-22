@@ -1,39 +1,36 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%   	  INSTITUTO FEDERAL DA BAHIA-IFBA       %             
-%        MODELO DE  RELATÓRIO                   %
-%          By   Valdex Santos                   %
-%     Mais templates em gg.gg/profwaldexsantos  %
-% Dúvidas e sugestões: valdexsantos@ifba.edu.br %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%    IOWA STATE UNIVERSITY                      %
+%    SENIOR DESIGN DOCUMENT                     %
+%    Eye-Tracking Assistive Technology          %
+%    Spring 2025 - SDDEC25-01                   %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\documentclass[oneside]{pacotes/relatorio}%CARREGANDO A CLASSE
+\documentclass[oneside,english]{pacotes/relatorio}%CARREGANDO A CLASSE
 
 %================================================
-% Informações de dados para CAPA e FOLHA DE ROSTO
-\nomeInst{INSTITUTO FEDERAL DA BAHIA\\ CAMPUS JEQUIÉ}% nome da instituição
-\logoInst{\includegraphics[width=0.8\textwidth]{2-Imagens/logo_if.pdf}} % logo da instituição
+% Document Information for COVER and TITLE PAGE
+\nomeInst{IOWA STATE UNIVERSITY\\ DEPARTMENT OF COMPUTER ENGINEERING}% institution name
+% logoInst{\includegraphics[width=0.6\textwidth]{2-Imagens/logo_if.pdf}} % institution logo (commented out temporarily)
 
-\nomeCurso{CURSO DE BACHARELADO EM ENGENHARIA MECÂNICA}% curso
+\nomeCurso{SENIOR DESIGN PROJECT\\COMPUTER ENGINEERING}% course
 %================================================
 
-\titulo{Modelo de Relatório em \LaTeXe\\ Métodos Numéricos}
+\titulo{Optimizing Semantic Segmentation for Real-Time\\ Eye-Tracking Assistive Technology}
 % ---------------------------------------------------
-\autor{Aluno 1 \\
-	Aluno 2 \\
-        Aluno 3}
+\autor{Team sddec25-01\\
+    [Team Member Names]}
 % ---------------------------------------------------
-\local{Jequié-BA}
-\data{2023}
-\tipotrabalho{Relatório técnico em \LaTeX}
-% O preambulo deve conter o tipo do trabalho e disciplina avaliada
-\preambulo{Relatório de Cálculo Numérico apresentado ao prof. Me. Valdex Santos como requisito avaliativo da disciplina, referente a I unidade.}
+\local{Ames, Iowa}
+\data{Spring 2025}
+\tipotrabalho{Senior Design Document}
+% The preamble should contain the work type and evaluation discipline
+\preambulo{Senior Design Project documentation submitted to the Department of Computer Engineering, Iowa State University, as part of the graduation requirements for the Bachelor of Science degree in Computer Engineering.}
 %##############################################################
-% INICIO DO DOCUMENTO
+% BEGIN DOCUMENT
 \begin{document}
 
-
 % ----------------------------------------------------------
-% ELEMENTOS PRÉ-TEXTUAIS
+% FRONT MATTER
 % ----------------------------------------------------------
 
 % Capa
@@ -48,25 +45,27 @@
 
 \cleardoublepage %força a quebra de página para próxima pag. impar
 
-\input{1-textos/resumo.tex}
+\input{sections/abstract.tex}
 % ----------------------------------------------------------
-% ELEMENTOS TEXTUAIS
+% MAIN CONTENT
 % ----------------------------------------------------------
 \textual
 
-\input{1-textos/1-introdução}
-\input{1-textos/2-referencial teorico}
-\input{1-textos/3-metodologia}
-\input{1-textos/4-desenvolvimento}
-\input{1-textos/5-conclusão}
+\input{sections/01-introduction}
+\input{sections/02-requirements}
+\input{sections/03-project-plan}
+\input{sections/04-design}
+\input{sections/05-testing}
+\input{sections/06-implementation}
+\input{sections/07-conclusion}
 % ----------------------------------------------------------
 % ELEMENTOS PÓS-TEXTUAIS
 % ----------------------------------------------------------
 \postextual
 
 % ----------------------------------------------------------
-% Referências bibliográficas
+% Bibliography / References
 % ----------------------------------------------------------
-\bibliography{references.bib}
+\bibliography{references}
 
 \end{document}
