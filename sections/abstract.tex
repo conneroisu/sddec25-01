@@ -1,5 +1,4 @@
-
-\begin{resumo}
+\begin{abstract}
 This project focuses on optimizing semantic segmentation algorithms for real-time eye tracking in assistive technology applications. Rather than splitting the algorithm, which would increase overhead cost and slow down overall system speed, we propose an efficient resource scheduling approach that ensures all algorithms receive fair access to the Deep Processing Unit (DPU). Our approach aims to improve processing from 160 ms per frame to approximately 33.2ms per frame for 4 frames simultaneously, while maintaining our required 99.8\% Intersection over Union (IoU) accuracy. This optimization ensures that all algorithms can collect their required periodic data without being starved by the semantic segmentation algorithm, which is critical for real-time eye tracking in medical assistance devices for individuals with disabilities, particularly those with conditions like cerebral palsy.
 
 The key design requirements include maintaining 99.8\% IoU accuracy while achieving the target processing speed of 60 frames per second. The approach leverages parallelism on the AMD Kria KV260 development board, utilizing its multi-core architecture and Deep Processing Unit (DPU) for neural network inference. The design employs resource scheduling strategies, memory management techniques, and deadline-aware prioritization to optimize resource utilization.
@@ -8,5 +7,5 @@ Progress to date includes establishing the development environment, testing the 
 
 The design effectively addresses user needs by improving response time for assistive devices, enabling more natural and responsive eye-tracking control for users with mobility impairments. This enhanced performance will significantly improve safety and quality of life for users, allowing the system to detect and respond to potential medical issues faster and more reliably.
 
-\textbf{Keywords}: Semantic Segmentation; Eye Tracking; Assistive Technology; Real-Time Processing; U-Net; AMD Kria KV260; DPU Scheduling; Embedded Systems.
-\end{resumo}
+\keywords{Semantic Segmentation; Eye Tracking; Assistive Technology; Real-Time Processing; U-Net; AMD Kria KV260; DPU Scheduling; Embedded Systems}
+\end{abstract}

@@ -5,26 +5,35 @@
 %    Spring 2025 - SDDEC25-01                   %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\documentclass[oneside,english]{pacotes/relatorio}%CARREGANDO A CLASSE
+\documentclass{isusdd}
+
+% Bibliography setup
+\usepackage[backend=biber,style=ieee,sorting=none]{biblatex}
+\addbibresource{references.bib}
 
 %================================================
-% Document Information for COVER and TITLE PAGE
-\nomeInst{IOWA STATE UNIVERSITY\\ DEPARTMENT OF COMPUTER ENGINEERING}% institution name
-% logoInst{\includegraphics[width=0.6\textwidth]{2-Imagens/logo_if.pdf}} % institution logo (commented out temporarily)
-
-\nomeCurso{SENIOR DESIGN PROJECT\\COMPUTER ENGINEERING}% course
+% Document Metadata
 %================================================
+\institution{IOWA STATE UNIVERSITY}
+\department{Department of Computer Engineering}
+\course{Senior Design Project - Computer Engineering}
+\semester{Spring 2025}
 
-\titulo{Optimizing Semantic Segmentation for Real-Time\\ Eye-Tracking Assistive Technology}
-% ---------------------------------------------------
-\autor{Team sddec25-01\\
-    [Team Member Names]}
-% ---------------------------------------------------
-\local{Ames, Iowa}
-\data{Spring 2025}
-\tipotrabalho{Senior Design Document}
-% The preamble should contain the work type and evaluation discipline
-\preambulo{Senior Design Project documentation submitted to the Department of Computer Engineering, Iowa State University, as part of the graduation requirements for the Bachelor of Science degree in Computer Engineering.}
+\title{Optimizing Semantic Segmentation for Real-Time Eye-Tracking Assistive Technology}
+
+\teamname{Team sddec25-01}
+\teammembers{%
+    [Team Member Names]
+}
+
+\location{Ames, Iowa}
+\documenttype{Senior Design Document}
+
+\projectdescription{%
+    Senior Design Project documentation submitted to the Department of
+    Computer Engineering, Iowa State University, as part of the graduation
+    requirements for the Bachelor of Science degree in Computer Engineering.
+}
 %##############################################################
 % BEGIN DOCUMENT
 \begin{document}
@@ -33,23 +42,19 @@
 % FRONT MATTER
 % ----------------------------------------------------------
 
-% Capa
-\imprimircapa%
+% Title page
+\maketitle
 
-%Inserir Folha de Rosto
-\imprimirfolhaderosto
+% Table of contents
+\pdfbookmark[0]{\contentsname}{toc}
+\tableofcontents
+\cleardoublepage
 
-% inserir o sumario
-\pdfbookmark[0]{\contentsname}{toc} % cria marcadores no pdf
-\tableofcontents* %Insere o índice que não deve ser numerado e não aparecer nele próprio
-
-\cleardoublepage %força a quebra de página para próxima pag. impar
-
+% Executive Summary (Abstract)
 \input{sections/abstract.tex}
 % ----------------------------------------------------------
 % MAIN CONTENT
 % ----------------------------------------------------------
-\textual
 
 \input{sections/01-introduction}
 \input{sections/02-requirements}
@@ -58,14 +63,13 @@
 \input{sections/05-testing}
 \input{sections/06-implementation}
 \input{sections/07-conclusion}
-% ----------------------------------------------------------
-% ELEMENTOS PÓS-TEXTUAIS
-% ----------------------------------------------------------
-\postextual
 
 % ----------------------------------------------------------
-% Bibliography / References
+% BACK MATTER
 % ----------------------------------------------------------
-\bibliography{references}
+
+% Bibliography / References
+\cleardoublepage
+\printbibliography[heading=bibintoc,title={References}]
 
 \end{document}
