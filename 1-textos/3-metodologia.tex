@@ -1,0 +1,252 @@
+\chapter{Metodologia}
+\label{cap:metodologia}
+De que maneira você vai atingir o objetivo? Logo após apresentar o objetivo você deve fazer uma breve descrição da metodologia utilizada para atingi-lo.
+
+Abaixo, apresentaremos alguns comandos em Latex que os alunos podem necessitarem utilizar em seus relatórios.
+\section{Modo Matemático e Equações}\label{sec:equacoes}
+Para inserir equações simples utilizamos o \textit{Modo Matemático}. Assim, para inserir uma equação em linha, utilizamos, por exemplo: $x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}$. Inserindo a mesma equação em destaque: $$x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}$$
+
+Para apresentar equações numeradas em um documento \LaTeX, utilizamos o ambiente \texttt{equation}, que numerará as equações automaticamente e permitirá que sejam referenciadas ao longo do texto.
+
+A transformada de Laplace é dada na equação \ref{eq:laplace}, enquanto a equação \ref{eq:dft} apresenta a formulação da transformada discreta de Fourier bidimensional.
+\begin{equation}
+X(s) = \int_{-\infty}^{\infty} x(t) , \text{e}^{-st} , dt
+\label{eq:laplace}
+\end{equation}
+
+\begin{equation}
+F(u, v) = \sum_{m = 0}^{M - 1} \sum_{n = 0}^{N - 1} f(m, n) \exp \left[ -j 2 \pi \left( \frac{u m}{M} + \frac{v n}{N} \right) \right]
+\label{eq:dft}
+\end{equation}
+
+Uma equação mais simples como a ``fórmula de Bháskara'' segue abaixo:
+\begin{equation}
+    x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}\label{eq:FormBhaskComp}
+\end{equation}
+A equação \eqref{eq:FormBhaskComp} pode ser separada em duas partes, conforme segue:\\
+$\Delta=b^2-4ac$ e $x=-b\pm\sqrt{\Delta}$
+
+É importante lembrar que, em equações com mais de uma linha, deve-se utilizar o ambiente \texttt{align} em vez de \texttt{equation}. Por exemplo:
+\begin{align}
+f(x) &= x^2 + 2x + 1 \\
+&= (x+1)^2
+\end{align}
+
+Nesse exemplo, a equação é dividida em duas linhas e alinhada pelo sinal de igualdade. 
+
+Para aprender sobre ``modo matemático'', símbolos e equações em \LaTeX, consulte \href{https://pt.overleaf.com/learn/latex/Mathematical_expressions}{este endereço}.
+
+
+
+
+Para saber mais sobre expressões e equações no Overleaf consulte o link: \href{https://www.overleaf.com/learn/latex/Mathematical_expressions}{Inserindo expressões no Overleaf}. 
+
+\subsection{Matrizes}
+Segue alguns comandos para inserir matrizes
+\subsubsection*{Matrizes entre colchetes}
+$\begin{bmatrix}
+2 & 3 & 4\\
+2 & 4 & 5\\
+3 & 0 & 8
+\end{bmatrix}$
+\subsubsection*{Matrizes entre parênteses}
+$\begin{pmatrix}
+2 & 3 & 4\\
+2 & 4 & 5\\
+3 & 0 & 8
+\end{pmatrix}$
+\subsubsection*{Determinantes}
+$\begin{vmatrix}
+2 & 3 & 4\\
+2 & 4 & 5\\
+3 & 0 & 8
+\end{vmatrix}$
+
+Mas informações sobre como trabalhar com matrizes no Overleaf, \href{https://pt.overleaf.com/learn/latex/Matrices#Inline_matrices}{consulte este link}.
+
+\section{Tabelas}
+A Tabela \ref{tab:dex} é um exemplo de referência a tabela em \LaTeX.
+\begin{table}[H]
+\centering
+\caption{Exemplo de tabela}
+\begin{tabular}{||c c c c||} 
+ \hline
+ Col1 & Col2 & Col2 & Col3 \\ [0.5ex] 
+ \hline\hline
+ 1 & 6 & 87837 & 787 \\ 
+ 2 & 7 & 78 & 5415 \\
+ 3 & 545 & 778 & 7507 \\
+ 4 & 545 & 18744 & 7560 \\
+ 5 & 88 & 788 & 6344 \\ [1ex] 
+ \hline
+\end{tabular}
+\fonte{\citeonline{paulofreire}}%tirar se a autoria é própria
+\label{tab:dex}
+\end{table}
+
+Outro exemplo:
+\begin{table}[h]
+  \caption{Exemplo de tabela}
+  \centering
+  \begin{tabular}{ccc}
+    \hline
+    \textbf{Item} & \textbf{Quantidade} & \textbf{Preço} \\
+    \hline
+    Maçã & 3 & R\$ 2,50 \\
+    \hline
+    Laranja & 2 & R\$ 1,80 \\
+    \hline
+    Pera & 4 & R\$ 3,20 \\
+    \hline
+  \end{tabular}
+  \label{tab:exemplo}
+\end{table}
+
+Colocamos a Tabela \ref{tab:exemplo} no corpo do texto. podemos criá-la em um arquivo separado usando o ambiente \texttt{table} e o ambiente \texttt{tabular}, e em seguida chamá-la no texto utilizando o comando \verb|\input{arquivo}|. Dessa forma, o código fica mais organizado e fácil de editar. 
+
+Segue  exemplos de tabelas criadas em arquivo separado:
+\input{3-Tabelas/tabcorr}
+\input{3-Tabelas/tabteste}
+
+São referenciadas da seguinte forma: Como observado na tabela  \ref{tab:correlacao} … e na  tabela \ref{tab:testes} …
+
+Informações sobre a construção de tabelas no LATEX podem ser encontradas  neste link de ajuda do Overleaf: \href{https://www.overleaf.com/learn/latex/Tables}{overleaf.com/learn/latex/Tables}.
+
+Existem diversos sites que ajudam a gerar tabelas de maneira mais fácil para latex, entre os quais temos este: \href{https://www.tablesgenerator.com}{tablesgenerator.com}.
+
+\section{Figuras}\label{sec:figuras}
+Para incluir uma figura, use o ambiente \texttt{figure} e o comando \texttt{\textbackslash includegraphics}, como no exemplo a seguir:
+\begin{figure}[!htb]
+\centering
+	\includegraphics[width=0.3\textwidth]{2-Imagens/IFBAlogo.png}
+    \caption{Logo do IFBA}
+    \fonte{\citeonline{Jadyr2011}}
+\label{fig:logofac}
+\end{figure}
+
+A figura \ref{fig:logofac} aparece automaticamente na lista de figuras. Para uso avançado de imagens no \LaTeX, recomenda-se a consulta de literatura especializada, como a \href{https://www.overleaf.com/learn/latex/Inserting_Images}{documentação de ajuda do Overleaf}.
+
+\subsection{Figuras lado a lado}\label{figladoalado}
+Abaixo segue um exemplo de como inserir figuras lado a lado:
+\begin{figure}[H]
+\centering
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{2-Imagens/IFBAlogo.png}
+         \caption{Rio Cachoeira em 2003}
+         \label{fig:rc-adezanoss}
+     \end{subfigure}\quad\qquad
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{2-Imagens/IFBAJEQUIElogo.png}
+         \caption{Rio Cachoeira em 2013}
+         \label{fig:rc-atualmentee}
+     \end{subfigure}
+    \caption{Logos do IFBA e IFBA JEQUÉ} \label{fig:logoifba}%\vspace{-0.6cm}
+    \fonte{Extraidas da internet em: \href{https://www.google.com/search?q=logo+ifba&sourceid=chrome&ie=UTF-8}{Link}}
+\end{figure}
+
+Para mais informações sobre como trabalhar com figuras em \LaTeX, consulte este \href{https://www.overleaf.com/learn/latex/Inserting_Images}{link do Overleaf}.
+\section{Marcadores e numeração}
+Abaixo exemplo de lista de marcadores
+\begin{itemize}
+    \item item um
+    \item item dois
+    \item item 3
+\end{itemize}
+
+Lista de numeração:
+\begin{enumerate}
+    \item item um
+    \item item dois
+    \item item três
+\end{enumerate}
+
+Para personalizar o ambiente de numeração com letras do alfabeto, utilize o comando:
+\begin{enumerate}[label=\alph*)]
+    \item item um
+    \item item dois
+    \item item três
+\end{enumerate}
+
+Personalizando com algarismos romanos:
+\begin{enumerate}[label=\roman*.]
+    \item item um
+    \item item dois
+    \item item três
+\end{enumerate}
+
+\section{Citações e Referências}
+Neste capítulo, apresentamos diversas formas de citações bibliográficas para que os autores possam se familiarizar com as diferentes maneiras de fazê-las. O modelo é bastante versátil e já vem configurado para seguir as normas da ABNT em relação à bibliografia, portanto, não é necessário se preocupar com isso.
+
+As citações são trechos transcritos ou informações retiradas das publicações consultadas para a realização do trabalho. Elas são utilizadas no texto com o propósito de esclarecer, completar, embasar ou corroborar as ideias do autor.
+
+Todas as publicações consultadas e efetivamente utilizadas (através de citações) devem ser listadas obrigatoriamente nas referências bibliográficas, para preservar os direitos autorais e intelectuais, conforme consta nas normas da ABNT. \textbf{Mas não se preocupe! nosso modelo gera automaticamente as referências para você!}
+
+No arquivo {\ttfamily referencias.bib}  há exemplos de como inserir referências bibliográficas para diferentes tipos de fontes, como livros, artigos em conferências, artigos em jornais e páginas de Web, etc.
+
+As referências podem ser citadas no texto usando os comandos \verb|\cite{chave}| ou\\ \verb|\cite[p.~123]{chave}| para citações diretas ou \verb|\citeonline{chave}| para citações indiretas.
+
+A seguir segue citação direta deste de um livro   \cite{paulofreire}, descrito da seguinte forma no arquivo {\ttfamily referencias.bib}:
+\begin{verbatim}
+@book{paulofreire,
+    title = {Pedagogia do oprimido},
+    year = {1974},
+    author = {Paulo Freire},
+    publisher = {Paz e Terra},
+    address = {São Paulo},
+\end{verbatim}
+
+
+\section{Citação indiretas ou livres}\label{ciação direta}
+As \textit{citações indiretas} são feitas com o comando \verb|\citeonline{chave}|, onde \verb|chave| corresponde a um nome dado para chamar a referência no texto. Por exemplo:  \citeonline{Jadyr2011} defende um princípio de lógica...
+
+Outro exemplo: \citeonline{Souza2008} argumenta que...
+
+\section{Citações diretas ou literais}\label{citacoesdiretas}
+Há várias maneiras de se fazer uma citação literal ou direta. As citações longas (mais de 3 linhas) devem usar um parágrafo específico para ela, na forma de um texto recuado (4 cm da margem esquerda), com tamanho de letra menor do que aquela utilizada no texto e espaçamento simples entre as linhas, seguido dos sobrenomes dos autores em caixa alta (separados por ponto e vírgula), ano de publicação e número da página. \textbf{Mas não se preocupe com estas regras, o modelo já está programado para fazer tudo isso automaticamente}, utilize o ambiente \texttt{citacao} para isso. Por exemplo:
+\begin{citacao}
+Desse modo, opera-se uma ruptura decisiva entre a reflexividade filosófica, isto 	é a possibilidade do sujeito de pensar e de refletir, e a objetividade científica.
+Encontramo-nos num ponto em que o conhecimento científico está sem consciência.
+Sem consciência moral, sem consciência reflexiva e também subjetiva.
+Cada vez mais o desenvolvimento extraordinário do conhecimento científico vai tornar menos praticável a própria possibilidade de reflexão do sujeito sobre a sua pesquisa \cite[p.~28]{Bassanezi}.
+\end{citacao}
+
+Obs.: O recuo passou a ser optativo de acordo com atualização em 2023 da norma da ABNT 10520 \cite{NBR10520:2023}. Mais informações sobre as mudanças da norma ABNT podem ser consultadas em \citeonline{abnt2023}.
+
+As citações curtas (menos de 3 linhas) devem ser inseridas diretamente no texto (entre aspas), seguida do nome do autor (em caixa alta), ano e página, como no exemplo a seguir: Então significa apenas que ``assumo que não posso fazer referência a entidades independentes de mim para construir meu explicar'' \cite[p.~35]{Junior2011}.
+
+Obs.: Fizemos um comando especial para inserção de aspas no texto, então podemos utilizar simplesmente \aspas{assumo que não posso fazer referência a entidades independentes de mim para construir meu explicar} \cite[p.~35]{Junior2011}.
+
+\section{Resumo dos comandos para  referências }\label{referenciasUtilizadas}
+Abaixo, apresentamos exemplos de referências já citadas no texto com seus comandos correspondentes:
+\begin{itemize}
+	\item \citeonline{Lima2004}\\ \verb|\citeonline{Lima2004}|
+	\item \citeonline{burden2013} \\ \verb|\citeonline{burden2013}|
+	\item \cite[p.~28]{Bollmann2000}\\ \verb|\cite[p.~28]{Bollmann2000}|
+	\item \citeonline[p.~33]{Stewart2013}\\ \verb|\citeonline[p.~33]{Stewart2013}|
+	\item \cite[p.~35]{Jadyr2011}\\ \verb|\cite[p.~35]{Jadyr2011}|
+	\item \citeonline[p.~35]{Article2012}\\ \verb|\citeonline[p.~35]{Article2012}|
+	\item \cite{Jadyr2011,Bassanezi}\\ \verb|\cite{Jadyr2011,Bassanezi}|
+\end{itemize}
+
+Esses comandos permitem citar corretamente as referências no texto e gerar a lista de referências automaticamente, de acordo com as normas estabelecidas pela ABNT.
+
+\section{Como gerar um arquivo de referências para Latex de forma automática}
+Pode ser laborioso  digitar todas as informações no arquivo \verb|refbase.bib|, neste caso, você pode criar seu próprio arquivo com extensão \verb|.bib|. Existem diversas ferramentas que podem ajudar na geração automática de arquivos \verb|.bib|, incluindo gerenciadores de referências como \href{https://www.mendeley.com}{Mendeley}, \href{https://www.jabref.org}{JabRef}, \href{https://www.zotero.org}{Zotero} e \href{https://endnote.com}{EndNote}. Esses programas permitem a importação de referências de diversas fontes, como artigos científicos, livros e websites, e a organização dessas referências em uma biblioteca pessoal.
+
+Outra opção é o uso de ferramentas de extração de dados, como o \href{https://scholar.google.com.br}{Google Scholar} e o \href{https://citeseerx.ist.psu.edu}{CiteSeerX}, que permitem a busca e a extração automática de referências bibliográficas a partir de uma palavra-chave, autor ou tópico de pesquisa.
+
+Uma vez que o arquivo \verb|.bib| foi gerado, ele pode ser gerado em um documento \LaTeX,  por meio do comando \verb|\addbibresource{referencias.bib}| e impresso com o comando \verb|\printbibliography|. Em seguida, as referências podem ser citadas conforme explicamos anteriormente.
+
+\section{Algoritmos e códigos}
+A maneira mais fácil de incluir códigos em \LaTeX~é criar um arquivo separado com a extensão correspondente ao programa para programar e  chamá-lo no corpo do texto com o comando \verb|\verbatiminput{nome_do_arquivo.extensão}|.
+
+Por exemplo, vamos incluir um código do Método de Gauss para resolver sistemas lineares que está no diretório \verb|códigos|. Observe que usamos a extensão \verb|.m|, uma vez que o código foi programado em Octave que usa essa extensão.
+\subsection{Código do Método da Bissecção}
+\verbatiminput{4-Códigos/MetBisseccao.m}
+
+Para gerar algoritmos ou Pseudocódigos dentro do próprio latex, você deve utilizar o pacote {\ttfamily algorithm2e} (já no preâmbulo). Para mais informações sobre como utilizar esse pacote, consulte a documentação disponível em \href{https://www.ctan.org/pkg/algorithm2e}{ctan.org/pkg/algorithm2e}.
+
+
+
