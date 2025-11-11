@@ -36,4 +36,4 @@ jobs:
 
       - name: Setup Nix
         run: |
-          nix develop
+          nix develop --command echo "Nix environment ready"
