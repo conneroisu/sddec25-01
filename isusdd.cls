@@ -123,6 +123,9 @@
 \newcommand{\@projectdescription}{}
 \newcommand{\projectdescription}[1]{\renewcommand{\@projectdescription}{#1}}
 
+\newcommand{\@version}{}
+\newcommand{\version}[1]{\renewcommand{\@version}{#1}}
+
 % Custom title page
 \renewcommand{\maketitle}{
     \begin{titlepage}
@@ -187,13 +190,16 @@
 \fancyhf{}
 \fancyhead[L]{\leftmark}
 \fancyhead[R]{\thepage}
+\fancyfoot[C]{\ifx\@version\@empty\else Version \@version\ |\ \fi Page \thepage}
 \renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
 
 % Plain style for chapter pages
 \fancypagestyle{plain}{
     \fancyhf{}
-    \fancyfoot[C]{\thepage}
+    \fancyfoot[C]{\ifx\@version\@empty\else Version \@version\ |\ \fi Page \thepage}
     \renewcommand{\headrulewidth}{0pt}
+    \renewcommand{\footrulewidth}{0.4pt}
 }
 
 % Table of contents formatting
