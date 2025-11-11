@@ -10,26 +10,26 @@ Our Semantic Segmentation Optimization project is situated in the healthcare and
 \centering
 \renewcommand{\arraystretch}{1.2}
 \caption{Design Context Analysis}
-\begin{tabular}{|p{2.5cm}|p{4.5cm}|p{5.5cm}|}
-\hline
+\begin{tabular}{p{2.5cm}p{4.5cm}p{5.5cm}}
+\toprule
 \textbf{Area} & \textbf{Description} & \textbf{Examples} \\
-\hline
+\midrule
 Public health, safety, and welfare &
 Our project directly improves the safety and well-being of individuals with mobility impairments by enhancing the responsiveness of eye-tracking medical monitoring systems. &
 Faster response times to potential medical issues, more reliable detection of eye movements for wheelchair control, reduced risk of incidents for users \\
-\hline
+\midrule
 Global, cultural, and social &
 The solution respects the values of independence and dignity for people with disabilities while acknowledging the cultural practices around care and assistance. &
 Supports the right to autonomy for people with disabilities, aligns with medical ethics of beneficence, works within existing healthcare frameworks \\
-\hline
+\midrule
 Ecological &
 By optimizing software rather than requiring new hardware, our solution extends the useful life of existing devices and reduces electronic waste. &
 Reduced need for frequent hardware replacement, lower energy consumption through optimized processing \\
-\hline
+\midrule
 Economic &
 Our optimization approach provides significant performance improvements while keeping costs accessible for healthcare providers and individuals. &
 Affordable enhancement to existing assistive technology systems, more efficient use of available computing resources, potential reduction in healthcare costs through preventative monitoring \\
-\hline
+\bottomrule
 \end{tabular}
 \end{table}
 
@@ -38,7 +38,7 @@ Affordable enhancement to existing assistive technology systems, more efficient 
 Several approaches have been used to implement semantic segmentation for eye tracking, but most face limitations when deployed on resource-constrained edge devices:
 
 \begin{enumerate}
-\item \textbf{Wang et al. (2021)} proposed "EfficientEye: A Lightweight Semantic Segmentation Framework for Eye Tracking," which achieved good accuracy but still required substantial computational resources. Their approach reduced model size but processing speed remained at approximately 120 ms per frame.
+\item \textbf{Wang et al. (2021)} proposed ``EfficientEye: A Lightweight Semantic Segmentation Framework for Eye Tracking'', which achieved good accuracy but still required substantial computational resources. Their approach reduced model size but processing speed remained at approximately 120 ms per frame.
 
 \item \textbf{Previous Project Iteration} implemented a standard U-Net architecture on the Kria KV260 board with an accuracy of 99.8\% IoU but could only process a single frame every 160ms, which is insufficient for real-time application needs.
 
@@ -67,7 +67,7 @@ Our project demonstrates significant technical complexity in both its components
 \begin{enumerate}
 \item \textbf{Multiple Components with Distinct Scientific Principles:}
    \begin{itemize}
-   \item \textbf{Neural Network Architecture:} The U-Net semantic segmentation algorithm incorporates complex convolutional neural network principles with encoder-decoder architecture \cite{burden2013}
+   \item \textbf{Neural Network Architecture:} The U-Net semantic segmentation algorithm incorporates complex convolutional neural network principles with encoder-decoder architecture~\cite{burden2013}
    \item \textbf{Parallel Computing:} Implementation of multi-threading and pipeline parallelism leverages computer architecture principles
    \item \textbf{Memory Management:} Developing efficient memory allocation strategies based on computer systems principles
    \item \textbf{Real-time Systems:} Balancing processing load to meet strict timing constraints based on real-time systems theory
@@ -100,7 +100,7 @@ We have identified the following key design decisions that are critical to the s
 
 \item \textbf{DPU Access Management}
    \begin{itemize}
-   \item \textbf{Decision:} Implement a fair access scheduling approach that prevents semantic segmentation from 'starving' other algorithms of DPU resources.
+   \item \textbf{Decision:} Implement a fair access scheduling approach that prevents semantic segmentation from `starving' other algorithms of DPU resources.
    \item \textbf{Importance:} The Kria board has four DDR4 memory banks (1GB each), but the single DPU is a shared resource that must be carefully managed. Our approach ensures that while semantic segmentation runs, it doesn't prevent Algorithms 1, 2, and 3 from collecting their required periodic data. This strategy prevents scenarios where the information gathered becomes incorrect due to delayed or missed data collection cycles.
    \end{itemize}
 

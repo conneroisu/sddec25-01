@@ -29,6 +29,7 @@
 \RequirePackage{xcolor}
 \RequirePackage{caption}
 \RequirePackage{subcaption}
+\RequirePackage{booktabs}
 
 % Micro-typography packages for better text formatting
 \RequirePackage{microtype}
