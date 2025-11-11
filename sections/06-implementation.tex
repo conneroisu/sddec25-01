@@ -8,19 +8,19 @@ Our project is currently in active development with significant progress made to
 
 \begin{itemize}
 \item \textbf{Hardware Configuration}: AMD Kria KV260 development board fully configured with necessary peripherals
-\item \textbf{Software Stack}: Vitis-AI development environment installed and operational
+\item \textbf{Software Stack}: Vitis-AI development environment~\cite{amd2023vitis} installed and operational
 \item \textbf{Version Control}: Git repository established with comprehensive documentation
 \item \textbf{Build System}: Docker-based development environment for consistency across team members
 \end{itemize}
 
 \subsection{Algorithm Analysis and Division}\label{subsec:algorithm-analysis}
 
-The U-Net semantic segmentation algorithm has been thoroughly analyzed for parallelization opportunities:
+The U-Net semantic segmentation algorithm has been thoroughly analyzed for parallelization opportunities~\cite{zhao2023parallel}:
 
 \begin{itemize}
 \item \textbf{Architecture Review}: Complete understanding of encoder-decoder structure and skip connections
 \item \textbf{Division Strategy}: Mathematical approach developed for splitting algorithm across multiple cores
-\item \textbf{Accuracy Validation}: Current implementation achieves 98.8\% IoU accuracy, within target range of 99.8\%
+\item \textbf{Accuracy Validation}: Current implementation achieves 98.8\% IoU accuracy, within target range of 99.8\%~\cite{wang2021}
 \item \textbf{Performance Baseline}: Established baseline processing time of 160ms per frame
 \end{itemize}
 
@@ -28,8 +28,8 @@ The U-Net semantic segmentation algorithm has been thoroughly analyzed for paral
 
 \begin{itemize}
 \item \textbf{DPU Access Management}: Round-robin scheduling system designed for fair resource allocation
-\item \textbf{Thread Coordination}: Multi-threading framework implemented for parallel processing
-\item \textbf{Memory Management}: Optimized memory allocation strategy for efficient data flow
+\item \textbf{Thread Coordination}: Multi-threading framework implemented for parallel processing~\cite{park2022thread}
+\item \textbf{Memory Management}: Optimized memory allocation strategy for efficient data flow~\cite{chen2022memory}
 \item \textbf{Synchronization}: Inter-thread communication mechanisms established
 \end{itemize}
 
@@ -109,7 +109,7 @@ Our implementation follows an agile methodology with:
 \subsection{Development Tools}\label{subsec:development-tools}
 
 \begin{itemize}
-\item \textbf{Xilinx Vitis-AI}: Primary development environment for AI acceleration
+\item \textbf{Xilinx Vitis-AI}~\cite{amd2023vitis}: Primary development environment for AI acceleration
 \item \textbf{Docker}: Containerized development environment for consistency
 \item \textbf{GCC/G++}: C++ development with optimization flags for performance
 \item \textbf{Git}: Version control and collaboration platform
@@ -159,7 +159,7 @@ Our implementation follows an agile methodology with:
 
 \begin{itemize}
 \item \textbf{Thread Pool}: Efficient thread creation and management
-\item \textbf{Synchronization}: Mutexes, semaphores, and condition variables for coordination
+\item \textbf{Synchronization}: Mutexes, semaphores, and condition variables for coordination~\cite{park2022thread}
 \item \textbf{Load Balancing}: Dynamic workload distribution across available cores
 \item \textbf{Deadlock Prevention}: Strategies to avoid thread deadlock scenarios
 \end{itemize}

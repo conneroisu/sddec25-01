@@ -20,7 +20,7 @@ Faster response times to potential medical issues, more reliable detection of ey
 \midrule
 Global, cultural, and social &
 The solution respects the values of independence and dignity for people with disabilities while acknowledging the cultural practices around care and assistance. &
-Supports the right to autonomy for people with disabilities, aligns with medical ethics of beneficence, works within existing healthcare frameworks \\
+Supports the right to autonomy for people with disabilities, aligns with medical ethics of beneficence~\cite{beauchamp2007ethics}, works within existing healthcare frameworks \\
 \midrule
 Ecological &
 By optimizing software rather than requiring new hardware, our solution extends the useful life of existing devices and reduces electronic waste. &
@@ -35,10 +35,10 @@ Affordable enhancement to existing assistive technology systems, more efficient 
 
 \subsection{Prior Work and Solutions}\label{subsec:prior-work}
 
-Several approaches have been used to implement semantic segmentation for eye tracking, but most face limitations when deployed on resource-constrained edge devices:
+Several approaches have been used to implement semantic segmentation for eye tracking~\cite{garcia2017review}, but most face limitations when deployed on resource-constrained edge devices:
 
 \begin{enumerate}
-\item \textbf{Wang et al. (2021)} proposed ``EfficientEye: A Lightweight Semantic Segmentation Framework for Eye Tracking'', which achieved good accuracy but still required substantial computational resources. Their approach reduced model size but processing speed remained at approximately 120 ms per frame.
+\item \textbf{Wang et al. (2021)}~\cite{wang2021} proposed ``EfficientEye: A Lightweight Semantic Segmentation Framework for Eye Tracking'', which achieved good accuracy but still required substantial computational resources. Their approach reduced model size but processing speed remained at approximately 120 ms per frame.
 
 \item \textbf{Previous Project Iteration} implemented a standard U-Net architecture on the Kria KV260 board with an accuracy of 99.8\% IoU but could only process a single frame every 160ms, which is insufficient for real-time application needs.
 
@@ -68,7 +68,7 @@ Our project demonstrates significant technical complexity in both its components
 \item \textbf{Multiple Components with Distinct Scientific Principles:}
    \begin{itemize}
    \item \textbf{Neural Network Architecture:} The U-Net semantic segmentation algorithm incorporates complex convolutional neural network principles with encoder-decoder architecture~\cite{burden2013}
-   \item \textbf{Parallel Computing:} Implementation of multi-threading and pipeline parallelism leverages computer architecture principles
+   \item \textbf{Parallel Computing:} Implementation of multi-threading and pipeline parallelism leverages computer architecture principles~\cite{zhao2023parallel}
    \item \textbf{Memory Management:} Developing efficient memory allocation strategies based on computer systems principles
    \item \textbf{Real-time Systems:} Balancing processing load to meet strict timing constraints based on real-time systems theory
    \item \textbf{Resource Scheduling:} Creating optimal DPU sharing mechanisms based on operating systems principles
@@ -177,7 +177,7 @@ Our semantic segmentation optimization system consists of the following key comp
 
 \subsubsection{Hardware Platform}
 \begin{itemize}
-\item \textbf{AMD Kria KV260 Development Board}
+\item \textbf{AMD Kria KV260 Development Board}~\cite{xilinx2022kv260}
   \begin{itemize}
   \item System-on-Module (SoM) with programmable logic
   \item Quad-core ARM processor
@@ -210,7 +210,7 @@ Our semantic segmentation optimization system consists of the following key comp
    \item Provides additional user intent information for the control system
    \end{itemize}
 
-\item \textbf{Thread Management System}
+\item \textbf{Thread Management System}~\cite{park2022thread}
    \begin{itemize}
    \item Coordinates execution across multiple threads
    \item Ensures proper synchronization between pipeline stages
@@ -229,7 +229,7 @@ Our system implements a four-stage processing pipeline:
    \item Preparation for neural network processing
    \end{itemize}
 
-\item \textbf{Parallel Semantic Segmentation}
+\item \textbf{Parallel Semantic Segmentation}~\cite{zhao2023parallel}
    \begin{itemize}
    \item Division of U-Net algorithm across multiple cores
    \item Concurrent processing of four image frames
@@ -253,7 +253,7 @@ Our system implements a four-stage processing pipeline:
 
 \subsubsection{Memory Allocation Strategy}
 \begin{itemize}
-\item \textbf{Distributed Memory Usage:} Utilize all four DDR4 memory banks efficiently
+\item \textbf{Distributed Memory Usage:} Utilize all four DDR4 memory banks efficiently~\cite{chen2022memory}
 \item \textbf{Buffer Management:} Implement circular buffers for smooth data flow
 \item \textbf{Cache Optimization:} Minimize memory transfers between processing stages
 \item \textbf{Thread-Local Storage:} Allocate dedicated memory regions for each processing thread
@@ -318,7 +318,7 @@ The AMD Kria KV260 provides an excellent balance of performance and power effici
 \end{itemize}
 
 \subsection{U-Net Semantic Segmentation Algorithm}
-The U-Net architecture is particularly well-suited for our eye tracking application:
+The U-Net architecture~\cite{ronneberger2015} is particularly well-suited for our eye tracking application:
 
 \begin{itemize}
 \item \textbf{Encoder-Decoder Structure:} Provides both high-level context and detailed localization
@@ -328,7 +328,7 @@ The U-Net architecture is particularly well-suited for our eye tracking applicat
 \end{itemize}
 
 \subsection{Vitis-AI and Vitas-Runtime}
-The Xilinx Vitis-AI development ecosystem provides essential tools for our optimization:
+The Xilinx Vitis-AI development ecosystem~\cite{amd2023vitis} provides essential tools for our optimization:
 
 \begin{itemize}
 \item \textbf{Model Optimization:} Quantization and pruning capabilities for performance improvement
