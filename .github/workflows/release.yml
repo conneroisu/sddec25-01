@@ -61,7 +61,7 @@ jobs:
       - name: Create version.tex file
         run: |
           NEW_VERSION="${{ steps.bump_version.outputs.NEW_VERSION }}"
-          echo "\\newcommand{\\version}{$NEW_VERSION}" > version.tex
+          echo "\\version{$NEW_VERSION}" > version.tex
           cat version.tex
 
       - name: Build PDF with LaTeX
