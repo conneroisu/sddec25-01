@@ -51,3 +51,4 @@ logs
 .bak 
 .mtc
 build/
+*.pdf
