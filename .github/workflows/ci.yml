@@ -36,10 +36,8 @@ jobs:
         uses: j2kun/chktex-action@v2
         with:
           lint-all: true
-        continue-on-error: true
       - name: Typos (reviewdog)
         uses: reviewdog/action-typos@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           reporter: github-pr-review
-        continue-on-error: true
