@@ -13,6 +13,45 @@ Our project is currently in active development with significant progress made to
 \item \textbf{Build System}: Docker-based development environment for consistency across team members
 \end{itemize}
 
+\subsection{Model Training}\label{subsec:model-training}
+
+The U-Net semantic segmentation model training process underwent significant optimization to improve both training efficiency and model performance. The initial training implementation suffered from excessive data transfer overhead between CPU and GPU, resulting in prolonged training times that hindered rapid experimentation and model refinement.
+
+\subsubsection{Training Infrastructure Improvements}
+
+The training pipeline was redesigned using PyTorch~\cite{paszke2019pytorch} with a focus on maximizing GPU utilization and minimizing unnecessary data movement:
+
+\begin{itemize}
+\item \textbf{Batched GPU Operations}: Implemented fully batched training operations that maintain all tensors on GPU memory throughout the forward and backward passes, eliminating redundant CPU-GPU synchronization points
+\item \textbf{Memory-Efficient Data Loading}: Optimized data pipeline using PyTorch's DataLoader with pinned memory and asynchronous data transfer, allowing preprocessing to occur concurrently with GPU computation
+\item \textbf{Mixed Precision Training}: Leveraged automatic mixed precision (AMP) to accelerate training while maintaining numerical stability
+\item \textbf{Gradient Accumulation}: Implemented gradient accumulation to effectively increase batch size without exceeding GPU memory constraints
+\end{itemize}
+
+\subsubsection{Experiment Tracking and Management}
+
+To ensure reproducibility and facilitate systematic hyperparameter optimization, the training infrastructure integrates MLflow~\cite{chen2020mlflow} for comprehensive experiment tracking:
+
+\begin{itemize}
+\item \textbf{Automated Artifact Logging}: All trained models, including checkpoints and final weights, are automatically versioned and stored with associated metadata
+\item \textbf{Training Metrics Tracking}: Real-time logging of training and validation metrics including loss, IoU accuracy, and learning rate schedules
+\item \textbf{Hyperparameter Management}: Systematic recording of all training configurations including batch size, learning rate, optimizer settings, and data augmentation parameters
+\item \textbf{Model Comparison}: Streamlined comparison of different model architectures and training strategies through unified metric visualization
+\end{itemize}
+
+\subsubsection{Performance Results}
+
+The optimized training infrastructure achieved substantial improvements in both training efficiency and model quality:
+
+\begin{itemize}
+\item \textbf{Training Time Reduction}: Reduced full model training time from approximately 12 hours to 50 minutes, representing a 15$\times$ speedup~\cite{jia2014gpu,shallue2019measuring}
+\item \textbf{Model Performance Improvement}: Achieved a 0.01 increase in IoU accuracy compared to the previous training approach, now reaching 99.8\% IoU
+\item \textbf{Iteration Velocity}: Faster training cycles enabled more extensive hyperparameter exploration and architecture refinement
+\item \textbf{Resource Utilization}: Improved GPU utilization from approximately 60\% to over 95\% during training, maximizing hardware investment
+\end{itemize}
+
+These training improvements directly support the project's deployment requirements by enabling rapid model iteration during development while producing higher-quality models for edge deployment on the Kria KV260 board.
+
 \subsection{Algorithm Analysis and Division}\label{subsec:algorithm-analysis}
 
 The U-Net semantic segmentation algorithm has been thoroughly analyzed for parallelization opportunities~\cite{zhao2023parallel}:
