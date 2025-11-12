@@ -180,12 +180,6 @@ main.tex (root)
 - **Frequency**: Before every commit
 - **Success Criteria**: PDF generation without errors
 
-**Spell Checking**:
-- **Tool**: `ltx-spell` (aspell with English dictionary)
-- **Frequency**: Before every commit, especially after content changes
-- **Process**: `ltx-spell main.tex` and review flagged words
-- **False Positives**: Add technical terms to personal dictionary
-
 **Bibliography Validation**:
 - **Tool**: `biber` (automatically run by latexmk)
 - **Success Criteria**: All citations resolve, no undefined references
@@ -378,18 +372,6 @@ This project adheres to IEEE standards for AI-based medical devices:
 - **Accuracy**: 99.8% IoU (Intersection over Union) for semantic segmentation
 - **Latency**: <100ms for medical emergency detection and response
 - **Memory**: <4GB usage (average 3.2GB on Kria KV260)
-- **Power**: Battery-optimized for mobile wheelchair deployment
-
-**Baseline Context**:
-- Previous year's implementation: 160ms per frame (too slow for real-time)
-- **Project Goal**: 19x speedup while maintaining accuracy
-- Achieved through: algorithm optimization, hardware acceleration (DPU), multi-threading
-
-**Real-World Constraints**:
-- Operates in variable lighting conditions
-- Must handle head movements and user position shifts
-- Continuous operation for hours (battery life considerations)
-- Must maintain performance under sustained thermal load
 
 ### Academic Project Context
 

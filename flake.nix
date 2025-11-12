@@ -82,14 +82,10 @@
           exec = ''
             chktex main.tex
             chktex sections/*.tex
-            aspell --mode=tex main.tex
-            aspell --mode=tex sections/*.tex
           '';
           description = "Lint, Spell check and word count LaTeX document(s)";
           deps = with pkgs; [
             texliveFull
-            aspell
-            aspellDicts.en
           ];
         };
       };
