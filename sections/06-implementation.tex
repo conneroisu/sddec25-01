@@ -33,6 +33,72 @@ The U-Net semantic segmentation algorithm has been thoroughly analyzed for paral
 \item \textbf{Synchronization}: Inter-thread communication mechanisms established
 \end{itemize}
 
+\section{Model Training}\label{sec:model-training}
+
+\subsection{Training Infrastructure}\label{subsec:training-infrastructure}
+
+The U-Net semantic segmentation model training process underwent significant optimization to improve both training efficiency and model performance. Our enhanced training infrastructure leverages GPU acceleration through PyTorch~\cite{pytorch2023} with carefully designed batched operations and optimized data flow patterns.
+
+\subsection{GPU-Optimized Training Pipeline}\label{subsec:gpu-optimized-training}
+
+The training implementation prioritizes GPU-native operations to minimize the performance overhead traditionally associated with CPU-GPU data transfers. Key optimizations include:
+
+\begin{itemize}
+\item \textbf{Batched Operations}: All training operations utilize batched GPU kernels, eliminating the need for sequential per-sample processing
+\item \textbf{In-GPU Metrics Calculation}: Performance metrics (IoU, loss, accuracy) are computed directly within GPU kernels rather than transferring data to CPU for calculation~\cite{elvinger2025gpu}
+\item \textbf{Minimized CPU-GPU Transfers}: Data pipeline designed to keep tensors on GPU throughout forward pass, backward pass, and metric computation
+\item \textbf{Optimized Memory Management}: Careful buffer allocation to prevent unnecessary memory copies between device and host
+\end{itemize}
+
+\subsection{Training Performance Improvements}\label{subsec:training-performance}
+
+The optimized PyTorch training script achieved remarkable performance improvements over the previous training implementation:
+
+\begin{itemize}
+\item \textbf{Training Time Reduction}: Complete model training reduced from approximately 12 hours to 50 minutes, representing a 15x speedup
+\item \textbf{Model Performance}: Achieved 0.01 increase in IoU accuracy (from 98.8\% to 99.8\%)
+\item \textbf{Resource Utilization}: Improved GPU utilization through elimination of idle time during CPU-GPU synchronization
+\item \textbf{Convergence Stability}: Batched operations provide more stable gradient estimates, leading to faster convergence
+\end{itemize}
+
+The dramatic speedup is primarily attributed to eliminating excessive CPU-GPU round trips that characterized the previous training approach. By maintaining all computation within GPU kernels and computing metrics device-side, the training pipeline achieves near-optimal GPU utilization.
+
+\subsection{Experiment Tracking and Artifact Management}\label{subsec:experiment-tracking}
+
+Training experiments are tracked using MLflow~\cite{mlflow2023}, providing comprehensive logging of training artifacts and performance metrics:
+
+\begin{itemize}
+\item \textbf{Hyperparameter Logging}: Automatic tracking of learning rate, batch size, optimizer configuration, and model architecture parameters
+\item \textbf{Training Metrics}: Real-time logging of loss curves, IoU scores, and accuracy metrics across training epochs
+\item \textbf{Model Artifacts}: Versioned storage of trained model weights, optimizer states, and training checkpoints
+\item \textbf{Performance Profiling}: Recording of GPU memory usage, training throughput, and computational efficiency metrics
+\item \textbf{Reproducibility}: Complete environment and dependency tracking for reproducible training runs
+\end{itemize}
+
+\subsection{GPU Metrics Methodology}\label{subsec:gpu-metrics-methodology}
+
+Following best practices for GPU performance measurement~\cite{elvinger2025gpu}, our training implementation computes all performance metrics directly within GPU kernels rather than relying on CPU-side calculations. This approach provides several advantages:
+
+\begin{itemize}
+\item \textbf{Fine-Grained Profiling}: Access to device-level performance counters including instruction throughput (IPC), streaming multiprocessor (SM) utilization, and memory bandwidth usage
+\item \textbf{Reduced Synchronization Overhead}: Eliminating host-device synchronization points that would otherwise stall the GPU pipeline
+\item \textbf{Accurate Resource Measurement}: Direct measurement of kernel-level resource interference and L1/L2 cache utilization
+\item \textbf{Real-Time Monitoring}: Continuous performance tracking without impacting training throughput
+\end{itemize}
+
+The methodology aligns with recent research demonstrating that conventional ``GPU utilization'' metrics measured from the CPU side are insufficient for understanding true GPU resource usage~\cite{elvinger2025gpu}. By measuring performance at the kernel level using device-side counters, we achieve more accurate characterization of computational efficiency and identify optimization opportunities that would be invisible to host-side profiling tools.
+
+\subsection{Training Dataset and Validation}\label{subsec:training-dataset}
+
+The model training process utilizes a comprehensive eye-tracking dataset with careful attention to data quality and validation:
+
+\begin{itemize}
+\item \textbf{Dataset Split}: 80\% training, 20\% validation following standard practices
+\item \textbf{Data Augmentation}: Real-time augmentation on GPU including rotation, scaling, and brightness variations
+\item \textbf{Quality Validation}: Automated verification of annotation quality and dataset consistency
+\item \textbf{Cross-Validation}: Multiple training runs with different random seeds to ensure model robustness
+\end{itemize}
+
 \section{Implementation Challenges}\label{subsec:implementation-challenges}
 
 \subsection{Technical Challenges}\label{subsec:technical-challenges}
