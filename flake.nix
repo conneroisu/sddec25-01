@@ -67,25 +67,6 @@
           description = "Watch and auto-compile LaTeX document";
           deps = with pkgs; [texliveFull];
         };
-        ltx-clean = {
-          exec = ''
-            latexmk -c "''${1:-.}"
-            echo "Cleaned auxiliary files"
-          '';
-          description = "Clean LaTeX auxiliary files";
-          deps = with pkgs; [texliveFull];
-        };
-        ltx-spell = {
-          exec = ''
-            if [ -z "$1" ]; then
-              echo "Usage: ltx-spell <file.tex>"
-              exit 1
-            fi
-            aspell --mode=tex --lang=en check "$1"
-          '';
-          description = "Spell check LaTeX document";
-          deps = with pkgs; [aspell aspellDicts.en];
-        };
         ltx-wordcount = {
           exec = ''
             if [ -z "$1" ]; then
@@ -96,6 +77,16 @@
           '';
           description = "Count words in LaTeX document";
           deps = with pkgs; [texliveFull];
+        };
+        lint = {
+          exec = ''
+            chktex main.tex
+            chktex sections/*.tex
+          '';
+          description = "Lint LaTeX document(s)";
+          deps = with pkgs; [
+            texliveFull
+          ];
         };
       };
 
@@ -148,15 +139,16 @@
             pandoc # Document conversion (Markdown ↔ LaTeX)
             ghostscript # PostScript/PDF manipulation
             poppler_utils # PDF utilities (pdfinfo, pdftotext, etc.)
-            # Make and build tools
             watchexec # File watcher alternative to latexmk -pvc
           ]
           ++ builtins.attrValues scriptPackages
           ++ preCommitCheck.enabledPackages;
 
-        shellHook = preCommitCheck.shellHook + ''
-          echo "🎓 LaTeX Development Environment 🎓"
-        '';
+        shellHook =
+          preCommitCheck.shellHook
+          + ''
+            echo "🎓 LaTeX Development Environment 🎓"
+          '';
       };
 
       formatter = treefmt-nix.lib.mkWrapper pkgs treefmtModule;
