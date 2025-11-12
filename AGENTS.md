@@ -1,8 +1,4 @@
-
 .
-├── AGENTS.md
-├── build.sh
-├── CLAUDE.md
 ├── documents
 │   ├── DesignDocSemester1.pdf
 │   ├── EngineeringStandards.pdf
