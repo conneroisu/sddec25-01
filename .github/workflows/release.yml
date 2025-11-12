@@ -83,7 +83,7 @@ jobs:
 
       - name: Create GitHub Release
         env:
-          GH_TOKEN: ${{ secrets.BOT_PAT }} # make gh use the PAT too
+          GH_TOKEN: ${{ secrets.BOT_PAT }} # Make gh use the PAT too
         run: |
           echo "## Changes" > release_notes.md
           echo "" >> release_notes.md
