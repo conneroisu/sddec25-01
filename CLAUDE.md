@@ -398,22 +398,6 @@ This project adheres to IEEE standards for AI-based medical devices:
 - **Course**: Senior Design (SDDEC25-01)
 - **Methodology**: Hybrid Waterfall + Agile with sprint-based development
 
-**Deliverables**:
-- Weekly status reports (8 per semester)
-- Design document (comprehensive technical design)
-- Testing strategy document
-- User testing plan
-- Lightning talk presentation
-- Engineering standards compliance document
-- Final project demonstration
-
-**Evaluation Criteria**:
-- Technical complexity and innovation
-- Requirements fulfillment
-- Documentation quality and completeness
-- Testing rigor and validation
-- Team collaboration and communication
-
 ### Scope Constraints
 
 **Documentation Repository Limitations**:
