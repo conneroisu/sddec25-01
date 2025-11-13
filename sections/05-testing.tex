@@ -13,9 +13,9 @@ Testing is key to our Semantic Segmentation project. We need to make sure our sy
 We test early and often. This helps us catch problems quickly and fix them before they get worse. For our project, this means:
 
 \begin{itemize}
-\item Testing each part of the divided U-Net algorithm as we create it
-\item Checking memory use before building the full system
-\item Testing how we share DPU resources as we develop
+\item Testing each pipeline stage and the U-Net algorithm components as we create them
+\item Checking memory use and buffer management before building the full system
+\item Testing how we schedule sequential DPU access as we develop
 \end{itemize}
 
 \subsection{Testing Challenges}\label{subsec:testing-challenges}
@@ -24,9 +24,9 @@ Our project has some tough testing challenges:
 
 \begin{itemize}
 \item Testing on FPGA hardware is different from normal software testing
-\item Making sure our parallel threads work together correctly
+\item Making sure our pipelined threads and sequential DPU scheduling work together correctly
 \item Balancing speed and accuracy
-\item Checking that memory is used correctly
+\item Checking that memory is used correctly for pipelined data flow
 \end{itemize}
 
 \subsection{Testing Schedule}\label{subsec:testing-schedule}

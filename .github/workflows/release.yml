@@ -56,11 +56,25 @@ jobs:
 
           # Increment patch version
           NEW_PATCH=$((PATCH + 1))
-          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
-
+          NEW_MINOR=$MINOR
+          NEW_MAJOR=$MAJOR
+ 
+          # Check for overflow: if patch reaches 10, increment minor and reset patch
+          if [ $NEW_PATCH -ge 10 ]; then
+            NEW_MINOR=$((MINOR + 1))
+            NEW_PATCH=0
+ 
+            # Check for overflow: if minor reaches 10, increment major and reset minor
+            if [ $NEW_MINOR -ge 10 ]; then
+              NEW_MAJOR=$((MAJOR + 1))
+              NEW_MINOR=0
+            fi
+          fi
+ 
+          NEW_VERSION="$NEW_MAJOR.$NEW_MINOR.$NEW_PATCH"
+          # Export NEW_VERSION to GITHUB_OUTPUT for use in later steps
           echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "New version: $NEW_VERSION"
-
           # Update VERSION file
           echo "$NEW_VERSION" > VERSION
 

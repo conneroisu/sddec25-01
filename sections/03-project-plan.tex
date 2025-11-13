@@ -5,9 +5,9 @@
 Our team has adopted a hybrid Waterfall + Agile project management approach for this project. This methodology provides us with both the structured framework of Waterfall for critical path activities and the flexibility of Agile for iterative development and testing. This hybrid approach is particularly well-suited for this project because:
 
 \begin{enumerate}
-\item The semantic segmentation optimization has clearly defined phases (mathematical division, implementation, testing) that benefit from Waterfall planning
-\item The technical nature of implementing parallelism and optimizing algorithms requires adaptive iterations that benefit from Agile sprints
-\item Working with specialized hardware (Kria Board KV260) requires careful planning of resource allocation and access
+\item The semantic segmentation optimization has clearly defined phases (pipeline architecture design, implementation, testing) that benefit from Waterfall planning
+\item The technical nature of implementing pipelined processing, DPU scheduling, and optimizing algorithms requires adaptive iterations that benefit from Agile sprints
+\item Working with specialized hardware (Kria Board KV260) requires careful planning of resource allocation and sequential DPU access scheduling
 \end{enumerate}
 
 For project tracking, the team will utilize the following tools:
@@ -22,7 +22,7 @@ Weekly team meetings will be held to review sprint progress, address blockers, a
 
 \section{Task Decomposition}\label{sec:task-decomposition}
 
-Our project involves optimizing the semantic segmentation U-Net algorithm by implementing parallelism across multiple cores and the MPU\@. The key objective is to increase throughput from 160 ms per frame to 33.2\ ms across 4 frames\@. The following tasks and subtasks have been identified:
+Our project involves optimizing the semantic segmentation U-Net algorithm by implementing a pipelined architecture that leverages multi-threaded CPU processing alongside sequential DPU execution\@. The key objective is to increase system throughput from 160 ms per frame to approximately 8.3\ ms per frame average (33.2\ ms total for 4 frames in the pipeline)\@. The following tasks and subtasks have been identified:
 
 \subsection{Task 1: Algorithm Performance Optimization}
 \begin{itemize}
@@ -77,25 +77,25 @@ These tasks will be further broken down into sprint activities with specific tea
 
 The following key milestones have been identified for the project, along with their associated metrics and evaluation criteria:
 
-\subsection{Milestone 1: Mathematical Division of the Algorithm}
+\subsection{Milestone 1: Pipeline Architecture Design}
 \begin{itemize}
 \item \textbf{Completion Date}: Week 8
-\item \textbf{Metrics}: Validated mathematical approach for dividing U-Net algorithm
-\item \textbf{Evaluation Criteria}: Division maintains output accuracy equivalent to original algorithm
+\item \textbf{Metrics}: Validated pipelined architecture design with CPU preprocessing/postprocessing and sequential DPU inference
+\item \textbf{Evaluation Criteria}: Architecture design maintains output accuracy equivalent to original algorithm
 \end{itemize}
 
-\subsection{Milestone 2: Loading of Split Algorithm Weights onto MPU}
+\subsection{Milestone 2: DPU Model Deployment and Memory Optimization}
 \begin{itemize}
 \item \textbf{Completion Date}: Week 12
-\item \textbf{Metrics}: Successful loading of model segments into appropriate memory locations
-\item \textbf{Evaluation Criteria}: Each model segment loads correctly with optimal memory utilization (<90\% of allocated memory)
+\item \textbf{Metrics}: Successful loading of U-Net xmodel onto DPU with optimized memory allocation for pipelined data flow
+\item \textbf{Evaluation Criteria}: Model loads correctly with optimal memory utilization (<90\% of allocated memory) supporting efficient buffer management
 \end{itemize}
 
 \subsection{Milestone 3: Thread Testing with Matrix Operations}
 \begin{itemize}
 \item \textbf{Completion Date}: Week 16
-\item \textbf{Metrics}: Successful parallel operation of multiple threads
-\item \textbf{Evaluation Criteria}: All threads operate concurrently without memory conflicts
+\item \textbf{Metrics}: Successful multi-threaded operation for CPU-based preprocessing and postprocessing
+\item \textbf{Evaluation Criteria}: All CPU threads operate correctly with proper synchronization and without memory conflicts
 \end{itemize}
 
 \subsection{Milestone 4: Docker Environment Configuration}
@@ -108,8 +108,8 @@ The following key milestones have been identified for the project, along with th
 \subsection{Milestone 5: Pipelined Implementation of Semantic Segmentation}
 \begin{itemize}
 \item \textbf{Completion Date}: Week 16
-\item \textbf{Metrics}: Functional parallelized semantic segmentation algorithm
-\item \textbf{Evaluation Criteria}: Algorithm processes multiple frames concurrently with accuracy equal to or greater than original implementation (99.8\% accuracy)
+\item \textbf{Metrics}: Functional pipelined semantic segmentation system with optimized throughput
+\item \textbf{Evaluation Criteria}: System achieves efficient pipelined processing of multiple frames with accuracy equal to or greater than original implementation (99.8\% accuracy)
 \end{itemize}
 
 \subsection{Milestone 6: Increased Throughput Demonstration}
@@ -199,15 +199,16 @@ The critical path for this project follows the mathematical division of the algo
   \end{itemize}
 \end{itemize}
 
-\subsection{Risk 5: Parallelism Implementation Challenges}
+\subsection{Risk 5: Pipeline and DPU Scheduling Implementation Challenges}
 \begin{itemize}
 \item \textbf{Probability}: 40\%
 \item \textbf{Severity}: High
 \item \textbf{Mitigation Strategies}:
   \begin{itemize}
-  \item Employ effective parallel programming paradigms
-  \item Utilize synchronization primitives to avoid resource contention
-  \item Profile and optimize critical code sections to maximize performance
+  \item Design efficient DPU scheduling system to maximize utilization while the DPU processes one inference at a time
+  \item Employ effective multi-threading paradigms for CPU-based preprocessing and postprocessing
+  \item Utilize synchronization primitives to coordinate between pipeline stages and avoid resource contention
+  \item Profile and optimize critical code sections to maximize overall throughput
   \end{itemize}
 \end{itemize}
 

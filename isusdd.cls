@@ -37,12 +37,12 @@
 
 % Page geometry
 \geometry{
-    letterpaper,
-    top=1in,
-    bottom=1in,
-    left=1in,
-    right=1in,
-    headheight=15pt
+	letterpaper,
+	top=1in,
+	bottom=1in,
+	left=1in,
+	right=1in,
+	headheight=15pt
 }
 
 % Line spacing
@@ -54,9 +54,9 @@
 
 % Micro-typography settings
 \microtypecontext{
-    protrusion=true,
-    expansion=true,
-    tracking=true
+	protrusion=true,
+	expansion=true,
+	tracking=true
 }
 
 % Reduce tolerance to prevent overfull boxes
@@ -102,9 +102,6 @@
 \newcommand{\@department}{}
 \newcommand{\department}[1]{\renewcommand{\@department}{#1}}
 
-\newcommand{\@course}{}
-\newcommand{\course}[1]{\renewcommand{\@course}{#1}}
-
 \newcommand{\@semester}{}
 \newcommand{\semester}[1]{\renewcommand{\@semester}{#1}}
 
@@ -128,62 +125,59 @@
 
 % Custom title page
 \renewcommand{\maketitle}{
-    \begin{titlepage}
-        \centering
-        \vspace*{1cm}
+	\begin{titlepage}
+		\centering
+		\vspace*{1cm}
 
-        {\Large\textbf{\@institution}\\}
-        \vspace{0.5cm}
-        {\large\@department\\}
-        \vspace{1.5cm}
+		{\Large\textbf{\@institution}\\}
+		\vspace{0.5cm}
+		{\large\@department\\}
+		\vspace{1.5cm}
 
-        {\Large\textbf{\@course}\\}
-        \vspace{2cm}
+		{\huge\bfseries\@title\\}
+		\vspace{2cm}
 
-        {\huge\bfseries\@title\\}
-        \vspace{2cm}
+		{\Large\@teamname\\}
+		\vspace{0.5cm}
+		{\large\@teammembers\\}
+		\vspace{2cm}
 
-        {\Large\@teamname\\}
-        \vspace{0.5cm}
-        {\large\@teammembers\\}
-        \vspace{2cm}
+		\vfill
 
-        \vfill
+		{\large\@location\\}
+		{\large\@semester\\}
+		\vspace{1cm}
 
-        {\large\@location\\}
-        {\large\@semester\\}
-        \vspace{1cm}
-
-    \end{titlepage}
+	\end{titlepage}
 }
 
 % Executive Summary environment (renamed from abstract to avoid conflict)
 \renewenvironment{abstract}{
-    \cleardoublepage
-    \chapter*{Executive Summary}
-    \addcontentsline{toc}{chapter}{Executive Summary}
+	\cleardoublepage
+	\chapter*{Executive Summary}
+	\addcontentsline{toc}{chapter}{Executive Summary}
 }{
-    \cleardoublepage
+	\cleardoublepage
 }
 
 % Keywords command
 \newcommand{\keywords}[1]{
-    \vspace{1em}
-    \noindent\textbf{Keywords}: #1
+	\vspace{1em}
+	\noindent\textbf{Keywords}: #1
 }
 
 % Chapter formatting
 \titleformat{\chapter}[display]
-    {\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+{\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
 \titlespacing*{\chapter}{0pt}{50pt}{40pt}
 
 % Section formatting
 \titleformat{\section}
-    {\normalfont\Large\bfseries}{\thesection}{1em}{}
+{\normalfont\Large\bfseries}{\thesection}{1em}{}
 \titleformat{\subsection}
-    {\normalfont\large\bfseries}{\thesubsection}{1em}{}
+{\normalfont\large\bfseries}{\thesubsection}{1em}{}
 \titleformat{\subsubsection}
-    {\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
+{\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
 
 % Header and footer
 \pagestyle{fancy}
@@ -196,10 +190,10 @@
 
 % Plain style for chapter pages
 \fancypagestyle{plain}{
-    \fancyhf{}
-    \fancyfoot[C]{\ifx\@version\@empty\else Version \@version\ |\ \fi Page \thepage}
-    \renewcommand{\headrulewidth}{0pt}
-    \renewcommand{\footrulewidth}{0.4pt}
+	\fancyhf{}
+	\fancyfoot[C]{\ifx\@version\@empty\else Version \@version\ |\ \fi Page \thepage}
+	\renewcommand{\headrulewidth}{0pt}
+	\renewcommand{\footrulewidth}{0.4pt}
 }
 
 % Table of contents formatting
@@ -209,34 +203,34 @@
 
 % Hyperref setup
 \hypersetup{
-    colorlinks=true,
-    linkcolor=black,
-    citecolor=blue,
-    filecolor=magenta,
-    urlcolor=blue,
-    pdftitle={\@title},
-    pdfauthor={\@teamname}
+	colorlinks=true,
+	linkcolor=black,
+	citecolor=blue,
+	filecolor=magenta,
+	urlcolor=blue,
+	pdftitle={\@title},
+	pdfauthor={\@teamname}
 }
 
 % Code listing style
 \lstdefinestyle{codestyle}{
-    backgroundcolor=\color{gray!10},
-    commentstyle=\color{green!50!black},
-    keywordstyle=\color{blue},
-    numberstyle=\tiny\color{gray},
-    stringstyle=\color{red!60!black},
-    basicstyle=\ttfamily\small,
-    breakatwhitespace=false,
-    breaklines=true,
-    captionpos=b,
-    keepspaces=true,
-    numbers=left,
-    numbersep=5pt,
-    showspaces=false,
-    showstringspaces=false,
-    showtabs=false,
-    tabsize=2,
-    frame=single
+	backgroundcolor=\color{gray!10},
+	commentstyle=\color{green!50!black},
+	keywordstyle=\color{blue},
+	numberstyle=\tiny\color{gray},
+	stringstyle=\color{red!60!black},
+	basicstyle=\ttfamily\small,
+	breakatwhitespace=false,
+	breaklines=true,
+	captionpos=b,
+	keepspaces=true,
+	numbers=left,
+	numbersep=5pt,
+	showspaces=false,
+	showstringspaces=false,
+	showtabs=false,
+	tabsize=2,
+	frame=single
 }
 \lstset{style=codestyle}
 

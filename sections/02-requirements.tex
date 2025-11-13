@@ -5,23 +5,23 @@
 \subsection{Functional Requirements}\label{subsec:functional-requirements}
 
 \begin{enumerate}
-\item \textbf{Algorithm Splitting and Pipelining:}
+\item \textbf{Algorithm Optimization and Pipelining:}
    \begin{itemize}
-   \item Split the U-Net semantic segmentation algorithm into four equal parts to enable parallel processing across multiple cores.
-   \item Implement a pipelined architecture to allow concurrent execution of the split U-Net segments and other algorithms (e.g., image preprocessing, blink detection, eye tracking).
-   \item Ensure the pipeline maintains data consistency and synchronization between stages.
+   \item Optimize the U-Net semantic segmentation algorithm to enable efficient pipelined processing with CPU-based preprocessing and postprocessing stages.
+   \item Implement a pipelined architecture where CPU threads handle data preparation while the DPU executes sequential neural network inference, maximizing overall system throughput.
+   \item Ensure the pipeline maintains data consistency and synchronization between stages, with proper scheduling to share the DPU sequentially among semantic segmentation and other algorithms (e.g., blink detection, eye tracking).
    \end{itemize}
 
 \item \textbf{System Throughput:}
    \begin{itemize}
-   \item Achieve a system throughput of less than 33.2 ms per frame when processing four frames concurrently.
+   \item Achieve a system throughput of less than 33.2 ms total for processing four frames through the pipelined architecture (approximately 8.3 ms per frame average).
    \item Ensure real-time processing capabilities are maintained for the assistive wheelchair application.
    \end{itemize}
 
 \item \textbf{Resource Efficiency:}
    \begin{itemize}
-   \item Optimize memory and FPGA resource usage to accommodate the additional overhead of pipelining and parallel execution.
-   \item Ensure efficient sharing of the DPU between the split U-Net segments and other algorithms.
+   \item Optimize memory and FPGA resource usage to accommodate the additional overhead of pipelined execution and multi-threaded CPU processing.
+   \item Ensure efficient sequential scheduling of the DPU among semantic segmentation and other algorithms, as the DPU can only execute one xmodel inference at a time.
    \end{itemize}
 
 \item \textbf{Error Handling in Pipeline:}
@@ -90,7 +90,7 @@
 
 \item \textbf{DPU Utilization:}
    \begin{itemize}
-   \item Develop a scheduling strategy to allow the DPU to be shared between blink detection and eye-tracking submodules without causing bottlenecks.
+   \item Develop a sequential scheduling strategy for DPU access, as the DPU can only execute one xmodel inference at a time. The scheduler must efficiently coordinate between blink detection and eye-tracking submodules without causing bottlenecks.
    \end{itemize}
 \end{enumerate}
 

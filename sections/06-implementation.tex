@@ -15,11 +15,11 @@ Our project is currently in active development with significant progress made to
 
 \subsection{Algorithm Analysis and Division}\label{subsec:algorithm-analysis}
 
-The U-Net semantic segmentation algorithm has been thoroughly analyzed for parallelization opportunities~\cite{zhao2023parallel}:
+The U-Net semantic segmentation algorithm has been thoroughly analyzed for pipelined processing optimization~\cite{zhao2023parallel}:
 
 \begin{itemize}
 \item \textbf{Architecture Review}: Complete understanding of encoder-decoder structure and skip connections
-\item \textbf{Division Strategy}: Mathematical approach developed for splitting algorithm across multiple cores
+\item \textbf{Pipeline Strategy}: Architectural approach developed for efficient pipelined processing with CPU preprocessing/postprocessing and sequential DPU inference
 \item \textbf{Accuracy Validation}: Current implementation achieves 98.8\% IoU accuracy, within target range of 99.8\%~\cite{wang2021}
 \item \textbf{Performance Baseline}: Established baseline processing time of 160ms per frame
 \end{itemize}
@@ -27,10 +27,10 @@ The U-Net semantic segmentation algorithm has been thoroughly analyzed for paral
 \subsection{Resource Scheduling Implementation}\label{subsec:scheduling-implementation}
 
 \begin{itemize}
-\item \textbf{DPU Access Management}: Round-robin scheduling system designed for fair resource allocation
-\item \textbf{Thread Coordination}: Multi-threading framework implemented for parallel processing~\cite{park2022thread}
-\item \textbf{Memory Management}: Optimized memory allocation strategy for efficient data flow~\cite{chen2022memory}
-\item \textbf{Synchronization}: Inter-thread communication mechanisms established
+\item \textbf{DPU Access Management}: Sequential scheduling system (round-robin) designed for fair DPU access allocation, recognizing that the DPU can only execute one xmodel inference at a time
+\item \textbf{Thread Coordination}: Multi-threading framework implemented for CPU-based preprocessing and postprocessing~\cite{park2022thread}
+\item \textbf{Memory Management}: Optimized memory allocation strategy for efficient pipelined data flow~\cite{chen2022memory}
+\item \textbf{Synchronization}: Inter-thread communication mechanisms established for pipeline stage coordination
 \end{itemize}
 
 \section{Model Training}\label{sec:model-training}
@@ -104,10 +104,10 @@ The model training process utilizes a comprehensive eye-tracking dataset with ca
 \subsection{Technical Challenges}\label{subsec:technical-challenges}
 
 \begin{itemize}
-\item \textbf{Memory Constraints}: Working within 4GB DDR memory limitations while supporting multiple concurrent algorithms
-\item \textbf{Thread Synchronization}: Ensuring proper coordination between parallel processing threads without deadlocks or race conditions
-\item \textbf{DPU Resource Sharing}: Balancing semantic segmentation requirements with periodic data collection needs of auxiliary algorithms
-\item \textbf{Performance Optimization}: Achieving target throughput of 33.2ms for 4 concurrent frames
+\item \textbf{Memory Constraints}: Working within 4GB DDR memory limitations while supporting pipelined processing across multiple algorithms
+\item \textbf{Thread Synchronization}: Ensuring proper coordination between pipeline processing threads without deadlocks or race conditions
+\item \textbf{Sequential DPU Scheduling}: Efficiently scheduling the single DPU (which can only execute one xmodel inference at a time) to balance semantic segmentation requirements with periodic data collection needs of auxiliary algorithms
+\item \textbf{Performance Optimization}: Achieving target pipelined throughput of 8.3ms average per frame (33.2ms total for 4 frames)
 \end{itemize}
 
 \subsection{Development Challenges}\label{subsec:development-challenges}
@@ -115,8 +115,8 @@ The model training process utilizes a comprehensive eye-tracking dataset with ca
 \begin{itemize}
 \item \textbf{FPGA Development Complexity}: Learning curve associated with Vitis-AI and hardware acceleration development
 \item \textbf{Testing on Embedded Hardware}: Limited debugging tools compared to traditional software development environments
-\item \textbf{Integration Complexity}: Coordinating multiple algorithm implementations with shared resources
-\item \textbf{Performance Profiling}: Identifying bottlenecks in parallel processing pipeline
+\item \textbf{Integration Complexity}: Coordinating multiple algorithm implementations with sequential DPU access scheduling
+\item \textbf{Performance Profiling}: Identifying bottlenecks in pipelined processing architecture
 \end{itemize}
 
 \section{Future Implementation Plans}\label{subsec:future-implementation}
@@ -124,18 +124,18 @@ The model training process utilizes a comprehensive eye-tracking dataset with ca
 \subsection{Short-term Goals (Next 4 weeks)}\label{subsec:short-term-goals}
 
 \begin{itemize}
-\item Complete implementation of divided U-Net algorithm across multiple cores
-\item Optimize DPU scheduling system for maximum throughput
+\item Complete implementation of pipelined U-Net processing with CPU preprocessing/postprocessing and sequential DPU inference
+\item Optimize sequential DPU scheduling system for maximum throughput
 \item Implement comprehensive testing framework
-\item Validate accuracy maintenance across algorithm modifications
+\item Validate accuracy maintenance across pipelined implementation
 \end{itemize}
 
 \subsection{Medium-term Goals (Next 8 weeks)}\label{subsec:medium-term-goals}
 
 \begin{itemize}
-\item Achieve target performance of 33.2ms processing time for 4 concurrent frames
-\item Complete integration testing with all auxiliary algorithms
-\item Optimize memory usage and buffer management
+\item Achieve target pipelined performance of 8.3ms average per frame (33.2ms total for 4 frames)
+\item Complete integration testing with all auxiliary algorithms and sequential DPU scheduling
+\item Optimize memory usage and buffer management for pipelined data flow
 \item Implement robust error handling and recovery mechanisms
 \end{itemize}
 
