@@ -2,7 +2,7 @@
 
 \section{Testing Strategy Overview}\label{sec:testing-overview}
 
-Testing is key to our Semantic Segmentation project. We need to make sure our system meets our goals of fast processing (<16.6ms between frames) while keeping good accuracy (99.8\%).
+Testing was essential for the Semantic Segmentation system. Comprehensive validation ensured that the system met critical performance objectives: fast processing (<16.6ms between frames) and high accuracy (99.8\%).
 
 \begin{quote}
 \textit{Note: Numerical values are representative placeholders due to NDA restrictions.}
@@ -10,23 +10,23 @@ Testing is key to our Semantic Segmentation project. We need to make sure our sy
 
 \subsection{Testing Philosophy}\label{subsec:testing-philosophy}
 
-We test early and often. This helps us catch problems quickly and fix them before they get worse. For our project, this means:
+Early and continuous testing enabled rapid detection and resolution of issues before they compounded. This methodology involved:
 
 \begin{itemize}
-\item Testing each pipeline stage and the U-Net algorithm components as we create them
+\item Testing each pipeline stage and the U-Net algorithm components as they were created
 \item Checking memory use and buffer management before building the full system
-\item Testing how we schedule sequential DPU access as we develop
+\item Testing how sequential DPU access was scheduled during development
 \end{itemize}
 
 \subsection{Testing Challenges}\label{subsec:testing-challenges}
 
-Our project has some tough testing challenges:
+The project encountered several significant testing challenges:
 
 \begin{itemize}
-\item Testing on FPGA hardware is different from normal software testing
-\item Making sure our pipelined threads and sequential DPU scheduling work together correctly
+\item Testing on FPGA hardware was different from normal software testing
+\item Ensuring pipelined threads and sequential DPU scheduling worked together correctly
 \item Balancing speed and accuracy
-\item Checking that memory is used correctly for pipelined data flow
+\item Verifying that memory was used correctly for pipelined data flow
 \end{itemize}
 
 \subsection{Testing Schedule}\label{subsec:testing-schedule}
@@ -83,31 +83,31 @@ Our project has some tough testing challenges:
 \item \textbf{Between Algorithms and Scheduler:}
    \begin{itemize}
    \item Verification of request handling under varying load conditions and priorities
-   \item Validation of preemption mechanisms when periodic collection deadlines approach
-   \item Confirmation that all algorithms receive their guaranteed resource allocation minimums
+   \item Validation of preemption mechanisms when periodic collection deadlines approached
+   \item Confirmation that all algorithms received their guaranteed resource allocation minimums
    \item Analysis of scheduling fairness across extended operational periods
    \end{itemize}
 
 \item \textbf{Between Semantic Segmentation and DPU:}
    \begin{itemize}
    \item Detailed profiling of resource utilization patterns during algorithm execution
-   \item Verification that feature map integrity is maintained despite scheduled access
+   \item Verification that feature map integrity was maintained despite scheduled access
    \item Measurement of context switching overhead to ensure minimal performance impact
-   \item Confirmation that unified algorithm behavior remains consistent
+   \item Confirmation that unified algorithm behavior remained consistent
    \end{itemize}
 
 \item \textbf{Memory Management:}
    \begin{itemize}
-   \item Test how each algorithm accesses its assigned memory
-   \item Verify that memory access patterns are efficient and minimize contention
-   \item Validate that shared memory regions are properly protected
+   \item Testing how each algorithm accessed its assigned memory
+   \item Verifying that memory access patterns were efficient and minimized contention
+   \item Validating that shared memory regions were properly protected
    \end{itemize}
 
 \item \textbf{Thread Coordination:}
    \begin{itemize}
-   \item Test how the scheduler manages resource allocation
-   \item Verify that priority escalation works properly for deadline-sensitive operations
-   \item Validate synchronization between algorithms with interdependencies
+   \item Testing how the scheduler managed resource allocation
+   \item Verifying that priority escalation worked properly for deadline-sensitive operations
+   \item Validating synchronization between algorithms with interdependencies
    \end{itemize}
 \end{enumerate}
 
@@ -116,23 +116,23 @@ Our project has some tough testing challenges:
 \begin{enumerate}
 \item \textbf{Data Processing Validation:}
    \begin{itemize}
-   \item \textbf{Purpose}: Ensure accurate image processing under various operating conditions
+   \item \textbf{Purpose}: Ensured accurate image processing under various operating conditions
    \item \textbf{Expected outcome}: Consistent processing quality matching baseline performance
    \item \textbf{Validation method}: Comparison against established accuracy metrics
    \end{itemize}
 
 \item \textbf{Resource Management Validation:}
    \begin{itemize}
-   \item \textbf{Purpose}: Verify system stability under concurrent processing demands
+   \item \textbf{Purpose}: Verified system stability under concurrent processing demands
    \item \textbf{Expected outcome}: Reliable operation without resource conflicts
    \item \textbf{Validation method}: Performance monitoring during multi-algorithm execution
    \end{itemize}
 
 \item \textbf{Periodic Collection Test:}
    \begin{itemize}
-   \item \textbf{What we do}: Run system under load with varying periodic collection requirements
-   \item \textbf{What should happen}: All algorithms meet their collection deadlines
-   \item \textbf{How we check}: Log collection times and verify against requirements
+   \item \textbf{Procedure}: System was executed under load with varying periodic collection requirements
+   \item \textbf{Expected Outcome}: All algorithms met their collection deadlines
+   \item \textbf{Validation Method}: Collection times were logged and verified against specified requirements
    \end{itemize}
 \end{enumerate}
 
@@ -143,36 +143,28 @@ Our project has some tough testing challenges:
 \begin{enumerate}
 \item \textbf{Continuous Running Test:}~\cite{smith2023eyetracking}
    \begin{itemize}
-   \item \textbf{What we do}: Feed many eye images continuously
-   \item \textbf{Tool}: Image generator with logging
-   \item \textbf{Goal}: Keep 16.6 ms between frames for over 30 minutes
+   \item \textbf{Procedure}: Multiple eye images were processed continuously via an image generator with logging
+   \item \textbf{Objective}: Maintained 16.6 ms frame interval throughout execution periods exceeding 30 minutes
    \end{itemize}
 
 \item \textbf{Lighting Test:}
    \begin{itemize}
-   \item \textbf{What we do}: Test with images in different lighting
-   \item \textbf{Tool}: Dataset with lighting variations
-   \item \textbf{Goal}: Keep accuracy above 98\% in all conditions
+   \item \textbf{Procedure}: Images with varying lighting conditions were evaluated using a comprehensive dataset
+   \item \textbf{Objective}: Maintained accuracy above 98\% across all lighting conditions
    \end{itemize}
 
 \item \textbf{Stress Test:}
    \begin{itemize}
-   \item \textbf{What we do}: Push memory and processing limits
-   \item \textbf{Tool}: Stress testing scripts
-   \item \textbf{Goal}: System stays running without failing
+   \item \textbf{Procedure}: Memory and processing limits were tested using automated stress testing scripts
+   \item \textbf{Objective}: System maintained operational stability without failure
    \end{itemize}
 
 \item \textbf{Long-Term Test:}
    \begin{itemize}
-   \item \textbf{What we do}: Run system for 24+ hours
-   \item \textbf{Tool}: Automated testing with monitoring
-   \item \textbf{Goal}: No crashes or slowdowns over time
+   \item \textbf{Procedure}: Automated testing with monitoring was conducted over extended periods of 24+ hours
+   \item \textbf{Objective}: System operated without crashes or performance degradation over extended runtime
    \end{itemize}
 \end{enumerate}
-
-\begin{quote}
-\textit{Note: Numerical values are representative placeholders due to NDA restrictions.}
-\end{quote}
 
 \subsection{Test Measurements}\label{subsec:test-measurements}
 
@@ -188,7 +180,7 @@ Our project has some tough testing challenges:
 
 \subsection{Automated Testing}\label{subsec:automated-testing}
 
-We'll create tests that run after code changes to make sure nothing breaks:
+Automated regression tests executed following code changes to verify system stability:
 
 \begin{enumerate}
 \item \textbf{Performance Check}: Compare speed to previous tests
@@ -222,17 +214,17 @@ We'll create tests that run after code changes to make sure nothing breaks:
 \subsection{Multi-Algorithm Integration}\label{subsec:multi-algorithm-integration}
 
 \begin{itemize}
-\item Verify all algorithms (1, 2, 3, and semantic segmentation) work together without conflicts
-\item Test priority escalation and resource reallocation under deadline pressure
-\item Validate end-to-end data flow from image capture to assistive response
+\item Verified all algorithms (1, 2, 3, and semantic segmentation) worked together without conflicts
+\item Tested priority escalation and resource reallocation under deadline pressure
+\item Validated end-to-end data flow from image capture to assistive response
 \end{itemize}
 
 \subsection{Hardware-Software Integration}\label{subsec:hardware-software-integration}
 
 \begin{itemize}
-\item Test camera integration and image capture reliability
-\item Verify DPU scheduling works correctly with FPGA programming
-\item Validate memory management across hardware and software boundaries
+\item Tested camera integration and image capture reliability
+\item Verified DPU scheduling worked correctly with FPGA programming
+\item Validated memory management across hardware and software boundaries
 \end{itemize}
 
 \section{Performance Testing}\label{sec:performance-testing}
@@ -240,9 +232,9 @@ We'll create tests that run after code changes to make sure nothing breaks:
 \subsection{Benchmarking}\label{subsec:benchmarking}
 
 \begin{itemize}
-\item Compare optimized performance against baseline implementation
-\item Measure throughput improvements across different input conditions
-\item Validate resource utilization efficiency improvements
+\item Compared optimized performance against baseline implementation
+\item Measured throughput improvements across different input conditions
+\item Validated resource utilization efficiency improvements
 \end{itemize}
 
 \subsection{Stress Testing}\label{subsec:stress-testing}
@@ -257,7 +249,7 @@ We'll create tests that run after code changes to make sure nothing breaks:
 
 \subsection{IEEE Standards Compliance}\label{subsec:ieee-compliance}
 
-Our testing methodology aligns with applicable IEEE standards:
+The testing methodology aligned with applicable IEEE standards:
 
 \begin{itemize}
 \item \textbf{IEEE 3129--2023}~\cite{ieee3129-2023}: Robustness testing and evaluation of AI-based image recognition services
