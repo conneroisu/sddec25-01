@@ -49,7 +49,7 @@ Several approaches have been used to implement semantic segmentation for eye tra
 \begin{itemize}
 \item Maintains high accuracy (99.8\% IoU) while significantly improving processing speed
 \item Utilizes existing hardware (Kria KV260) without requiring costly upgrades
-\item Implements a parallelized approach that can process multiple frames concurrently
+\item Implements a pipelined approach that maximizes system throughput through overlapped CPU and DPU processing
 \item Integrates with existing assistive wheelchair technology ecosystem
 \end{itemize}
 
@@ -68,22 +68,22 @@ Our project demonstrates significant technical complexity in both its components
 \item \textbf{Multiple Components with Distinct Scientific Principles:}
    \begin{itemize}
    \item \textbf{Neural Network Architecture:} The U-Net semantic segmentation algorithm incorporates complex convolutional neural network principles with encoder-decoder architecture~\cite{burden2013}
-   \item \textbf{Parallel Computing:} Implementation of multi-threading and pipeline parallelism leverages computer architecture principles~\cite{zhao2023parallel}
+   \item \textbf{Pipelined Computing:} Implementation of multi-threaded CPU processing and pipeline architecture leverages computer architecture principles~\cite{zhao2023parallel}
    \item \textbf{Memory Management:} Developing efficient memory allocation strategies based on computer systems principles
    \item \textbf{Real-time Systems:} Balancing processing load to meet strict timing constraints based on real-time systems theory
-   \item \textbf{Resource Scheduling:} Creating optimal DPU sharing mechanisms based on operating systems principles
+   \item \textbf{Resource Scheduling:} Creating optimal sequential DPU scheduling mechanisms based on operating systems principles, managing the constraint that the DPU can only execute one xmodel inference at a time
    \end{itemize}
 
 \item \textbf{Challenging Requirements:}
    \begin{itemize}
-   \item \textbf{Speed Improvement:} Increasing throughput (from 160ms to 33.2ms for 4 frames) exceeds typical optimization gains in the industry
-   \item \textbf{Accuracy Maintenance:} Preserving 99.8\% IoU accuracy while dividing the algorithm is significantly more challenging than standard parallelization
-   \item \textbf{Resource Constraints:} Working within the limited memory (4GB) and processing resources of the Kria board requires innovative solutions
+   \item \textbf{Speed Improvement:} Increasing throughput (from 160ms to approximately 8.3ms per frame average through pipelining) exceeds typical optimization gains in the industry
+   \item \textbf{Accuracy Maintenance:} Preserving 99.8\% IoU accuracy while implementing complex pipelined processing is significantly more challenging than standard optimization
+   \item \textbf{Resource Constraints:} Working within the limited memory (4GB) and single-DPU architecture of the Kria board requires innovative scheduling solutions
    \item \textbf{Real-time Performance:} Meeting the 60 frames per second requirement is at the upper end of what is possible with current embedded AI systems
    \end{itemize}
 \end{enumerate}
 
-The combination of these elements, particularly maintaining mathematical consistency while dividing a complex neural network for parallel execution, represents technical complexity beyond standard engineering solutions.
+The combination of these elements, particularly maintaining accuracy while implementing efficient pipelined execution with sequential DPU access scheduling across multiple algorithms, represents technical complexity beyond standard engineering solutions.
 
 \section{Design Exploration}\label{sec:design-exploration}
 
@@ -94,8 +94,8 @@ We have identified the following key design decisions that are critical to the s
 \begin{enumerate}
 \item \textbf{Resource Scheduling Approach}
    \begin{itemize}
-   \item \textbf{Decision:} Instead of dividing the U-Net semantic segmentation algorithm (which would increase overhead and slow the system), implement an efficient round-robin scheduling system for DPU access.
-   \item \textbf{Importance:} This is fundamental to achieving our throughput goal while ensuring Algorithms 1, 2, and 3 can collect their required periodic data. Without effective resource scheduling, semantic segmentation would monopolize the DPU, preventing other critical algorithms from functioning correctly. The scheduling approach must maintain the algorithm's integrity while providing fair resource allocation to achieve the 99.8\% IoU accuracy target.
+   \item \textbf{Decision:} Implement an efficient sequential scheduling system for DPU access, recognizing that the DPU can only execute one xmodel inference at a time. The system uses round-robin or priority-based scheduling to coordinate access among semantic segmentation and other algorithms.
+   \item \textbf{Importance:} This is fundamental to achieving our throughput goal while ensuring Algorithms 1, 2, and 3 can collect their required periodic data. Without effective sequential scheduling, semantic segmentation would monopolize the DPU, preventing other critical algorithms from functioning correctly. The scheduling approach must provide fair resource allocation while maintaining the 99.8\% IoU accuracy target.
    \end{itemize}
 
 \item \textbf{DPU Access Management}
@@ -165,18 +165,18 @@ Another important note is that the scheduling system must account for operating 
 
 Our Semantic Segmentation Optimization project aims to enhance the performance of a U-Net-based eye tracking system for individuals with disabilities, particularly those with cerebral palsy. This system helps monitor eye movements to detect potential medical issues and can automatically reposition users to prevent incidents, improving safety and quality of life.
 
-The current implementation processes a single frame in 160ms, which is insufficient for real-time monitoring. Our optimized design divides the U-Net algorithm across multiple cores and utilizes the Memory Processing Unit (MPU) to achieve a throughput of 33.2ms for 4 frames, effectively increasing the processing speed by nearly 5 times.
+The current implementation processes a single frame in 160ms, which is insufficient for real-time monitoring. Our optimized design implements a pipelined architecture that leverages multi-threaded CPU processing alongside sequential DPU execution to achieve a throughput of approximately 8.3ms per frame average (33.2ms total for 4 frames in the pipeline), effectively increasing the processing speed by nearly 5 times.
 
 At a high level, our system:
 
 \begin{enumerate}
 \item Captures eye movement images through a camera
-\item Processes these images using a parallelized semantic segmentation algorithm to remove reflections and identify the pupil
+\item Processes these images using a pipelined semantic segmentation architecture where CPU threads handle preprocessing while the DPU executes neural network inference sequentially, removing reflections and identifying the pupil
 \item Tracks the eye's position and detects blinks in real-time
 \item Provides this information to the assistive wheelchair technology for appropriate response
 \end{enumerate}
 
-The key innovation in our design is the approach to parallelism and resource utilization on the AMD Kria KV260 board, which has limited memory and processing resources but powerful acceleration capabilities when properly leveraged.
+The key innovation in our design is the approach to pipelined processing and efficient sequential DPU scheduling on the AMD Kria KV260 board, which has limited memory and a single DPU that can only execute one xmodel inference at a time, but powerful acceleration capabilities when properly leveraged.
 
 \subsection{Detailed Design}\label{subsec:detailed-design}
 
@@ -236,11 +236,11 @@ Our system implements a four-stage processing pipeline:
    \item Preparation for neural network processing
    \end{itemize}
 
-\item \textbf{Parallel Semantic Segmentation}~\cite{zhao2023parallel}
+\item \textbf{Pipelined Semantic Segmentation}~\cite{zhao2023parallel}
    \begin{itemize}
-   \item Division of U-Net algorithm across multiple cores
-   \item Concurrent processing of four image frames
-   \item DPU resource scheduling and management
+   \item Pipelined U-Net processing with overlapped CPU preprocessing/postprocessing and sequential DPU inference
+   \item Efficient throughput of multiple frames through pipeline stages
+   \item Sequential DPU scheduling and management to coordinate access among multiple algorithms
    \end{itemize}
 
 \item \textbf{Feature Extraction and Analysis}
@@ -371,16 +371,16 @@ Our current system achieves 98.8\% IoU accuracy with single-frame processing in 
 
 \subsection{Implementation Challenges:}
 \begin{itemize}
-\item Limited DPU availability for concurrent algorithm execution
+\item Single DPU constraint requiring sequential scheduling among multiple algorithms
 \item Memory bandwidth constraints affecting data flow between processing stages
-\item Thread synchronization overhead in parallel processing
-\item Balancing resource allocation between multiple algorithms
+\item Thread synchronization overhead in pipelined processing
+\item Balancing sequential DPU access time allocation between multiple algorithms
 \end{itemize}
 
 \subsection{Future Implementation Plans:}
 \begin{itemize}
-\item Complete mathematical division of U-Net algorithm for parallel processing
-\item Implement comprehensive DPU scheduling system
-\item Optimize memory access patterns and buffer management
+\item Complete pipelined architecture implementation with optimized CPU preprocessing and postprocessing
+\item Implement comprehensive sequential DPU scheduling system
+\item Optimize memory access patterns and buffer management for pipelined data flow
 \item Develop robust testing and validation framework
 \end{itemize}
