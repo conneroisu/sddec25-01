@@ -68,7 +68,7 @@ Our project demonstrates significant technical complexity in both its components
 \item \textbf{Multiple Components with Distinct Scientific Principles:}
    \begin{itemize}
    \item \textbf{Neural Network Architecture:} The U-Net semantic segmentation algorithm incorporates complex convolutional neural network principles with encoder-decoder architecture~\cite{burden2013}
-   \item \textbf{Pipelined Computing:} Implementation of multi-threaded CPU processing and pipeline architecture leverages computer architecture principles~\cite{zhao2023parallel}
+   \item \textbf{Pipelined Computing:} Implementation of multithreaded CPU processing and pipeline architecture leverages computer architecture principles~\cite{zhao2023parallel}
    \item \textbf{Memory Management:} Developing efficient memory allocation strategies based on computer systems principles
    \item \textbf{Real-time Systems:} Balancing processing load to meet strict timing constraints based on real-time systems theory
    \item \textbf{Resource Scheduling:} Creating optimal sequential DPU scheduling mechanisms based on operating systems principles, managing the constraint that the DPU can only execute one xmodel inference at a time
@@ -165,7 +165,7 @@ Another important note is that the scheduling system must account for operating 
 
 Our Semantic Segmentation Optimization project aims to enhance the performance of a U-Net-based eye tracking system for individuals with disabilities, particularly those with cerebral palsy. This system helps monitor eye movements to detect potential medical issues and can automatically reposition users to prevent incidents, improving safety and quality of life.
 
-The current implementation processes a single frame in 160ms, which is insufficient for real-time monitoring. Our optimized design implements a pipelined architecture that leverages multi-threaded CPU processing alongside sequential DPU execution to achieve approximately 8.3ms per frame average throughput (33.2ms total for 4 frames), effectively increasing the processing speed by nearly 5 times.
+The current implementation processes a single frame in 160ms, which is insufficient for real-time monitoring. Our optimized design implements a pipelined architecture that leverages multithreaded CPU processing alongside sequential DPU execution to achieve approximately 8.3ms per frame average throughput (33.2ms total for 4 frames), effectively increasing the processing speed by nearly 5 times.
 
 At a high level, our system:
 
@@ -188,7 +188,7 @@ Our semantic segmentation optimization system consists of the following key comp
   \begin{itemize}
   \item System-on-Module (SoM) with programmable logic
   \item Quad-core ARM processor
-  \item Deep Processing Unit (DPU) for accelerating neural network inference
+  \item DPU for accelerating neural network inference
   \item Four 1GB DDR4 memory banks
   \item Various I/O interfaces for camera input and system communication
   \end{itemize}
@@ -318,7 +318,7 @@ The AMD Kria KV260 provides an excellent balance of performance and power effici
 
 \begin{itemize}
 \item \textbf{Processing Power:} Quad-core ARM Cortex-A53 with 1.5 GHz clock speed
-\item \textbf{AI Acceleration:} Integrated Deep Learning Processing Unit (DPU) for neural network inference
+\item \textbf{AI Acceleration:} Integrated DPU for neural network inference
 \item \textbf{Memory System:} 4GB DDR4 memory with four banks for parallel access
 \item \textbf{Connectivity:} Multiple I/O interfaces for camera integration and system communication
 \item \textbf{Power Efficiency:} Low power consumption suitable for mobile applications
