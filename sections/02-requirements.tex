@@ -9,7 +9,7 @@
    \begin{itemize}
    \item Optimize the U-Net semantic segmentation algorithm to enable efficient pipelined processing with CPU-based preprocessing and postprocessing stages.
    \item Implement a pipelined architecture that maximizes overall system throughput through overlapped CPU and DPU processing.
-   \item Ensure the pipeline maintains data consistency and synchronization between stages with proper DPU scheduling across algorithms.
+   \item Ensure the pipeline maintains data consistency and synchronization between stages with proper DPU scheduling across algorithms (see Section~\ref{design:dpu-scheduling} for design approach).
    \end{itemize}
 
 \item \textbf{System Throughput:}
@@ -21,7 +21,7 @@
 \item \textbf{Resource Efficiency:}
    \begin{itemize}
    \item Optimize memory and FPGA resource usage to accommodate the additional overhead of pipelined execution and multi-threaded CPU processing.
-   \item Ensure efficient sequential scheduling of the DPU among semantic segmentation and other algorithms.
+   \item Ensure efficient sequential scheduling of the DPU among semantic segmentation and other algorithms (design approach detailed in Section~\ref{design:dpu-scheduling}).
    \end{itemize}
 
 \item \textbf{Error Handling in Pipeline:}
@@ -91,12 +91,7 @@ For the demonstration of the VisionAssist system, the user interface requirement
 \item \textbf{FPGA Resource Allocation:}
    \begin{itemize}
    \item The available FPGA resources are limited and must be efficiently allocated to accommodate the additional logic required for pipelining.
-   \item Ensure that the Deep Learning Processing Unit (DPU) is shared effectively between blink detection and eye-tracking submodules.
-   \end{itemize}
-
-\item \textbf{DPU Utilization:}
-   \begin{itemize}
-   \item Develop a sequential scheduling strategy for DPU access that efficiently coordinates between blink detection and eye-tracking submodules without causing bottlenecks.
+   \item Ensure that the Deep Learning Processing Unit (DPU) is shared effectively between semantic segmentation, blink detection, and eye-tracking algorithms through sequential scheduling (design approach in Section~\ref{design:dpu-scheduling}).
    \end{itemize}
 \end{enumerate}
 

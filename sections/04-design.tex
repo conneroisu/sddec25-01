@@ -92,22 +92,11 @@ The combination of these elements, particularly maintaining accuracy while imple
 We have identified the following key design decisions that are critical to the success of our Semantic Segmentation Optimization project:
 
 \begin{enumerate}
-\item \textbf{Resource Scheduling Approach}
+\item \textbf{Resource Scheduling and DPU Access Management}\label{design:dpu-scheduling}
    \begin{itemize}
-   \item \textbf{Decision:} Implement an efficient sequential scheduling system for DPU access, recognizing that the DPU can only execute one xmodel inference at a time. The system uses round-robin or priority-based scheduling to coordinate access among semantic segmentation and other algorithms.
-   \item \textbf{Importance:} This is fundamental to achieving our throughput goal while ensuring other algorithms (blink detection and eye tracking) can collect their required periodic data. Without effective sequential scheduling, semantic segmentation would monopolize the DPU, preventing other critical algorithms from functioning correctly. The scheduling approach must provide fair resource allocation while maintaining the 99.8\% IoU accuracy target.
-   \end{itemize}
-
-\item \textbf{DPU Access Management}
-   \begin{itemize}
-   \item \textbf{Decision:} Implement a fair access scheduling approach that prevents semantic segmentation from `starving' other algorithms of DPU resources.
-   \item \textbf{Importance:} The Kria board has four DDR4 memory banks (1GB each), but the single DPU is a shared resource that must be carefully managed. Our approach ensures that while semantic segmentation runs, it doesn't prevent other algorithms (blink detection and eye tracking) from collecting their required periodic data. This strategy prevents scenarios where the information gathered becomes incorrect due to delayed or missed data collection cycles.
-   \end{itemize}
-
-\item \textbf{Resource Allocation Strategy}
-   \begin{itemize}
-   \item \textbf{Decision:} Develop a resource management system that coordinates access to the DPU and ensures each algorithm receives appropriate processing time.
-   \item \textbf{Importance:} With multiple algorithms needing DPU access (semantic segmentation, blink detection, and eye tracking), proper resource allocation is essential to maintain data integrity and prevent starvation. This decision impacts both performance and accuracy, as our client noted that blink detection and eye tracking require periodic data or the information gathered becomes incorrect. Our scheduling system must ensure that semantic segmentation doesn't monopolize resources while maintaining overall system efficiency.
+   \item \textbf{Decision:} Implement an efficient sequential scheduling system for DPU access that provides fair resource allocation across all algorithms. The system recognizes that the DPU can only execute one xmodel inference at a time and uses round-robin or priority-based scheduling to coordinate access among semantic segmentation, blink detection, and eye tracking algorithms.
+   \item \textbf{Rationale:} The Kria board has four DDR4 memory banks (1GB each), but the single DPU is a shared resource that must be carefully managed. Without effective sequential scheduling, semantic segmentation would monopolize the DPU, preventing other critical algorithms from functioning correctly and causing data collection delays.
+   \item \textbf{Importance:} This is fundamental to achieving our throughput goal while ensuring other algorithms can collect their required periodic data. Our client noted that blink detection and eye tracking require periodic data or the information gathered becomes incorrect. The scheduling system must prevent resource starvation while maintaining the 99.8\% IoU accuracy target and overall system efficiency. This decision impacts both performance and data integrity across the entire system.
    \end{itemize}
 
 \item \textbf{Single DPU Architecture Constraint}
@@ -217,11 +206,15 @@ Our semantic segmentation optimization system consists of the following key comp
    \item Provides additional user intent information for the control system
    \end{itemize}
 
-\item \textbf{Thread Management System}~\cite{park2022thread}
+\item \textbf{Thread Management System}\label{design:threading-model}~\cite{park2022thread}
    \begin{itemize}
-   \item Coordinates execution across multiple threads
-   \item Ensures proper synchronization between pipeline stages
-   \item Manages resource allocation and conflict resolution
+   \item \textbf{Architecture:} Multi-threaded CPU processing overlapped with sequential DPU execution in a pipelined architecture
+   \item \textbf{Thread Pool:} Efficient thread creation and management system for processing stages
+   \item \textbf{Synchronization Primitives:} Mutexes, semaphores, and condition variables coordinate execution across multiple threads
+   \item \textbf{Pipeline Coordination:} Ensures proper synchronization between pipeline stages to prevent race conditions and deadlocks
+   \item \textbf{Resource Allocation:} Manages resource allocation and conflict resolution with dynamic load balancing across available cores
+   \item \textbf{Memory Management:} Thread-local storage allocates dedicated memory regions for each processing thread
+   \item \textbf{Deadlock Prevention:} Implements strategies to avoid thread deadlock scenarios through careful resource ordering
    \end{itemize}
 \end{enumerate}
 

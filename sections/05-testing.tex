@@ -15,7 +15,7 @@ Early and continuous testing enabled rapid detection and resolution of issues be
 \begin{itemize}
 \item Testing each pipeline stage and the U-Net algorithm components as they were created
 \item Checking memory use and buffer management before building the full system
-\item Testing DPU access scheduling during development
+\item Testing DPU access scheduling (Section~\ref{design:dpu-scheduling}) during development
 \end{itemize}
 
 \subsection{Testing Challenges}\label{subsec:testing-challenges}
@@ -24,7 +24,7 @@ The project encountered several significant testing challenges:
 
 \begin{itemize}
 \item Testing on FPGA hardware was different from normal software testing
-\item Ensuring pipelined threads and DPU scheduling worked together correctly
+\item Ensuring pipelined threads (Section~\ref{design:threading-model}) and DPU scheduling (Section~\ref{design:dpu-scheduling}) worked together correctly
 \item Balancing speed and accuracy
 \item Verifying efficient memory use for pipelined data flow
 \end{itemize}
@@ -53,7 +53,7 @@ The project encountered several significant testing challenges:
 \subsection{Algorithm Testing}\label{subsec:algorithm-testing}
 
 \begin{itemize}
-\item Resource allocation verification to confirm fair DPU access distribution
+\item Resource allocation verification to confirm fair DPU access distribution per the scheduling approach (Section~\ref{design:dpu-scheduling})
 \item Temporal analysis of periodic data collection to ensure deadlines are consistently met
 \item Controlled stress testing to verify scheduling robustness under varying load conditions
 \item Validation that algorithms 1, 2, and 3 can reliably collect data without interruption
@@ -105,9 +105,9 @@ The project encountered several significant testing challenges:
 
 \item \textbf{Thread Coordination:}
    \begin{itemize}
-   \item Testing how the scheduler managed resource allocation
-   \item Verifying that priority escalation worked properly for deadline-sensitive operations
-   \item Validating synchronization between algorithms with interdependencies
+   \item Testing the threading model implementation (Section~\ref{design:threading-model}) for proper resource allocation management
+   \item Verifying that synchronization primitives (mutexes, semaphores, condition variables) worked correctly for deadline-sensitive operations
+   \item Validating coordination between algorithms with interdependencies without race conditions or deadlocks
    \end{itemize}
 \end{enumerate}
 
@@ -223,7 +223,7 @@ Automated regression tests executed following code changes to verify system stab
 
 \begin{itemize}
 \item Tested camera integration and image capture reliability
-\item Verified DPU scheduling worked correctly with FPGA programming
+\item Verified DPU scheduling (Section~\ref{design:dpu-scheduling}) worked correctly with FPGA programming
 \item Validated memory management across hardware and software boundaries
 \end{itemize}
 

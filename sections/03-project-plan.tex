@@ -36,15 +36,18 @@ Our project involved optimizing the semantic segmentation U-Net algorithm by imp
 \item Subtask 2.1: Implement image pre-processing using semantic segmentation
 \item Subtask 2.2: Implement eye tracking algorithm with pre-processed images
 \item Subtask 2.3: Implement blink detection algorithm
-\item Subtask 2.4: Implement DPU sharing mechanism for resource optimization
+\item Subtask 2.4: Implement DPU sharing mechanism for resource optimization (design in Section~\ref{design:dpu-scheduling})
 \end{itemize}
 
 \subsection{Task 3: Thread Management}
+
+Implement the threading model described in Section~\ref{design:threading-model}:
+
 \begin{itemize}
-\item Subtask 3.1: Implement memory sharing between threads (non-DDR)
-\item Subtask 3.2: Configure thread allocation to specific memory locations
-\item Subtask 3.3: Implement thread synchronization and communication~\cite{park2022thread}
-\item Subtask 3.4: Test thread operation with matrix operations
+\item Subtask 3.1: Implement thread-local storage for memory sharing between threads (non-DDR)
+\item Subtask 3.2: Configure thread pool and allocation to specific memory locations
+\item Subtask 3.3: Implement thread synchronization primitives (mutexes, semaphores, condition variables) and communication mechanisms~\cite{park2022thread}
+\item Subtask 3.4: Test thread operation with matrix operations and validate synchronization
 \end{itemize}
 
 \subsection{Task 4: Multicore Processing}
@@ -94,8 +97,8 @@ The following key milestones were identified for the project, along with their a
 \subsection{Milestone 3: Thread Testing with Matrix Operations}
 \begin{itemize}
 \item \textbf{Completion Date}: Week 16
-\item \textbf{Metrics}: Successful multi-threaded operation for CPU-based preprocessing and postprocessing
-\item \textbf{Evaluation Criteria}: All CPU threads operate correctly with proper synchronization and without memory conflicts
+\item \textbf{Metrics}: Successful multi-threaded operation for CPU-based preprocessing and postprocessing following the threading model (Section~\ref{design:threading-model})
+\item \textbf{Evaluation Criteria}: All CPU threads operate correctly with proper synchronization (mutexes, semaphores) and without memory conflicts or race conditions
 \end{itemize}
 
 \subsection{Milestone 4: Docker Environment Configuration}
@@ -205,10 +208,10 @@ The critical path for this project follows the U-Net model optimization and pipe
 \item \textbf{Severity}: High
 \item \textbf{Mitigation Strategies}:
   \begin{itemize}
-  \item Design efficient DPU scheduling system to maximize utilization
-  \item Employ effective multi-threading paradigms for CPU-based preprocessing and postprocessing
-  \item Utilize synchronization primitives to coordinate between pipeline stages and avoid resource contention
-  \item Profile and optimize critical code sections to maximize overall throughput
+  \item Implement efficient DPU scheduling system (Section~\ref{design:dpu-scheduling}) to maximize utilization through sequential round-robin access
+  \item Employ the threading model (Section~\ref{design:threading-model}) with proper synchronization primitives for CPU-based preprocessing and postprocessing
+  \item Utilize mutexes, semaphores, and condition variables to coordinate between pipeline stages and avoid resource contention
+  \item Profile and optimize critical code sections to minimize thread synchronization overhead and maximize overall throughput
   \end{itemize}
 \end{itemize}
 

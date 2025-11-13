@@ -64,11 +64,13 @@ The U-Net semantic segmentation algorithm has been thoroughly analyzed for pipel
 
 \subsection{Resource Scheduling Implementation}\label{subsec:scheduling-implementation}
 
+Our implementation realizes the resource scheduling approach defined in Section~\ref{design:dpu-scheduling}:
+
 \begin{itemize}
-\item \textbf{DPU Access Management}: Sequential scheduling system (round-robin) designed for fair DPU access allocation
-\item \textbf{Thread Coordination}: Multi-threading framework implemented for CPU-based preprocessing and postprocessing~\cite{park2022thread}
-\item \textbf{Memory Management}: Optimized memory allocation strategy for efficient pipelined data flow~\cite{chen2022memory}
-\item \textbf{Synchronization}: Inter-thread communication mechanisms established for pipeline stage coordination
+\item \textbf{DPU Access Management}: Sequential scheduling system implementing round-robin algorithm for fair DPU access allocation across semantic segmentation, blink detection, and eye tracking algorithms
+\item \textbf{Thread Coordination}: Multi-threading framework (see Section~\ref{design:threading-model}) implemented for CPU-based preprocessing and postprocessing~\cite{park2022thread}
+\item \textbf{Memory Management}: Optimized memory allocation strategy for efficient pipelined data flow with thread-local storage~\cite{chen2022memory}
+\item \textbf{Synchronization}: Inter-thread communication mechanisms using mutexes and semaphores established for pipeline stage coordination
 \end{itemize}
 
 \section{Model Training}\label{sec:model-training}
@@ -143,9 +145,9 @@ The model training process utilizes a comprehensive eye-tracking dataset with ca
 
 \begin{itemize}
 \item \textbf{Memory Constraints}: Working within 4GB DDR memory limitations while supporting pipelined processing across multiple algorithms
-\item \textbf{Thread Synchronization}: Ensuring proper coordination between pipeline processing threads without deadlocks or race conditions
-\item \textbf{Sequential DPU Scheduling}: Efficiently scheduling the single DPU to balance semantic segmentation requirements with periodic data collection needs of auxiliary algorithms
-\item \textbf{Performance Optimization}: Achieving target pipelined throughput for real-time operation
+\item \textbf{Thread Synchronization}: Implementing the threading model (Section~\ref{design:threading-model}) while ensuring proper coordination between pipeline processing threads without deadlocks or race conditions
+\item \textbf{Sequential DPU Scheduling}: Realizing the resource scheduling approach (Section~\ref{design:dpu-scheduling}) to efficiently balance semantic segmentation requirements with periodic data collection needs of auxiliary algorithms
+\item \textbf{Performance Optimization}: Achieving target pipelined throughput for real-time operation while managing synchronization overhead
 \end{itemize}
 
 \section{Future Implementation Plans}\label{subsec:future-implementation}
@@ -154,7 +156,7 @@ The model training process utilizes a comprehensive eye-tracking dataset with ca
 
 \begin{itemize}
 \item Complete implementation of pipelined U-Net processing
-\item Optimize DPU scheduling system for maximum throughput
+\item Optimize DPU scheduling system (Section~\ref{design:dpu-scheduling}) for maximum throughput
 \item Implement comprehensive testing framework
 \item Validate accuracy maintenance across pipelined implementation
 \end{itemize}
@@ -163,7 +165,7 @@ The model training process utilizes a comprehensive eye-tracking dataset with ca
 
 \begin{itemize}
 \item Achieve target pipelined performance for real-time operation
-\item Complete integration testing with all auxiliary algorithms and DPU scheduling
+\item Complete integration testing with all auxiliary algorithms and DPU scheduling (Section~\ref{design:dpu-scheduling})
 \item Optimize memory usage and buffer management for pipelined data flow
 \item Implement robust error handling and recovery mechanisms
 \end{itemize}
@@ -252,9 +254,11 @@ Our implementation follows an agile methodology with:
 
 \subsection{Thread Management}\label{subsec:thread-management}
 
+Our implementation follows the threading model defined in Section~\ref{design:threading-model}. Key implementation details include:
+
 \begin{itemize}
-\item \textbf{Thread Pool}: Efficient thread creation and management
-\item \textbf{Synchronization}: Mutexes, semaphores, and condition variables for coordination~\cite{park2022thread}
-\item \textbf{Load Balancing}: Dynamic workload distribution across available cores
-\item \textbf{Deadlock Prevention}: Strategies to avoid thread deadlock scenarios
+\item \textbf{POSIX Threading}: Utilizes POSIX threads (pthreads) for multi-core ARM processing on the Kria KV260
+\item \textbf{Performance Impact}: Thread synchronization overhead measured at 48.2\% latency increase in split model approach (see Section~\ref{subsec:performance-metrics}), demonstrating the importance of minimizing inter-thread coordination
+\item \textbf{Pipeline Implementation}: Each pipeline stage runs in a dedicated thread with synchronization points between stages to ensure data consistency
+\item \textbf{Resource Contention}: Higher variance in split model timings (±3.38ms vs ±0.05ms) indicates synchronization overhead and resource contention between parallel threads
 \end{itemize}
