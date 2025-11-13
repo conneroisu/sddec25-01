@@ -48,9 +48,7 @@ The split model approach incurs additional overhead from thread coordination and
 
 \begin{itemize}
 \item \textbf{Parallelization Overhead}: The split model demonstrates that naive algorithm division introduces significant overhead (255 ms increase) due to thread synchronization and inter-segment data transfer
-\item \textbf{DPU Utilization}: Both implementations show high DPU utilization (89.6\% for single model, 93.0\% for split model)
-\item \textbf{Processing Consistency}: Single model shows more consistent performance with lower variance, important for real-time applications
-\item \textbf{Memory Efficiency}: Single model maintains relatively low memory footprint (45 MB)
+\item \textbf{Memory Efficiency}: Single model maintains relatively low memory footprint (45 MB) when compared to split model inference. 
 \end{itemize}
 
 \subsection{Algorithm Analysis and Division}\label{subsec:algorithm-analysis}
