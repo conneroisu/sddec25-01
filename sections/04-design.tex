@@ -38,11 +38,11 @@ Affordable enhancement to existing assistive technology systems, more efficient 
 Several approaches have been used to implement semantic segmentation for eye tracking~\cite{garcia2017review}, but most face limitations when deployed on resource-constrained edge devices:
 
 \begin{enumerate}
-\item \textbf{Wang et al. (2021)}~\cite{wang2021} proposed ``EfficientEye: A Lightweight Semantic Segmentation Framework for Eye Tracking'', which achieved good accuracy but still required substantial computational resources. Their approach reduced model size but processing speed remained at approximately 120 ms per frame.
+\item \textbf{Li et al. (2022)}~\cite{li2022lighteyes} proposed ``LightEyes: A Lightweight Fundus Segmentation Network for Mobile Edge Computing'', which achieved good accuracy but still required substantial computational resources. Their approach reduced model size but processing speed remained a key challenge.
 
 \item \textbf{Previous Project Iteration} implemented a standard U-Net architecture on the Kria KV260 board with high accuracy (99.8\% IoU) but could only process a single frame every 160ms, which is insufficient for real-time application needs.
 
-\item \textbf{Commercial Solutions} like Tobii Pro Fusion offer high-speed eye tracking (250 Hz) but require dedicated hardware and specialized processors, making them expensive and difficult to integrate into existing assistive devices.
+\item \textbf{Commercial Solutions} like Tobii Pro Fusion offer high-speed eye tracking (250 Hz) but require dedicated hardware and specialized processors, making them expensive and difficult to integrate into existing assistive devices~\cite{tobii2023fusion}.
 \end{enumerate}
 
 \subsubsection{Advantages of Our Approach}
@@ -76,9 +76,9 @@ Our project demonstrates significant technical complexity in both its components
 
 \item \textbf{Challenging Requirements:}
    \begin{itemize}
-   \item \textbf{Speed Improvement:} Achieving near 5x throughput improvement through pipelining exceeds typical optimization gains in the industry
+   \item \textbf{Speed Improvement:} Achieving near 5x throughput improvement through pipelining exceeds typical optimization gains in the industry~\cite{li2020graph}
    \item \textbf{Accuracy Maintenance:} Preserving high accuracy while implementing complex pipelined processing is significantly more challenging than standard optimization
-   \item \textbf{Resource Constraints:} Working within the limited memory (4GB) and single-DPU architecture of the Kria board requires innovative scheduling solutions
+   \item \textbf{Resource Constraints:} Working within the limited memory (4GB) and single-DPU architecture of the Kria board requires innovative scheduling solutions~\cite{saha2024biolite}
    \item \textbf{Real-time Performance:} Meeting the 60 frames per second requirement is at the upper end of what is possible with current embedded AI systems
    \end{itemize}
 \end{enumerate}
