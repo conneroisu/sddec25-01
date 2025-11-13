@@ -2,7 +2,7 @@
 
 \section{Testing Strategy Overview}\label{sec:testing-overview}
 
-Testing is key to our Semantic Segmentation project. We need to make sure our system meets our goals of fast processing (<16.6ms between frames) while keeping good accuracy (99.8\%).
+Testing is essential for the Semantic Segmentation system. Comprehensive validation ensures that the system meets critical performance objectives: fast processing (<16.6ms between frames) and high accuracy (99.8\%).
 
 \begin{quote}
 \textit{Note: Numerical values are representative placeholders due to NDA restrictions.}
@@ -10,7 +10,7 @@ Testing is key to our Semantic Segmentation project. We need to make sure our sy
 
 \subsection{Testing Philosophy}\label{subsec:testing-philosophy}
 
-We test early and often. This helps us catch problems quickly and fix them before they get worse. For our project, this means:
+Early and continuous testing enables rapid detection and resolution of issues before they compound. This methodology involves:
 
 \begin{itemize}
 \item Testing each pipeline stage and the U-Net algorithm components as we create them
@@ -20,7 +20,7 @@ We test early and often. This helps us catch problems quickly and fix them befor
 
 \subsection{Testing Challenges}\label{subsec:testing-challenges}
 
-Our project has some tough testing challenges:
+The project encounters several significant testing challenges:
 
 \begin{itemize}
 \item Testing on FPGA hardware is different from normal software testing
@@ -130,9 +130,9 @@ Our project has some tough testing challenges:
 
 \item \textbf{Periodic Collection Test:}
    \begin{itemize}
-   \item \textbf{What we do}: Run system under load with varying periodic collection requirements
-   \item \textbf{What should happen}: All algorithms meet their collection deadlines
-   \item \textbf{How we check}: Log collection times and verify against requirements
+   \item \textbf{Procedure}: System is executed under load with varying periodic collection requirements
+   \item \textbf{Expected Outcome}: All algorithms meet their collection deadlines
+   \item \textbf{Validation Method}: Collection times are logged and verified against specified requirements
    \end{itemize}
 \end{enumerate}
 
@@ -143,36 +143,28 @@ Our project has some tough testing challenges:
 \begin{enumerate}
 \item \textbf{Continuous Running Test:}~\cite{smith2023eyetracking}
    \begin{itemize}
-   \item \textbf{What we do}: Feed many eye images continuously
-   \item \textbf{Tool}: Image generator with logging
-   \item \textbf{Goal}: Keep 16.6 ms between frames for over 30 minutes
+   \item \textbf{Procedure}: Multiple eye images are processed continuously via an image generator with logging
+   \item \textbf{Objective}: Maintain 16.6 ms frame interval throughout execution periods exceeding 30 minutes
    \end{itemize}
 
 \item \textbf{Lighting Test:}
    \begin{itemize}
-   \item \textbf{What we do}: Test with images in different lighting
-   \item \textbf{Tool}: Dataset with lighting variations
-   \item \textbf{Goal}: Keep accuracy above 98\% in all conditions
+   \item \textbf{Procedure}: Images with varying lighting conditions are evaluated using a comprehensive dataset
+   \item \textbf{Objective}: Maintain accuracy above 98\% across all lighting conditions
    \end{itemize}
 
 \item \textbf{Stress Test:}
    \begin{itemize}
-   \item \textbf{What we do}: Push memory and processing limits
-   \item \textbf{Tool}: Stress testing scripts
-   \item \textbf{Goal}: System stays running without failing
+   \item \textbf{Procedure}: Memory and processing limits are tested using automated stress testing scripts
+   \item \textbf{Objective}: System maintains operational stability without failure
    \end{itemize}
 
 \item \textbf{Long-Term Test:}
    \begin{itemize}
-   \item \textbf{What we do}: Run system for 24+ hours
-   \item \textbf{Tool}: Automated testing with monitoring
-   \item \textbf{Goal}: No crashes or slowdowns over time
+   \item \textbf{Procedure}: Automated testing with monitoring is conducted over extended periods of 24+ hours
+   \item \textbf{Objective}: System operates without crashes or performance degradation over extended runtime
    \end{itemize}
 \end{enumerate}
-
-\begin{quote}
-\textit{Note: Numerical values are representative placeholders due to NDA restrictions.}
-\end{quote}
 
 \subsection{Test Measurements}\label{subsec:test-measurements}
 
@@ -188,7 +180,7 @@ Our project has some tough testing challenges:
 
 \subsection{Automated Testing}\label{subsec:automated-testing}
 
-We'll create tests that run after code changes to make sure nothing breaks:
+Automated regression tests execute following code changes to verify system stability:
 
 \begin{enumerate}
 \item \textbf{Performance Check}: Compare speed to previous tests
