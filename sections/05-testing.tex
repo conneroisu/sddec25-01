@@ -24,9 +24,9 @@ The project encountered several significant testing challenges:
 
 \begin{itemize}
 \item Testing on FPGA hardware was different from normal software testing
-\item Ensuring pipelined threads and DPU scheduling worked together correctly
+\item Ensuring pipe-lined threads and DPU scheduling worked together correctly
 \item Balancing speed and accuracy
-\item Verifying efficient memory use for pipelined data flow
+\item Verifying efficient memory use for pipe-lined data flow
 \end{itemize}
 
 \subsection{Testing Schedule}\label{subsec:testing-schedule}
@@ -195,13 +195,13 @@ Automated regression tests executed following code changes to verify system stab
 
 \item \textbf{Resource Check}: Make sure changes don't use more memory or CPU
    \begin{itemize}
-   \item \textbf{Tool}: Vitis AI Profiler with logging
+   \item \textbf{Tool}: Vitis-AI Profiler with logging
    \end{itemize}
 \end{enumerate}
 
 \subsection{Monitoring}\label{subsec:monitoring}
 
-\textbf{Performance Tracking}: Use Vitis AI Profiler~\cite{amd2023vitis} to watch:
+\textbf{Performance Tracking}: Use Vitis-AI Profiler~\cite{amd2023vitis} to watch:
 \begin{itemize}
 \item Running time
 \item DPU use
