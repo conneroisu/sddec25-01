@@ -48,7 +48,7 @@ The split model approach incurs additional overhead from thread coordination and
 
 \begin{itemize}
 \item \textbf{Parallelization Overhead}: The split model demonstrates that naive algorithm division introduces significant overhead (255 ms increase) due to thread synchronization and inter-segment data transfer
-\item \textbf{Memory Efficiency}: Single model maintains a lower memory footprint (45 MB) when compared to split model inference (111.01 MB). This increase in memory footprint is caused by the intermittent storage of tensors needed as inputs for futher UNet Segments.
+\item \textbf{Memory Efficiency}: Single model maintains a lower memory footprint (45 MB) when compared to split model inference (111.01 MB). This increase in memory footprint is caused by the intermediate storage of tensors needed as inputs for further UNet segments.
 \end{itemize}
 
 \subsection{Algorithm Analysis and Division}\label{subsec:algorithm-analysis}
