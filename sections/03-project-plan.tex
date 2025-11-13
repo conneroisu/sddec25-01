@@ -22,7 +22,7 @@ Weekly team meetings were held to review sprint progress, address blockers, and 
 
 \section{Task Decomposition}\label{sec:task-decomposition}
 
-Our project involved optimizing the semantic segmentation U-Net algorithm by implementing a pipelined architecture that leveraged multi-threaded CPU processing alongside sequential DPU execution\@. The key objective was to increase system throughput from 160 ms per frame to approximately 8.3\ ms per frame average (33.2\ ms total for 4 frames in the pipeline)\@. The following tasks and subtasks were identified:
+Our project involved optimizing the semantic segmentation U-Net algorithm by implementing a pipelined architecture that leveraged multi-threaded CPU processing alongside sequential DPU execution\@. The key objective was to achieve target throughput of 60 FPS for real-time medical monitoring. The following tasks and subtasks were identified:
 
 \subsection{Task 1: Algorithm Performance Optimization}
 \begin{itemize}
@@ -80,7 +80,7 @@ The following key milestones were identified for the project, along with their a
 \subsection{Milestone 1: Pipeline Architecture Design}
 \begin{itemize}
 \item \textbf{Completion Date}: Week 8
-\item \textbf{Metrics}: Validated pipelined architecture design with CPU preprocessing/postprocessing and sequential DPU inference
+\item \textbf{Metrics}: Validated pipelined architecture design with overlapped CPU and DPU processing
 \item \textbf{Evaluation Criteria}: Architecture design maintains output accuracy equivalent to original algorithm
 \end{itemize}
 
@@ -205,7 +205,7 @@ The critical path for this project follows the mathematical division of the algo
 \item \textbf{Severity}: High
 \item \textbf{Mitigation Strategies}:
   \begin{itemize}
-  \item Design efficient DPU scheduling system to maximize utilization while the DPU processes one inference at a time
+  \item Design efficient DPU scheduling system to maximize utilization
   \item Employ effective multi-threading paradigms for CPU-based preprocessing and postprocessing
   \item Utilize synchronization primitives to coordinate between pipeline stages and avoid resource contention
   \item Profile and optimize critical code sections to maximize overall throughput

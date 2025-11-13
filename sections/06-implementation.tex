@@ -57,7 +57,7 @@ The U-Net semantic segmentation algorithm has been thoroughly analyzed for pipel
 
 \begin{itemize}
 \item \textbf{Architecture Review}: Complete understanding of encoder-decoder structure and skip connections
-\item \textbf{Pipeline Strategy}: Architectural approach developed for efficient pipelined processing with CPU preprocessing/postprocessing and sequential DPU inference
+\item \textbf{Pipeline Strategy}: Architectural approach developed for efficient pipelined processing with overlapped CPU and DPU stages
 \item \textbf{Accuracy Validation}: Current implementation achieves 98.8\% IoU accuracy, within target range of 99.8\%~\cite{wang2021}
 \item \textbf{Performance Baseline}: Comprehensive benchmarking completed for both single and split model architectures
 \end{itemize}
@@ -65,7 +65,7 @@ The U-Net semantic segmentation algorithm has been thoroughly analyzed for pipel
 \subsection{Resource Scheduling Implementation}\label{subsec:scheduling-implementation}
 
 \begin{itemize}
-\item \textbf{DPU Access Management}: Sequential scheduling system (round-robin) designed for fair DPU access allocation, recognizing that the DPU can only execute one xmodel inference at a time
+\item \textbf{DPU Access Management}: Sequential scheduling system (round-robin) designed for fair DPU access allocation
 \item \textbf{Thread Coordination}: Multi-threading framework implemented for CPU-based preprocessing and postprocessing~\cite{park2022thread}
 \item \textbf{Memory Management}: Optimized memory allocation strategy for efficient pipelined data flow~\cite{chen2022memory}
 \item \textbf{Synchronization}: Inter-thread communication mechanisms established for pipeline stage coordination
@@ -144,8 +144,8 @@ The model training process utilizes a comprehensive eye-tracking dataset with ca
 \begin{itemize}
 \item \textbf{Memory Constraints}: Working within 4GB DDR memory limitations while supporting pipelined processing across multiple algorithms
 \item \textbf{Thread Synchronization}: Ensuring proper coordination between pipeline processing threads without deadlocks or race conditions
-\item \textbf{Sequential DPU Scheduling}: Efficiently scheduling the single DPU (which can only execute one xmodel inference at a time) to balance semantic segmentation requirements with periodic data collection needs of auxiliary algorithms
-\item \textbf{Performance Optimization}: Achieving target pipelined throughput of 8.3ms average per frame (33.2ms total for 4 frames)
+\item \textbf{Sequential DPU Scheduling}: Efficiently scheduling the single DPU to balance semantic segmentation requirements with periodic data collection needs of auxiliary algorithms
+\item \textbf{Performance Optimization}: Achieving target pipelined throughput for real-time operation
 \end{itemize}
 
 \section{Future Implementation Plans}\label{subsec:future-implementation}
@@ -153,8 +153,8 @@ The model training process utilizes a comprehensive eye-tracking dataset with ca
 \subsection{Short-term Goals (Next 4 weeks)}\label{subsec:short-term-goals}
 
 \begin{itemize}
-\item Complete implementation of pipelined U-Net processing with CPU preprocessing/postprocessing and sequential DPU inference
-\item Optimize sequential DPU scheduling system for maximum throughput
+\item Complete implementation of pipelined U-Net processing
+\item Optimize DPU scheduling system for maximum throughput
 \item Implement comprehensive testing framework
 \item Validate accuracy maintenance across pipelined implementation
 \end{itemize}
@@ -162,8 +162,8 @@ The model training process utilizes a comprehensive eye-tracking dataset with ca
 \subsection{Medium-term Goals (Next 8 weeks)}\label{subsec:medium-term-goals}
 
 \begin{itemize}
-\item Achieve target pipelined performance of 8.3ms average per frame (33.2ms total for 4 frames)
-\item Complete integration testing with all auxiliary algorithms and sequential DPU scheduling
+\item Achieve target pipelined performance for real-time operation
+\item Complete integration testing with all auxiliary algorithms and DPU scheduling
 \item Optimize memory usage and buffer management for pipelined data flow
 \item Implement robust error handling and recovery mechanisms
 \end{itemize}

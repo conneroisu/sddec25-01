@@ -8,8 +8,8 @@
 \item \textbf{Algorithm Optimization and Pipelining:}
    \begin{itemize}
    \item Optimize the U-Net semantic segmentation algorithm to enable efficient pipelined processing with CPU-based preprocessing and postprocessing stages.
-   \item Implement a pipelined architecture where CPU threads handle data preparation while the DPU executes sequential neural network inference, maximizing overall system throughput.
-   \item Ensure the pipeline maintains data consistency and synchronization between stages, with proper scheduling to share the DPU sequentially among semantic segmentation and other algorithms (e.g., blink detection, eye tracking).
+   \item Implement a pipelined architecture that maximizes overall system throughput through overlapped CPU and DPU processing.
+   \item Ensure the pipeline maintains data consistency and synchronization between stages with proper DPU scheduling across algorithms.
    \end{itemize}
 
 \item \textbf{System Throughput:}
@@ -21,7 +21,7 @@
 \item \textbf{Resource Efficiency:}
    \begin{itemize}
    \item Optimize memory and FPGA resource usage to accommodate the additional overhead of pipelined execution and multi-threaded CPU processing.
-   \item Ensure efficient sequential scheduling of the DPU among semantic segmentation and other algorithms, as the DPU can only execute one xmodel inference at a time.
+   \item Ensure efficient sequential scheduling of the DPU among semantic segmentation and other algorithms.
    \end{itemize}
 
 \item \textbf{Error Handling in Pipeline:}
@@ -96,7 +96,7 @@ For the demonstration of the VisionAssist system, the user interface requirement
 
 \item \textbf{DPU Utilization:}
    \begin{itemize}
-   \item Develop a sequential scheduling strategy for DPU access, as the DPU can only execute one xmodel inference at a time. The scheduler must efficiently coordinate between blink detection and eye-tracking submodules without causing bottlenecks.
+   \item Develop a sequential scheduling strategy for DPU access that efficiently coordinates between blink detection and eye-tracking submodules without causing bottlenecks.
    \end{itemize}
 \end{enumerate}
 
