@@ -109,6 +109,13 @@ We have identified the following key design decisions that are critical to the s
    \item \textbf{Decision:} Develop a resource management system that coordinates access to the DPU and ensures each algorithm receives appropriate processing time.
    \item \textbf{Importance:} With multiple algorithms needing DPU access (semantic segmentation, Algorithms 1, 2, and 3), proper resource allocation is essential to maintain data integrity and prevent starvation. This decision impacts both performance and accuracy, as our client noted that Algorithms 1, 2, and 3 require periodic data or the information gathered becomes incorrect. Our scheduling system must ensure that semantic segmentation doesn't monopolize resources while maintaining overall system efficiency.
    \end{itemize}
+
+\item \textbf{Single DPU Architecture Constraint}
+   \begin{itemize}
+   \item \textbf{Decision:} Utilize the single B4096 DPU core (300MHz) on the KV260 board rather than exploring dual smaller DPU configurations.
+   \item \textbf{Rationale:} The KV260's FPGA fabric technically supports implementing two smaller DPUs (B1024 or B512) instead of the single large B4096 core. Both our team and a previous ISU team concluded that dual smaller DPUs would be advantageous, especially given our reduced semantic segmentation requirements. However, our client directed us to maintain the existing single B4096 DPU architecture and not explore the dual DPU approach.
+   \item \textbf{Importance:} This client-driven constraint significantly impacts our optimization strategy. Rather than leveraging multi-core DPU parallelism at the hardware level, we must focus on efficient time-division scheduling and resource sharing mechanisms to achieve our performance goals. The single DPU architecture necessitates careful coordination of algorithm access patterns and optimized scheduling to prevent resource contention while meeting our throughput targets.
+   \end{itemize}
 \end{enumerate}
 
 \subsection{Ideation}\label{subsec:ideation}
@@ -316,6 +323,16 @@ The AMD Kria KV260 provides an excellent balance of performance and power effici
 \item \textbf{Connectivity:} Multiple I/O interfaces for camera integration and system communication
 \item \textbf{Power Efficiency:} Low power consumption suitable for mobile applications
 \end{itemize}
+
+\subsubsection{DPU Architecture Options}
+The KV260's FPGA fabric offers flexibility in DPU configuration. The maximum single-core DPU configuration for K26 SoM and KV260 is the B4096 architecture (feature customized at 300MHz)~\cite{amd_ug1354_kv260,amd_kv260_b4096_forum}. However, the FPGA fabric technically supports alternative configurations:
+
+\begin{itemize}
+\item \textbf{Single Large Core:} B4096 DPU at 300MHz (current implementation)
+\item \textbf{Dual Smaller Cores:} Two B1024 or B512 DPUs enabling true multi-core parallel processing
+\end{itemize}
+
+While dual smaller DPUs could provide benefits for our workload—particularly with reduced semantic segmentation requirements and multiple concurrent algorithms—our client specified maintaining the single B4096 configuration. This architectural constraint was established based on the existing system design and integration considerations, necessitating our focus on software-level optimization and efficient resource scheduling rather than hardware-level parallelism.
 
 \subsection{U-Net Semantic Segmentation Algorithm}
 The U-Net architecture~\cite{ronneberger2015} is particularly well-suited for our eye tracking application:
