@@ -32,28 +32,34 @@
 
 \subsection{User Interface (UI) Requirements}\label{subsec:ui-requirements}
 
+For the demonstration of the VisionAssist system, the user interface requirements are tailored to provide a clear and effective visual presentation of the eye tracking and semantic segmentation capabilities in real-time.
+
 \begin{enumerate}
-\item \textbf{Command Line Interface (CLI):}
+\item \textbf{Display Hardware:}
    \begin{itemize}
-   \item Retain the existing user-friendly CLI for both technical and non-technical users.
-   \item Add new commands to allow users to:
-      \begin{enumerate}
-      \item Configure pipeline settings (e.g., number of threads, buffer sizes).
-      \item Monitor pipeline performance (e.g., throughput, latency, resource usage).
-      \end{enumerate}
-   \item Include help commands to describe new pipeline-related functionalities.
+   \item The demonstration system shall utilize a VGA display connected directly to the Xilinx Kria KV260 development board for visual output.
+   \item The VGA interface provides sufficient resolution and refresh rate to demonstrate real-time processing performance at 60 FPS.
    \end{itemize}
 
-\item \textbf{Command Feedback:}
+\item \textbf{Desktop Environment:}
    \begin{itemize}
-   \item Provide real-time feedback on pipeline performance, including throughput, latency, and error rates.
-   \item Display warnings or errors if the pipeline encounters issues (e.g., buffer overflow, frame drops).
+   \item The board shall run the XFCE desktop environment, providing a lightweight graphical user interface suitable for embedded systems.
+   \item XFCE is deployed on a PetaLinux-based embedded Linux distribution~\cite{xilinx2022petalinux}, which provides the necessary drivers and system libraries for VGA output, camera interfacing, and neural network acceleration.
+   \item The PetaLinux build shall be configured with appropriate kernel modules and device tree overlays to support the Kria KV260 hardware peripherals.
    \end{itemize}
 
-\item \textbf{Error Handling and Logging:}
+\item \textbf{Visual Demonstration:}
    \begin{itemize}
-   \item Enhance error logging to include pipeline-specific issues (e.g., stage delays, synchronization errors).
-   \item Provide detailed logs to assist users in debugging pipeline performance and resource allocation.
+   \item The demonstration shall display real-time operation of the U-Net semantic segmentation model processing live webcam feed.
+   \item Eye tracking model results shall be overlaid on the video stream, clearly showing detected eye regions, pupil positions, and segmentation masks.
+   \item The display shall include visual indicators of processing performance, such as frames per second (FPS) and inference latency metrics.
+   \item The interface shall clearly demonstrate the pipelined architecture operation, showing synchronized processing of multiple frames through the CPU preprocessing, DPU inference, and CPU postprocessing stages.
+   \end{itemize}
+
+\item \textbf{User Interaction:}
+   \begin{itemize}
+   \item Basic user controls shall be accessible through the XFCE environment, allowing demonstration operators to start, stop, and configure the eye tracking application.
+   \item Configuration options shall include camera source selection, model parameters, and display overlay settings.
    \end{itemize}
 \end{enumerate}
 
