@@ -15,7 +15,7 @@ Early and continuous testing enabled rapid detection and resolution of issues be
 \begin{itemize}
 \item Testing each pipeline stage and the U-Net algorithm components as they were created
 \item Checking memory use and buffer management before building the full system
-\item Testing how sequential DPU access was scheduled during development
+\item Testing DPU access scheduling during development
 \end{itemize}
 
 \subsection{Testing Challenges}\label{subsec:testing-challenges}
@@ -24,9 +24,9 @@ The project encountered several significant testing challenges:
 
 \begin{itemize}
 \item Testing on FPGA hardware was different from normal software testing
-\item Ensuring pipelined threads and sequential DPU scheduling worked together correctly
+\item Ensuring pipelined threads and DPU scheduling worked together correctly
 \item Balancing speed and accuracy
-\item Verifying that memory was used correctly for pipelined data flow
+\item Verifying efficient memory use for pipelined data flow
 \end{itemize}
 
 \subsection{Testing Schedule}\label{subsec:testing-schedule}
