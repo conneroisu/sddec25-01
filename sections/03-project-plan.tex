@@ -134,17 +134,17 @@ The project spanned approximately 16 weeks, with work organized into sprints. Th
 
 \subsection{Key Deliverable Dates}
 \begin{itemize}
-\item \textbf{Week 8}: Mathematical division proposal document
+\item \textbf{Week 8}: Model optimization and pipelining proposal document
 \item \textbf{Week 12}: Thread testing results and documentation
 \item \textbf{Week 16}: Preliminary performance report
 \end{itemize}
 
 \subsection{Critical Path}
-The critical path for this project follows the mathematical division of the algorithm, implementation of the eye-tracking components, integration of the parallelization framework, and final optimization of throughput.
+The critical path for this project follows the U-Net model optimization and pipelining, implementation of the eye-tracking components, integration of the processing pipeline, and final optimization of throughput.
 
 \subsection{Sprint Organization}
 \begin{itemize}
-\item \textbf{Sprints 1--4 (Weeks 1--8)}: Focus on mathematical algorithm analysis and division
+\item \textbf{Sprints 1--4 (Weeks 1--8)}: Focus on U-Net model optimization and processing pipeline design
 \item \textbf{Sprints 5--8 (Weeks 9--12)}: Core component implementation and thread management
 \item \textbf{Sprints 9--12 (Weeks 13--16)}: Integration, testing, and optimization
 \end{itemize}
@@ -235,11 +235,11 @@ For risks with probability exceeding 30\%, our team developed detailed contingen
 \toprule
 \textbf{Team Member} & \textbf{Task Area} & \textbf{Specific Tasks} & \textbf{Hours} \\
 \midrule
-Tyler & Mathematical Division &
+Tyler & Model Optimization \& Pipelining &
 \begin{minipage}{5cm}
 \begin{itemize}
-\item Optimize and divide algorithm into 4 parts
-\item Pipeline U-Net into 4 roughly equal parts while maintaining accuracy
+\item Optimize processing pipeline to handle 4-frame batches efficiently
+\item Design overlapped CPU/DPU processing stages while maintaining 99.8\% IoU accuracy
 \item Code implementation
 \item Testing and validation
 \end{itemize}
@@ -259,7 +259,7 @@ Conner & OS and Environment &
 \begin{minipage}{5cm}
 \begin{itemize}
 \item Docker configuration optimization
-\item ONNX splitting for MPU loading
+\item ONNX model optimization for DPU (Deep Learning Processing Unit) loading
 \item OS scheduler optimization
 \item Data version control system demonstration
 \end{itemize}

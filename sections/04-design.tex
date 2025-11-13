@@ -95,19 +95,19 @@ We have identified the following key design decisions that are critical to the s
 \item \textbf{Resource Scheduling Approach}
    \begin{itemize}
    \item \textbf{Decision:} Implement an efficient sequential scheduling system for DPU access, recognizing that the DPU can only execute one xmodel inference at a time. The system uses round-robin or priority-based scheduling to coordinate access among semantic segmentation and other algorithms.
-   \item \textbf{Importance:} This is fundamental to achieving our throughput goal while ensuring Algorithms 1, 2, and 3 can collect their required periodic data. Without effective sequential scheduling, semantic segmentation would monopolize the DPU, preventing other critical algorithms from functioning correctly. The scheduling approach must provide fair resource allocation while maintaining the 99.8\% IoU accuracy target.
+   \item \textbf{Importance:} This is fundamental to achieving our throughput goal while ensuring other algorithms (blink detection and eye tracking) can collect their required periodic data. Without effective sequential scheduling, semantic segmentation would monopolize the DPU, preventing other critical algorithms from functioning correctly. The scheduling approach must provide fair resource allocation while maintaining the 99.8\% IoU accuracy target.
    \end{itemize}
 
 \item \textbf{DPU Access Management}
    \begin{itemize}
    \item \textbf{Decision:} Implement a fair access scheduling approach that prevents semantic segmentation from `starving' other algorithms of DPU resources.
-   \item \textbf{Importance:} The Kria board has four DDR4 memory banks (1GB each), but the single DPU is a shared resource that must be carefully managed. Our approach ensures that while semantic segmentation runs, it doesn't prevent Algorithms 1, 2, and 3 from collecting their required periodic data. This strategy prevents scenarios where the information gathered becomes incorrect due to delayed or missed data collection cycles.
+   \item \textbf{Importance:} The Kria board has four DDR4 memory banks (1GB each), but the single DPU is a shared resource that must be carefully managed. Our approach ensures that while semantic segmentation runs, it doesn't prevent other algorithms (blink detection and eye tracking) from collecting their required periodic data. This strategy prevents scenarios where the information gathered becomes incorrect due to delayed or missed data collection cycles.
    \end{itemize}
 
 \item \textbf{Resource Allocation Strategy}
    \begin{itemize}
    \item \textbf{Decision:} Develop a resource management system that coordinates access to the DPU and ensures each algorithm receives appropriate processing time.
-   \item \textbf{Importance:} With multiple algorithms needing DPU access (semantic segmentation, Algorithms 1, 2, and 3), proper resource allocation is essential to maintain data integrity and prevent starvation. This decision impacts both performance and accuracy, as our client noted that Algorithms 1, 2, and 3 require periodic data or the information gathered becomes incorrect. Our scheduling system must ensure that semantic segmentation doesn't monopolize resources while maintaining overall system efficiency.
+   \item \textbf{Importance:} With multiple algorithms needing DPU access (semantic segmentation, blink detection, and eye tracking), proper resource allocation is essential to maintain data integrity and prevent starvation. This decision impacts both performance and accuracy, as our client noted that blink detection and eye tracking require periodic data or the information gathered becomes incorrect. Our scheduling system must ensure that semantic segmentation doesn't monopolize resources while maintaining overall system efficiency.
    \end{itemize}
 
 \item \textbf{Single DPU Architecture Constraint}
@@ -149,7 +149,7 @@ These options were generated through team brainstorming sessions, a literature r
 
 \subsection{Decision-Making and Trade-Off}\label{subsec:decision-making}
 
-Our client required maintaining the existing accuracy with no degradation due to the sensitive medical nature of the product. Additionally, Algorithms 1, 2, and 3 required periodic data collection or the information gathered would become incorrect. We could not let semantic segmentation starve the other algorithms for the length of time that it runs.
+Our client required maintaining the existing accuracy with no degradation due to the sensitive medical nature of the product. Additionally, blink detection and eye tracking required periodic data collection or the information gathered would become incorrect. We could not let semantic segmentation starve the other algorithms for the length of time that it runs.
 
 Our design prioritized balanced system performance while ensuring all components could meet their operational requirements. The approach maintained critical timing needs for essential functions while enabled the performance improvements necessary to achieve our target throughput.
 
@@ -238,7 +238,7 @@ Our system implements a four-stage processing pipeline:
 
 \item \textbf{Pipelined Semantic Segmentation}~\cite{zhao2023parallel}
    \begin{itemize}
-   \item Pipelined U-Net processing with overlapped CPU preprocessing/postprocessing and sequential DPU inference
+   \item Processing pipeline optimization with overlapped CPU preprocessing/postprocessing stages and sequential DPU inference (U-Net model architecture unchanged)
    \item Efficient throughput of multiple frames through pipeline stages
    \item Sequential DPU scheduling and management to coordinate access among multiple algorithms
    \end{itemize}
