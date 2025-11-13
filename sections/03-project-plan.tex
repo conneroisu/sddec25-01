@@ -49,8 +49,8 @@ Our project involved optimizing the semantic segmentation U-Net algorithm by imp
 
 \subsection{Task 4: Multicore Processing}
 \begin{itemize}
-\item Subtask 4.1: Configure Docker environment for efficiency
-\item Subtask 4.2: Develop multi-core loading method for split ONNX model
+\item Subtask 4.1: Configure build environment for optimal performance
+\item Subtask 4.2: Develop multi-core loading method for ONNX model
 \item Subtask 4.3: Implement pipelined passing of data through threads
 \item Subtask 4.4: Optimize data flow between processing units
 \end{itemize}
@@ -98,21 +98,14 @@ The following key milestones were identified for the project, along with their a
 \item \textbf{Evaluation Criteria}: All CPU threads operate correctly with proper synchronization and without memory conflicts
 \end{itemize}
 
-\subsection{Milestone 4: Docker Environment Configuration}
-\begin{itemize}
-\item \textbf{Completion Date}: Week 16
-\item \textbf{Metrics}: Streamlined processing environment
-\item \textbf{Evaluation Criteria}: Environment supports all required libraries and tools with minimal overhead
-\end{itemize}
-
-\subsection{Milestone 5: Pipelined Implementation of Semantic Segmentation}
+\subsection{Milestone 4: Pipelined Implementation of Semantic Segmentation}
 \begin{itemize}
 \item \textbf{Completion Date}: Week 16
 \item \textbf{Metrics}: Functional pipelined semantic segmentation system with optimized throughput
 \item \textbf{Evaluation Criteria}: System achieves efficient pipelined processing of multiple frames with accuracy equal to or greater than original implementation (99.8\% accuracy)
 \end{itemize}
 
-\subsection{Milestone 6: Increased Throughput Demonstration}
+\subsection{Milestone 5: Increased Throughput Demonstration}
 \begin{itemize}
 \item \textbf{Completion Date}: Week 16
 \item \textbf{Metrics}: Processing speed of multiple frames
@@ -258,7 +251,7 @@ Aidan & Algorithm Implementation &
 Conner & OS and Environment &
 \begin{minipage}{5cm}
 \begin{itemize}
-\item Docker configuration optimization
+\item Build system configuration optimization
 \item ONNX model optimization for DPU (Deep Learning Processing Unit) loading
 \item OS scheduler optimization
 \item Data version control system demonstration
@@ -290,10 +283,10 @@ Joey & Hardware Management &
 \subsection{Software Resources}
 \begin{itemize}
 \item Vitis-AI development suite
-\item Docker runtime environment
-\item Development tools (GCC, GDB, etc.)
+\item Development tools (GCC, GDB, Make/CMake)
 \item ONNX runtime libraries
 \item Testing and benchmarking tools
+\item Cross-compilation toolchain for ARM targets
 \end{itemize}
 
 \subsection{Development Tools}
