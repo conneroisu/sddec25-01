@@ -367,7 +367,7 @@ During our design process, we evaluated several alternative approaches:
 \section{Design Analysis}\label{sec:design-analysis}
 
 \subsection{Current Implementation Status:}
-Our current system achieves 98.8\% IoU accuracy with single-frame processing in 160ms. While accuracy is within acceptable range, performance falls significantly short of our target throughput requirements.
+Our comprehensive benchmarking has evaluated both single-model and split-model implementations. The single model achieves 529.39 ms total latency with 98.8\% IoU accuracy. The split model (4 segments) demonstrates 784.29 ms latency, revealing that naive parallelization introduces significant overhead (48.2\% increase) due to thread synchronization and inter-segment data transfer. These results inform future optimization strategies focusing on pipeline parallelism and efficient resource scheduling rather than simple algorithm division.
 
 \subsection{Implementation Challenges:}
 \begin{itemize}

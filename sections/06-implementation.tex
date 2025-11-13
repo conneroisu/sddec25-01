@@ -2,7 +2,7 @@
 
 \section{Current Implementation Status}\label{sec:current-status}
 
-Our project is currently in active development with significant progress made toward achieving our performance and accuracy goals. The implementation follows a structured approach focusing on the critical path items while maintaining flexibility for iterative improvements.
+Our project has completed comprehensive performance evaluation of both single-model and split-model architectures on the AMD Kria KV260 development board. The implementation follows a structured approach focusing on the critical path items while maintaining flexibility for iterative improvements.
 
 \subsection{Development Environment Setup}\label{subsec:development-environment}
 
@@ -13,6 +13,44 @@ Our project is currently in active development with significant progress made to
 \item \textbf{Build System}: Docker-based development environment for consistency across team members
 \end{itemize}
 
+\subsection{Performance Results}\label{subsec:performance-results}
+
+We have conducted extensive benchmarking of both single-model and split-model implementations to evaluate the trade-offs between different parallelization strategies.
+
+\subsubsection{Single Model Performance}\label{subsubsec:single-model-performance}
+
+The baseline U-Net implementation running as a single unified model demonstrates the following performance characteristics:
+
+\begin{itemize}
+\item \textbf{Mean Total Latency}: 529.39 ms ($\pm$ 0.26 ms)
+\item \textbf{Mean DPU Time}: 474.32 ms ($\pm$ 0.05 ms)
+\item \textbf{Mean Preprocess}: 27.43 ms ($\pm$ 0.23 ms)
+\item \textbf{Mean Postprocess}: 27.64 ms ($\pm$ 0.08 ms)
+\item \textbf{Memory Usage}: 45.00 MB
+\end{itemize}
+
+The single model implementation provides a stable baseline with low variance in processing times, indicating consistent performance across frames. The dominant processing time is spent in DPU execution (89.6\% of total latency), with preprocessing and postprocessing contributing approximately 10\% of overall latency.
+
+\subsubsection{Split Model Performance (4 Segments)}\label{subsubsec:split-model-performance}
+
+The parallelized implementation dividing the U-Net algorithm into four segments demonstrates the following characteristics:
+
+\begin{itemize}
+\item \textbf{Mean Total Latency}: 784.29 ms ($\pm$ 3.39 ms)
+\item \textbf{Mean DPU Time}: 729.00 ms ($\pm$ 3.38 ms)
+\item \textbf{Mean Preprocess}: 27.64 ms ($\pm$ 0.18 ms)
+\item \textbf{Mean Postprocess}: 27.64 ms ($\pm$ 0.01 ms)
+\end{itemize}
+
+The split model approach incurs additional overhead from thread coordination and data transfer between segments, resulting in 48.2\% higher total latency compared to the single model. The increased variance ($\pm$ 3.39 ms vs. $\pm$ 0.26 ms) indicates synchronization overhead and resource contention between parallel threads.
+
+\subsection{Performance Analysis}\label{subsec:performance-analysis}
+
+\begin{itemize}
+\item \textbf{Parallelization Overhead}: The split model demonstrates that naive algorithm division introduces significant overhead (255 ms increase) due to thread synchronization and inter-segment data transfer
+\item \textbf{Memory Efficiency}: Single model maintains a lower memory footprint (45 MB) when compared to split model inference (111.01 MB). This increase in memory footprint is caused by the intermediate storage of tensors needed as inputs for further UNet segments.
+\end{itemize}
+
 \subsection{Algorithm Analysis and Division}\label{subsec:algorithm-analysis}
 
 The U-Net semantic segmentation algorithm has been thoroughly analyzed for pipelined processing optimization~\cite{zhao2023parallel}:
@@ -21,7 +59,7 @@ The U-Net semantic segmentation algorithm has been thoroughly analyzed for pipel
 \item \textbf{Architecture Review}: Complete understanding of encoder-decoder structure and skip connections
 \item \textbf{Pipeline Strategy}: Architectural approach developed for efficient pipelined processing with CPU preprocessing/postprocessing and sequential DPU inference
 \item \textbf{Accuracy Validation}: Current implementation achieves 98.8\% IoU accuracy, within target range of 99.8\%~\cite{wang2021}
-\item \textbf{Performance Baseline}: Established baseline processing time of 160ms per frame
+\item \textbf{Performance Baseline}: Comprehensive benchmarking completed for both single and split model architectures
 \end{itemize}
 
 \subsection{Resource Scheduling Implementation}\label{subsec:scheduling-implementation}
