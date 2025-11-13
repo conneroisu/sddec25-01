@@ -4,7 +4,7 @@
 
 \subsection{Broader Context}\label{subsec:broader-context}
 
-Our Semantic Segmentation Optimization project is situated in the healthcare and assistive technology domain, specifically addressing the needs of individuals with mobility disabilities who require eye-tracking systems for communication and control of assistive devices. We are designing for healthcare professionals, caregivers, and most importantly, individuals with conditions such as cerebral palsy who depend on efficient and responsive eye tracking for daily activities and medical monitoring.
+Our Semantic Segmentation Optimization project is situated in the healthcare and assistive technology domain, specifically addressing the needs of individuals with mobility impairments who require eye-tracking systems for communication and control of assistive devices. We are designing for healthcare professionals, caregivers, and most importantly, individuals with conditions such as cerebral palsy who depend on efficient and responsive eye tracking for daily activities and medical monitoring.
 
 \begin{table}[htbp]
 \centering
@@ -114,7 +114,7 @@ We have identified the following key design decisions that are critical to the s
    \begin{itemize}
    \item \textbf{Decision:} Utilize the single B4096 DPU core (300MHz) on the KV260 board rather than exploring dual smaller DPU configurations.
    \item \textbf{Rationale:} The KV260's FPGA fabric technically supports implementing two smaller DPUs (B1024 or B512) instead of the single large B4096 core. Both our team and a previous ISU team concluded that dual smaller DPUs would be advantageous, especially given our reduced semantic segmentation requirements. However, our client directed us to maintain the existing single B4096 DPU architecture and not explore the dual DPU approach.
-   \item \textbf{Importance:} This client-driven constraint significantly impacts our optimization strategy. Rather than leveraging multi-core DPU parallelism at the hardware level, we must focus on efficient time-division scheduling and resource sharing mechanisms to achieve our performance goals. The single DPU architecture necessitates careful coordination of algorithm access patterns and optimized scheduling to prevent resource contention while meeting our throughput targets.
+   \item \textbf{Importance:} This client-driven constraint significantly impacts our optimization strategy. The single DPU architecture prevents us from leveraging hardware-level parallelism. Instead, we must focus on efficient time-division scheduling and resource sharing mechanisms to achieve our performance goals. This architecture necessitates careful coordination of algorithm access patterns and optimized scheduling to prevent resource contention while meeting our throughput targets.
    \end{itemize}
 \end{enumerate}
 
@@ -149,7 +149,7 @@ These options were generated through team brainstorming sessions, a literature r
 
 \subsection{Decision-Making and Trade-Off}\label{subsec:decision-making}
 
-Our client required absolutely no decrease in accuracy due to the sensitive medical nature of the product. Additionally, Algorithms 1, 2, and 3 required periodic data collection or the information gathered would become incorrect. We could not let semantic segmentation starve the other algorithms for the length of time that it runs.
+Our client required maintaining the existing accuracy with no degradation due to the sensitive medical nature of the product. Additionally, Algorithms 1, 2, and 3 required periodic data collection or the information gathered would become incorrect. We could not let semantic segmentation starve the other algorithms for the length of time that it runs.
 
 Our design prioritized balanced system performance while ensuring all components could meet their operational requirements. The approach maintained critical timing needs for essential functions while enabled the performance improvements necessary to achieve our target throughput.
 
