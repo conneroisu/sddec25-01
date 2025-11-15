@@ -4,7 +4,7 @@
 
 \subsection{Broader Context}\label{subsec:broader-context}
 
-Our Semantic Segmentation Optimization project is situated in the healthcare and assistive technology domain, specifically addressing the needs of individuals with mobility impairments who require eye-tracking systems for communication and control of assistive devices. We are designing for healthcare professionals, caregivers, and most importantly, individuals with conditions such as cerebral palsy who depend on efficient and responsive eye tracking for daily activities and medical monitoring.
+This semantic segmentation optimization is situated in the healthcare and assistive technology domain, specifically addressing the needs of individuals with mobility impairments who require eye-tracking systems for communication and control of assistive devices. The target users include healthcare professionals, caregivers, and individuals with conditions such as cerebral palsy who depend on efficient and responsive eye tracking for daily activities and medical monitoring.
 
 \begin{table}[htbp]
 \centering
@@ -15,7 +15,7 @@ Our Semantic Segmentation Optimization project is situated in the healthcare and
 \textbf{Area} & \textbf{Description} & \textbf{Examples} \\
 \midrule
 Public health, safety, and welfare &
-Our project directly improves the safety and well-being of individuals with mobility impairments by enhancing the responsiveness of eye-tracking medical monitoring systems. &
+The optimized system improves the safety and well-being of individuals with mobility impairments by enhancing the responsiveness of eye-tracking medical monitoring systems. &
 Faster response times to potential medical issues, more reliable detection of eye movements for wheelchair control, reduced risk of incidents for users \\
 \midrule
 Global, cultural, and social &
@@ -23,11 +23,11 @@ The solution respects the values of independence and dignity for people with dis
 Supports the right to autonomy for people with disabilities, aligns with medical ethics of beneficence~\cite{beauchamp2007ethics}, works within existing healthcare frameworks \\
 \midrule
 Ecological &
-By optimizing software rather than requiring new hardware, our solution extends the useful life of existing devices and reduces electronic waste. &
+By optimizing software rather than requiring new hardware, the solution extends the useful life of existing devices and reduces electronic waste. &
 Reduced need for frequent hardware replacement, lower energy consumption through optimized processing \\
 \midrule
 Economic &
-Our optimization approach provides significant performance improvements while keeping costs accessible for healthcare providers and individuals. &
+The optimization approach provides significant performance improvements while keeping costs accessible for healthcare providers and individuals. &
 Affordable enhancement to existing assistive technology systems, more efficient use of available computing resources, potential reduction in healthcare costs through preventative monitoring \\
 \bottomrule
 \end{tabular}
@@ -45,7 +45,7 @@ Several approaches have been used to implement semantic segmentation for eye tra
 \item \textbf{Commercial Solutions} like Tobii Pro Fusion offer high-speed eye tracking (250 Hz) but require dedicated hardware and specialized processors, making them expensive and difficult to integrate into existing assistive devices.
 \end{enumerate}
 
-\subsubsection{Advantages of Our Approach}
+\subsubsection{Advantages of This Approach}
 \begin{itemize}
 \item Maintains high accuracy while significantly improving processing speed
 \item Utilizes existing hardware (Kria KV260) without requiring costly upgrades
@@ -53,7 +53,7 @@ Several approaches have been used to implement semantic segmentation for eye tra
 \item Integrates with existing assistive wheelchair technology ecosystem
 \end{itemize}
 
-\subsubsection{Limitations of Our Approach}
+\subsubsection{Limitations of This Approach}
 \begin{itemize}
 \item Requires careful optimization of memory and DPU resources
 \item Complexity in thread synchronization and pipeline management
@@ -163,11 +163,11 @@ Another important note is that the scheduling system must account for operating 
 
 \subsection{Overview}\label{subsec:overview}
 
-Our Semantic Segmentation Optimization project aims to enhance the performance of a U-Net-based eye tracking system for individuals with disabilities, particularly those with cerebral palsy. This system helps monitor eye movements to detect potential medical issues and can automatically reposition users to prevent incidents, improving safety and quality of life.
+This optimization enhances the performance of a U-Net-based eye tracking system for individuals with disabilities, particularly those with cerebral palsy. The system monitors eye movements to detect potential medical issues and can automatically reposition users to prevent incidents.
 
-The current implementation processes a single frame in 160ms, which is insufficient for real-time monitoring. Our optimized design implements a pipelined architecture that leverages multithreaded CPU processing alongside sequential DPU execution to achieve approximately 8.3ms per frame average throughput (33.2ms total for 4 frames), effectively increasing the processing speed by nearly 5 times.
+The baseline implementation processes a single frame in 160ms, which is insufficient for real-time monitoring. The optimized design implements a pipelined architecture that leverages multithreaded CPU processing alongside sequential DPU execution to achieve approximately 8.3ms per frame average throughput (33.2ms total for 4 frames).
 
-At a high level, our system:
+At a high level, the system:
 
 \begin{enumerate}
 \item Captures eye movement images through a camera
@@ -176,11 +176,11 @@ At a high level, our system:
 \item Provides this information to the assistive wheelchair technology for appropriate response
 \end{enumerate}
 
-The key innovation in our design is the approach to pipelined processing and efficient sequential DPU scheduling on the AMD Kria KV260 board, which has limited memory and a single DPU, but powerful acceleration capabilities when properly leveraged.
+The design employs pipelined processing and efficient sequential DPU scheduling on the AMD Kria KV260 board, which has limited memory and a single DPU, but powerful acceleration capabilities when properly leveraged.
 
 \subsection{Detailed Design}\label{subsec:detailed-design}
 
-Our semantic segmentation optimization system consists of the following key components:
+The semantic segmentation optimization system consists of the following key components:
 
 \subsubsection{Hardware Platform}
 \begin{itemize}
@@ -226,7 +226,7 @@ Our semantic segmentation optimization system consists of the following key comp
 \end{enumerate}
 
 \subsubsection{Processing Pipeline}
-Our system implements a four-stage processing pipeline:
+The system implements a four-stage processing pipeline:
 
 \begin{enumerate}
 \item \textbf{Image Capture and Preprocessing}
@@ -367,7 +367,9 @@ During our design process, we evaluated several alternative approaches:
 \section{Design Analysis}\label{sec:design-analysis}
 
 \subsection{Current Implementation Status:}
-Our comprehensive benchmarking has evaluated both single-model and split-model implementations. The single model achieves 529.39 ms total latency with 98.8\% IoU accuracy. The split model (4 segments) demonstrates 784.29 ms latency, revealing that naive parallelization introduces significant overhead (48.2\% increase) due to thread synchronization and inter-segment data transfer. These results inform future optimization strategies focusing on pipeline parallelism and efficient resource scheduling rather than simple algorithm division.
+Comprehensive benchmarking has evaluated both single-model and split-model implementations. The single model achieves 529.39 ms total latency with 98.8\% IoU accuracy. The split model (4 segments) demonstrates 784.29 ms latency, revealing that naive parallelization introduces significant overhead (48.2\% increase) due to thread synchronization and inter-segment data transfer.
+
+These results inform optimization strategies that focus on pipeline parallelism and efficient resource scheduling rather than simple algorithm division.
 
 \subsection{Implementation Challenges:}
 \begin{itemize}

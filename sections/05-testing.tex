@@ -2,7 +2,7 @@
 
 \section{Testing Strategy Overview}\label{sec:testing-overview}
 
-Testing was essential for the Semantic Segmentation system. Comprehensive validation ensured that the system met critical performance objectives: fast processing (<16.6ms between frames) and high accuracy (99.8\%).
+Comprehensive testing validates that the Semantic Segmentation system meets critical performance objectives: fast processing (<16.6ms between frames) and high accuracy (99.8\%).
 
 \begin{quote}
 \textit{Note: Numerical values are representative placeholders due to NDA restrictions.}
@@ -10,10 +10,10 @@ Testing was essential for the Semantic Segmentation system. Comprehensive valida
 
 \subsection{Testing Philosophy}\label{subsec:testing-philosophy}
 
-Early and continuous testing enabled rapid detection and resolution of issues before they compounded. This methodology involved:
+Early and continuous testing enables rapid detection and resolution of issues before they compound. This methodology ensures each component validates correctly before integration, reducing the complexity of debugging distributed systems. The approach involves:
 
 \begin{itemize}
-\item Testing each pipeline stage and the U-Net algorithm components as they were created
+\item Testing each pipeline stage and the U-Net algorithm components as they are created
 \item Checking memory use and buffer management before building the full system
 \item Testing DPU access scheduling during development
 \end{itemize}
@@ -23,11 +23,13 @@ Early and continuous testing enabled rapid detection and resolution of issues be
 The project encountered several significant testing challenges:
 
 \begin{itemize}
-\item Testing on FPGA hardware was different from normal software testing
-\item Ensuring pipe-lined threads and DPU scheduling worked together correctly
-\item Balancing speed and accuracy
-\item Verifying efficient memory use for pipe-lined data flow
+\item Testing on FPGA hardware differs from conventional software testing
+\item Ensuring pipelined threads and DPU scheduling work together correctly
+\item Balancing speed and accuracy requirements
+\item Verifying efficient memory use for pipelined data flow
 \end{itemize}
+
+These challenges arise from the distributed, hardware-accelerated nature of the system. Unlike software-only applications, FPGA-based systems require specialized testing infrastructure and cannot rely on traditional debugging tools. The pipelined architecture introduces timing dependencies that must be validated under realistic load conditions.
 
 \subsection{Testing Schedule}\label{subsec:testing-schedule}
 

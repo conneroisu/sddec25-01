@@ -30,6 +30,8 @@
    \end{itemize}
 \end{enumerate}
 
+These functional requirements prioritize real-time performance and accuracy, which are essential for medical safety. The pipelined architecture addresses the fundamental constraint that the DPU can only execute one inference at a time, while the throughput target of 33.2ms for four frames enables the 60 FPS operation necessary for reliable medical monitoring.
+
 \subsection{User Interface (UI) Requirements}\label{subsec:ui-requirements}
 
 For the demonstration of the VisionAssist system, the user interface requirements are tailored to provide a clear and effective visual presentation of the eye tracking and semantic segmentation capabilities in real-time.
@@ -63,6 +65,8 @@ For the demonstration of the VisionAssist system, the user interface requirement
    \end{itemize}
 \end{enumerate}
 
+The UI requirements focus on demonstration needs while maintaining technical transparency. The VGA display and XFCE environment provide a lightweight, embedded-appropriate interface that allows stakeholders to directly observe system performance metrics and real-time processing results. This approach validates both functional correctness and performance targets during live demonstrations.
+
 \subsection{Physical and Economic Requirements}\label{subsec:physical-economic}
 
 \begin{enumerate}
@@ -78,6 +82,8 @@ For the demonstration of the VisionAssist system, the user interface requirement
    \item Ensure that future maintenance and updates remain economical.
    \end{itemize}
 \end{enumerate}
+
+These requirements emphasize software optimization over hardware expansion, reducing barriers to deployment. By maximizing performance on existing Kria KV260 hardware, the solution remains accessible to medical assistive technology applications with constrained budgets while maintaining the flexibility needed for future enhancements.
 
 \subsection{System Constraints}\label{subsec:system-constraints}
 
@@ -100,6 +106,8 @@ For the demonstration of the VisionAssist system, the user interface requirement
    \end{itemize}
 \end{enumerate}
 
+These constraints reflect the physical limitations of the Kria KV260 platform. The single DPU architecture necessitates careful resource scheduling to prevent algorithm starvation, while the 4GB memory limit requires efficient buffer management for pipelined processing. These constraints drive the core architectural decisions for the implementation.
+
 \subsection{Additional Considerations}\label{subsec:additional-considerations}
 
 \begin{enumerate}
@@ -121,6 +129,8 @@ For the demonstration of the VisionAssist system, the user interface requirement
    \item Ensure that the architecture can handle increased workloads (e.g., higher frame rates or additional features) without significant rework.
    \end{itemize}
 \end{enumerate}
+
+These considerations ensure the system remains viable beyond initial deployment. Privacy-preserving on-device processing aligns with medical data protection standards, while scalable architecture design anticipates future functional requirements without necessitating complete system redesign.
 
 \section{Engineering Standards}\label{sec:engineering-standards}
 

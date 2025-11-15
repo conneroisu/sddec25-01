@@ -2,7 +2,7 @@
 
 \section{Current Implementation Status}\label{sec:current-status}
 
-Our project has completed comprehensive performance evaluation of both single-model and split-model architectures on the AMD Kria KV260 development board. The implementation follows a structured approach focusing on the critical path items while maintaining flexibility for iterative improvements.
+The project has completed comprehensive performance evaluation of both single-model and split-model architectures on the AMD Kria KV260 development board. The implementation follows a structured approach focusing on critical path items while maintaining flexibility for iterative improvements.
 
 \subsection{Development Environment Setup}\label{subsec:development-environment}
 
@@ -75,7 +75,7 @@ The U-Net semantic segmentation algorithm has been thoroughly analyzed for pipel
 
 \subsection{Training Infrastructure}\label{subsec:training-infrastructure}
 
-The U-Net semantic segmentation model training process underwent significant optimization to improve both training efficiency and model performance. Our enhanced training infrastructure leverages GPU acceleration through PyTorch~\cite{pytorch2023} with carefully designed batched operations and optimized data flow patterns.
+The U-Net semantic segmentation model training process underwent significant optimization to improve both training efficiency and model performance. The enhanced training infrastructure leverages GPU acceleration through PyTorch~\cite{pytorch2023} with carefully designed batched operations and optimized data flow patterns.
 
 \subsection{GPU-Optimized Training Pipeline}\label{subsec:gpu-optimized-training}
 
@@ -115,7 +115,7 @@ Training experiments are tracked using MLflow~\cite{mlflow2023}, providing compr
 
 \subsection{GPU Metrics Methodology}\label{subsec:gpu-metrics-methodology}
 
-Following best practices for GPU performance measurement~\cite{elvinger2025gpu}, our training implementation computes all performance metrics directly within GPU kernels rather than relying on CPU-side calculations. This approach provides several advantages:
+Following best practices for GPU performance measurement~\cite{elvinger2025gpu}, the training implementation computes all performance metrics directly within GPU kernels rather than relying on CPU-side calculations. This approach provides several advantages:
 
 \begin{itemize}
 \item \textbf{Fine-Grained Profiling}: Access to device-level performance counters including instruction throughput (IPC), streaming multiprocessor (SM) utilization, and memory bandwidth usage
@@ -181,7 +181,7 @@ The model training process utilizes a comprehensive eye-tracking dataset with ca
 
 \subsection{Agile Development Approach}\label{subsec:agile-approach}
 
-Our implementation follows an agile methodology with:
+The implementation follows an agile methodology with:
 
 \begin{itemize}
 \item \textbf{Sprint Planning}: 2-week sprints with specific deliverables
