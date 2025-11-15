@@ -163,7 +163,7 @@ Another important note is that the scheduling system must account for operating 
 
 \subsection{Overview}\label{subsec:overview}
 
-Our Semantic Segmentation Optimization project aims to enhance the performance of a U-Net-based eye tracking system for individuals with disabilities, particularly those with cerebral palsy. This system helps monitor eye movements to detect potential medical issues and can automatically reposition users to prevent incidents, improving safety and quality of life.
+Our Semantic Segmentation Optimization project aims to enhance the performance of a U-Net-based eye tracking system for individuals with disabilities, particularly those with cerebral palsy. This system monitors eye movements to detect potential medical issues and can automatically reposition users to prevent incidents.
 
 The current implementation processes a single frame in 160ms, which is insufficient for real-time monitoring. Our optimized design implements a pipelined architecture that leverages multithreaded CPU processing alongside sequential DPU execution to achieve approximately 8.3ms per frame average throughput (33.2ms total for 4 frames), effectively increasing the processing speed by nearly 5 times.
 
@@ -314,7 +314,7 @@ Our system implements a four-stage processing pipeline:
 \section{Technology Considerations}\label{sec:technology-considerations}
 
 \subsection{Kria Board KV260}
-The AMD Kria KV260 provides an excellent balance of performance and power efficiency for our application:
+The AMD Kria KV260 provides a balance of performance and power efficiency for our application:
 
 \begin{itemize}
 \item \textbf{Processing Power:} Quad-core ARM Cortex-A53 with 1.5 GHz clock speed
