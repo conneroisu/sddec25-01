@@ -41,7 +41,7 @@ jobs:
           # Format: //username:password@server/share
           SMB_URL="//${SMB_USERNAME}:${SMB_PASSWORD}@${SMB_SERVER}/${SMB_SHARE}"
 
-          echo "Mounting SMB share from ${SMB_SERVER}/${SMB_SHARE}..."
+          echo "Mounting SMB share..."
 
           # Mount the SMB share (macOS specific command)
           if mount_smbfs "${SMB_URL}" ~/smb_mount; then
