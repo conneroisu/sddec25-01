@@ -52,4 +52,5 @@ logs
 .mtc
 build/
 *.pdf
+*.png
 /.pre-commit-config.yaml
