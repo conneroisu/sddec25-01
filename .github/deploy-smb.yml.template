@@ -1,0 +1,92 @@
+name: Deploy to SMB Share
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'www/**'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  deploy:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check www directory exists
+        run: |
+          if [ ! -d "www" ]; then
+            echo "Error: www/ directory does not exist"
+            exit 1
+          fi
+          echo "Found www/ directory with contents:"
+          ls -la www/
+
+      - name: Create mount point
+        run: |
+          mkdir -p ~/smb_mount
+          echo "Created mount point at ~/smb_mount"
+
+      - name: Mount SMB share
+        env:
+          SMB_SERVER: ${{ secrets.SMB_SERVER }}
+          SMB_SHARE: ${{ secrets.SMB_SHARE }}
+          SMB_USERNAME: ${{ secrets.SMB_USERNAME }}
+          SMB_PASSWORD: ${{ secrets.SMB_PASSWORD }}
+        run: |
+          # Construct SMB URL
+          # Format: //username:password@server/share
+          SMB_URL="//${SMB_USERNAME}:${SMB_PASSWORD}@${SMB_SERVER}/${SMB_SHARE}"
+
+          echo "Mounting SMB share from ${SMB_SERVER}/${SMB_SHARE}..."
+
+          # Mount the SMB share (macOS specific command)
+          if mount_smbfs "${SMB_URL}" ~/smb_mount; then
+            echo "Successfully mounted SMB share"
+            ls -la ~/smb_mount
+          else
+            echo "Failed to mount SMB share"
+            exit 1
+          fi
+
+      - name: Sync www contents to SMB share
+        run: |
+          echo "Syncing www/ contents to SMB share..."
+
+          # Use rsync to copy files
+          # -a: archive mode (preserves permissions, timestamps, etc.)
+          # -v: verbose
+          # --delete: delete files in destination that don't exist in source
+          # --exclude: exclude specific files/patterns if needed
+          rsync -av --delete \
+            --exclude='.git*' \
+            --exclude='.DS_Store' \
+            www/ ~/smb_mount/
+
+          echo "Sync complete!"
+          echo "Files in SMB share:"
+          ls -la ~/smb_mount/
+
+      - name: Unmount SMB share
+        if: always()  # Always unmount, even if previous steps failed
+        run: |
+          echo "Unmounting SMB share..."
+          if umount ~/smb_mount; then
+            echo "Successfully unmounted SMB share"
+          else
+            echo "Warning: Failed to unmount SMB share cleanly"
+            # Force unmount as fallback
+            diskutil unmount force ~/smb_mount || true
+          fi
+
+          # Clean up mount point
+          rmdir ~/smb_mount || true
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "✅ Successfully deployed www/ contents to SMB share"
+          echo "Deployment completed at $(date)"

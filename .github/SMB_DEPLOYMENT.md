@@ -2,6 +2,24 @@
 
 This workflow automatically deploys the contents of the `www/` directory to an SMB network share whenever changes are pushed to the `main` branch.
 
+## Installation
+
+**The workflow file must be added manually** due to GitHub security restrictions on automated workflow creation.
+
+### Steps to Add the Workflow:
+
+1. Go to your GitHub repository
+2. Navigate to `.github/workflows/`
+3. Create a new file named `deploy-smb.yml`
+4. Copy the contents from `.github/deploy-smb.yml.template` in this repository
+5. Commit the file
+
+Alternatively, you can use the GitHub web interface:
+- Click "Add file" → "Create new file"
+- Name it `.github/workflows/deploy-smb.yml`
+- Paste the template contents
+- Commit directly to your desired branch
+
 ## Required GitHub Secrets
 
 Before the workflow can run successfully, you must configure the following secrets in your GitHub repository:
