@@ -62,6 +62,19 @@ The U-Net semantic segmentation algorithm has been thoroughly analyzed for pipel
 \item \textbf{Performance Baseline}: Comprehensive benchmarking completed for both single and split model architectures
 \end{itemize}
 
+\subsubsection{ONNX Graph Analysis with Netron}\label{subsubsec:onnx-graph-analysis}
+
+To identify appropriate split points for dividing the U-Net model into segments for parallel processing, we utilized Netron~\cite{netron}, an open-source neural network visualization tool. Netron provides comprehensive visualization of ONNX model graphs, enabling detailed inspection of the network architecture including:
+
+\begin{itemize}
+\item \textbf{Node Identification}: Visual representation of all computational nodes in the ONNX graph, including convolutional layers, activation functions, pooling operations, and skip connections
+\item \textbf{Layer Connectivity}: Clear visualization of data flow between layers, essential for identifying valid split points that preserve model integrity
+\item \textbf{Tensor Dimensions}: Display of intermediate tensor shapes at each node, critical for understanding memory requirements and data transfer overhead between split segments
+\item \textbf{Operation Parameters}: Detailed inspection of layer parameters and attributes to understand computational complexity of each segment
+\end{itemize}
+
+Using Netron's interactive graph visualization, we identified strategic nodes in the U-Net encoder-decoder architecture where the model could be divided into four segments while maintaining the skip connection pathways essential for semantic segmentation accuracy. This analysis informed the split model implementation evaluated in Section~\ref{subsubsec:split-model-performance}, where intermediate tensors between segments are stored and passed to subsequent processing stages.
+
 \subsection{Resource Scheduling Implementation}\label{subsec:scheduling-implementation}
 
 \begin{itemize}
