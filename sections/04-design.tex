@@ -368,6 +368,15 @@ The Xilinx Vitis-AI development ecosystem~\cite{amd2023vitis} and ONNX Runtime~\
 \item \textbf{Memory Management:} Efficient buffer allocation and transfer optimization
 \end{itemize}
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{assets/xilinx-vart-stack.png}
+\caption{Xilinx Vitis AI Runtime (VART) stack architecture showing the layered approach from application level through runtime libraries to hardware acceleration.}
+~\label{fig:vart-stack}
+\end{figure}
+
+The VART stack architecture (Figure~\ref{fig:vart-stack}) illustrates the complete software stack from the application layer down to the Deep Learning Processing Unit (DPU) hardware. This layered approach enables efficient neural network inference by providing optimized runtime libraries and hardware abstraction layers that maximize utilization of the Kria KV260's acceleration capabilities.
+
 \subsection{Alternative Technologies Considered}
 During our design process, we evaluated several alternative approaches:
 
