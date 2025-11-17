@@ -129,6 +129,10 @@
 		\centering
 		\vspace*{1cm}
 
+		% Project logo
+		\includegraphics[width=0.25\textwidth]{assets/title-logo.png}\\
+		\vspace{1cm}
+
 		{\Large\textbf{\@institution}\\}
 		\vspace{0.5cm}
 		{\large\@department\\}
