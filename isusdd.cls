@@ -130,7 +130,7 @@
 		\vspace*{1cm}
 
 		% Project logo
-		\includegraphics[width=0.25\textwidth]{assets/title-logo.png}\\
+		\includegraphics[width=0.6\textwidth]{assets/title-logo.png}\\
 		\vspace{1cm}
 
 		{\Large\textbf{\@institution}\\}
