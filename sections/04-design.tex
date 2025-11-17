@@ -184,7 +184,7 @@ Our semantic segmentation optimization system consists of the following key comp
 
 \subsubsection{Hardware Platform}
 \begin{itemize}
-\item \textbf{AMD Kria KV260 Development Board}~\cite{xilinx2022kv260}
+\item \textbf{AMD Kria KV260 Development Board}~\cite{xilinx2022kv260} (see Figure~\ref{fig:kv260})
   \begin{itemize}
   \item System-on-Module (SoM) with programmable logic
   \item Quad-core ARM processor
@@ -196,7 +196,7 @@ Our semantic segmentation optimization system consists of the following key comp
 
 \subsubsection{Software Components}
 \begin{enumerate}
-\item \textbf{U-Net Semantic Segmentation Algorithm}
+\item \textbf{U-Net Semantic Segmentation Algorithm} (see Figure~\ref{fig:unet})
    \begin{itemize}
    \item \textbf{Purpose:} Processes eye images to create pixel-level segmentation for pupil identification
    \item \textbf{Capabilities:} Achieves target accuracy while meeting performance requirements
@@ -316,6 +316,13 @@ Our system implements a four-stage processing pipeline:
 \subsection{Kria Board KV260}
 The AMD Kria KV260 provides a balance of performance and power efficiency for our application:
 
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.7\textwidth]{assets/kv260.png}
+\caption{AMD Kria KV260 Development Board featuring Zynq UltraScale+ MPSoC with integrated DPU for AI acceleration.}
+~\label{fig:kv260}
+\end{figure}
+
 \begin{itemize}
 \item \textbf{Processing Power:} Quad-core ARM Cortex-A53 with 1.5 GHz clock speed
 \item \textbf{AI Acceleration:} Integrated DPU for neural network inference
@@ -336,6 +343,13 @@ While dual smaller DPUs could provide benefits for our workload—particularly w
 
 \subsection{U-Net Semantic Segmentation Algorithm}
 The U-Net architecture~\cite{ronneberger2015} is particularly well-suited for our eye tracking application:
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{assets/unet.png}
+\caption{U-Net encoder-decoder architecture with skip connections for semantic segmentation. The architecture features contracting path (left) for context capture and expansive path (right) for precise localization.}
+~\label{fig:unet}
+\end{figure}
 
 \begin{itemize}
 \item \textbf{Encoder-Decoder Structure:} Provides both high-level context and detailed localization
