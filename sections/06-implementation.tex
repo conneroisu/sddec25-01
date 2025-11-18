@@ -116,7 +116,7 @@ where $\alpha(t)$ is a time-dependent weighting factor that transitions from sur
 \begin{itemize}
 \item \textbf{Boundary-Aware Cross Entropy ($\mathcal{L}_{\text{CE-boundary}}$)}: Standard cross entropy loss weighted by boundary proximity maps generated via Canny edge detection with dilation. Boundary pixels receive 20x higher weight to improve segmentation precision at pupil edges, critical for accurate eye tracking.
 
-\item \textbf{Generalized Dice Loss ($\mathcal{L}_{\text{Dice}}$)}: Class-weighted dice coefficient that addresses class imbalance between background and pupil pixels. Weights are inversely proportional to the square of class pixel counts, ensuring the minority pupil class receives appropriate optimization attention despite representing only 2-5\% of image pixels.
+\item \textbf{Generalized Dice Loss ($\mathcal{L}_{\text{Dice}}$)}: Class-weighted dice coefficient that addresses class imbalance between background and pupil pixels. Weights are inversely proportional to the square of class pixel counts, ensuring the minority pupil class receives appropriate optimization attention despite representing only 2--5\% of image pixels.
 
 \item \textbf{Surface Loss ($\mathcal{L}_{\text{Surface}}$)}: Distance-based loss computed from signed distance transforms of ground truth masks~\cite{kervadec2019boundary}. Penalizes predictions based on their Euclidean distance from true boundaries, encouraging topologically accurate segmentation maps essential for medical applications.
 \end{itemize}
@@ -133,7 +133,7 @@ The alpha scheduling mechanism implements a curriculum learning approach:
 \end{cases}
 \end{equation}
 
-Early training (epochs 1-125) emphasizes surface loss to establish correct boundary topology, while later training focuses on dice loss to optimize overall segmentation quality. This two-phase approach prevents the model from learning topologically incorrect solutions that would be difficult to correct in later training.
+Early training (epochs 1--125) emphasizes surface loss to establish correct boundary topology, while later training focuses on dice loss to optimize overall segmentation quality. This two-phase approach prevents the model from learning topologically incorrect solutions that would be difficult to correct in later training.
 
 \subsection{GPU-Optimized Training Pipeline}\label{subsec:gpu-optimized-training}
 
@@ -143,7 +143,7 @@ The training implementation prioritizes GPU-native operations to minimize perfor
 \item \textbf{Batched Operations}: All training operations utilize batched GPU kernels with batch size 8, eliminating sequential per-sample processing
 \item \textbf{In-GPU Metrics Calculation}: Performance metrics (mIoU, per-class IoU) computed directly on GPU tensors without CPU transfer~\cite{elvinger2025gpu}
 \item \textbf{Persistent Workers}: DataLoader configured with 4 persistent workers and pinned memory for efficient data pipeline
-\item \textbf{Optimized Preprocessing}: Pre-computed gamma correction lookup table (exponent 0.8) applied via vectorized operations, CLAHE preprocessing with clip limit 1.5 and tile grid 8x8
+\item \textbf{Optimized Preprocessing}: Pre-computed gamma correction lookup table (exponent 0.8) applied via vectorized operations, CLAHE preprocessing with clip limit 1.5 and tile grid $8 \times 8$
 \end{itemize}
 
 \subsection{Data Augmentation Strategy}\label{subsec:data-augmentation}
@@ -152,7 +152,7 @@ The training pipeline implements comprehensive augmentation to improve model rob
 
 \begin{itemize}
 \item \textbf{Geometric Augmentation}: Random horizontal flip (50\% probability), translation up to 40 pixels in any direction (40\% probability)
-\item \textbf{Appearance Augmentation}: Gaussian blur with kernel size 7x7 and random sigma 2-6 (20\% probability), line augmentation simulating occlusions (20\% probability)
+\item \textbf{Appearance Augmentation}: Gaussian blur with kernel size $7 \times 7$ and random sigma 2--6 (20\% probability), line augmentation simulating occlusions (20\% probability)
 \item \textbf{Preprocessing Pipeline}: Fixed gamma correction (0.8 exponent), CLAHE for local contrast enhancement, normalization to [-1, 1] range
 \end{itemize}
 
@@ -181,7 +181,7 @@ The training system logs extensive metadata for complete experiment reproducibil
 \item \textbf{Hyperparameter Tracking}: Learning rate (1e-3), batch size (8), optimizer configuration (Adam with ReduceLROnPlateau), scheduler parameters (patience=5), epoch count (50), number of workers (4)
 \item \textbf{Model Architecture}: DenseNet2D parameters including channel size (32), dropout probability (0.2), depthwise separable convolution configuration, total trainable parameters
 \item \textbf{System Information}: Python version, platform details, GPU name and memory, CUDA version for reproducibility
-\item \textbf{Dataset Statistics}: Training samples, validation samples, image dimensions (640x400), class distribution, augmentation probabilities
+\item \textbf{Dataset Statistics}: Training samples, validation samples, image dimensions ($640 \times 400$), class distribution, augmentation probabilities
 \end{itemize}
 
 \subsubsection{Multi-Dimensional Metric Tracking}
@@ -240,7 +240,7 @@ The training pipeline automatically exports trained models to ONNX format for se
 \item \textbf{Automatic ONNX Conversion}: Models exported to ONNX format (opset version 10) at each epoch using PyTorch's native export functionality with dynamic batch size support
 \item \textbf{Best Model Selection}: Best-performing model (by validation mIoU) automatically identified and exported for downstream quantization pipeline
 \item \textbf{Deployment Compatibility}: ONNX format enables compatibility with Xilinx Vitis AI quantizer for INT8 post-training quantization calibration (PTQC)
-\item \textbf{Model Verification}: Exported models automatically verified for correct input/output dimensions (1x1x640x400 input, 1x2x640x400 output) and operation count
+\item \textbf{Model Verification}: Exported models automatically verified for correct input/output dimensions ($1 \times 1 \times 640 \times 400$ input, $1 \times 2 \times 640 \times 400$ output) and operation count
 \item \textbf{Artifact Management}: ONNX models logged to MLflow with metadata including input shape, parameter count, and performance metrics for traceability
 \end{itemize}
 
@@ -256,7 +256,7 @@ The model training process utilizes the OpenEDS (Open Eye Dataset)~\cite{openeds
 \item \textbf{Automated Download}: Training pipeline automatically downloads OpenEDS dataset from Kaggle using authenticated API access, eliminating manual dataset preparation
 \item \textbf{Dataset Organization}: OpenEDS structured with train/validation/test splits, each containing aligned images/ and labels/ directories with per-pixel semantic annotations
 \item \textbf{Label Mapping}: Four-class OpenEDS annotations (background, sclera, iris, pupil) mapped to binary segmentation (pupil vs non-pupil) for eye tracking application
-\item \textbf{Quality Verification}: Automated validation of image-label alignment, dimension consistency (640x400), and annotation completeness before training initiation
+\item \textbf{Quality Verification}: Automated validation of image-label alignment, dimension consistency ($640 \times 400$), and annotation completeness before training initiation
 \end{itemize}
 
 \subsubsection{Dataset Characteristics}
