@@ -75,6 +75,30 @@ To identify appropriate split points for dividing the U-Net model into segments 
 
 Using Netron's interactive graph visualization, we identified strategic nodes in the U-Net encoder-decoder architecture where the model could be divided into four segments while maintaining the skip connection pathways essential for semantic segmentation accuracy. This analysis informed the split model implementation evaluated in Section~\ref{subsubsec:split-model-performance}, where intermediate tensors between segments are stored and passed to subsequent processing stages.
 
+\subsubsection{Model Extraction with ONNX Utilities}\label{subsubsec:onnx-model-extraction}
+
+After identifying the appropriate split points using Netron visualization, we utilized the ONNX utilities library~\cite{onnx2023} to programmatically extract sub-models from the original U-Net architecture. The \texttt{onnx.utils.extract\_model} function enables precise extraction of model segments by specifying input and output tensor names:
+
+\begin{itemize}
+\item \textbf{Extraction Method}: The \texttt{extract\_model} function~\cite{onnx_extract_model} creates sub-models by defining boundaries through input and output tensor names, preserving the computational graph structure between specified points
+\item \textbf{Model Validation}: The extraction process includes optional model checking to ensure the extracted sub-model maintains valid ONNX graph structure and type consistency
+\item \textbf{Shape Inference}: Automatic shape inference ensures all intermediate tensors have properly defined dimensions, critical for memory allocation during DPU execution
+\item \textbf{Large Model Support}: For extracted models exceeding 2GB, the utility automatically externalizes weight data to separate files (e.g., \texttt{output\_path.data}), maintaining compatibility with file system limitations
+\end{itemize}
+
+The extraction process allowed us to systematically divide the U-Net architecture into four independent segments, each represented as a separate ONNX model file. This modular approach enables flexible deployment strategies, including the split model implementation evaluated in Section~\ref{subsubsec:split-model-performance}. Each extracted segment maintains the precise computational semantics of the corresponding portion of the original model, ensuring that when executed sequentially with proper intermediate tensor passing, the split model produces identical results to the unified architecture.
+
+Key considerations during the extraction process included:
+
+\begin{itemize}
+\item \textbf{Boundary Selection}: Ensuring extraction boundaries do not cut through control-flow operators (e.g., If, Loop) that would disconnect subgraphs from the main computational graph
+\item \textbf{Tensor Naming}: Identifying correct tensor names from Netron visualization to specify precise extraction boundaries
+\item \textbf{Skip Connection Preservation}: Maintaining U-Net skip connections that span multiple segments by carefully selecting output tensors that include both the primary data path and skip connection tensors
+\item \textbf{Segment Balance}: Distributing computational load approximately evenly across the four segments to optimize parallel processing opportunities
+\end{itemize}
+
+This extraction methodology provided the foundation for our multi-segment deployment experiments, enabling direct comparison between single-model and split-model architectures on the Kria KV260 hardware platform.
+
 \subsection{Resource Scheduling Implementation}\label{subsec:scheduling-implementation}
 
 \begin{itemize}
