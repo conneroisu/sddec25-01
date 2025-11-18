@@ -70,7 +70,7 @@ Our project involved optimizing the semantic segmentation U-Net algorithm by imp
 \item Subtask 6.4: Prepare final project presentation
 \end{itemize}
 
-These tasks were further broken down into sprint activities with specific team members assigned based on their expertise, as outlined in the personnel effort requirements section.
+These tasks were further broken down into sprint activities with specific team members assigned based on their expertise.
 
 \section{Project Milestones, Metrics, and Evaluation Criteria}\label{sec:milestones}
 
@@ -217,57 +217,6 @@ The critical path for this project follows the U-Net model optimization and pipe
 \end{itemize}
 
 For risks with probability exceeding 30\%, our team developed detailed contingency plans, including alternative implementation approaches and resource reallocation strategies.
-
-\section{Personnel Effort Requirements}\label{sec:personnel-requirements}
-
-\begin{table}[htbp]
-\centering
-\caption{Personnel Effort Requirements by Task}
-\begin{tabular}{p{2.5cm}p{3cm}p{5.5cm}c}
-\toprule
-\textbf{Team Member} & \textbf{Task Area} & \textbf{Specific Tasks} & \textbf{Hours} \\
-\midrule
-Tyler & Model Optimization \& Pipelining &
-\begin{minipage}{5cm}
-\begin{itemize}
-\item Optimize processing pipeline to handle 4-frame batches efficiently
-\item Design overlapped CPU/DPU processing stages while maintaining 99.8\% IoU accuracy
-\item Code implementation
-\item Testing and validation
-\end{itemize}
-\end{minipage} & 35 \\
-\midrule
-Aidan & Algorithm Implementation &
-\begin{minipage}{5cm}
-\begin{itemize}
-\item Integrate with codebase
-\item Implement into current codebase with 4 pipelines
-\item Thread management configuration
-\item Implementation testing
-\end{itemize}
-\end{minipage} & 30 \\
-\midrule
-Conner & OS and Environment &
-\begin{minipage}{5cm}
-\begin{itemize}
-\item Build system configuration optimization
-\item ONNX model optimization for DPU loading
-\item OS scheduler optimization
-\item Data version control system demonstration
-\end{itemize}
-\end{minipage} & 30 \\
-\midrule
-Joey & Hardware Management &
-\begin{minipage}{5cm}
-\begin{itemize}
-\item Kria board benchmarking
-\item Research and document hardware capabilities
-\item Hardware performance optimization
-\end{itemize}
-\end{minipage} & 20 \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 \section{Resource Requirements}\label{sec:resource-requirements}
 
