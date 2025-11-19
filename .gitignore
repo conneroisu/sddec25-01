@@ -54,3 +54,4 @@ build/
 *.pdf
 *.png
 /.pre-commit-config.yaml
+*.bak0

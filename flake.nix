@@ -109,6 +109,8 @@
         projectRootFile = "flake.nix";
         programs = {
           alejandra.enable = true; # Nix formatter
+          # texfmt.enable = true; # TeX formatter
+          latexindent.enable = true; # TeX formatter
         };
       };
 

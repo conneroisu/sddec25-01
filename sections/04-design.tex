@@ -7,30 +7,30 @@
 Our Semantic Segmentation Optimization project is situated in the healthcare and assistive technology domain, specifically addressing the needs of individuals with mobility impairments who require eye-tracking systems for communication and control of assistive devices. We are designing for healthcare professionals, caregivers, and most importantly, individuals with conditions such as cerebral palsy who depend on efficient and responsive eye tracking for daily activities and medical monitoring.
 
 \begin{table}[htbp]
-\centering
-\renewcommand{\arraystretch}{1.2}
-\caption{Design Context Analysis}
-\begin{tabular}{p{2.5cm}p{4.5cm}p{5.5cm}}
-\toprule
-\textbf{Area} & \textbf{Description} & \textbf{Examples} \\
-\midrule
-Public health, safety, and welfare &
-Our project directly improves the safety and well-being of individuals with mobility impairments by enhancing the responsiveness of eye-tracking medical monitoring systems. &
-Faster response times to potential medical issues, more reliable detection of eye movements for wheelchair control, reduced risk of incidents for users \\
-\midrule
-Global, cultural, and social &
-The solution respects the values of independence and dignity for people with disabilities while acknowledging the cultural practices around care and assistance. &
-Supports the right to autonomy for people with disabilities, aligns with medical ethics of beneficence~\cite{beauchamp2007ethics}, works within existing healthcare frameworks \\
-\midrule
-Ecological &
-By optimizing software rather than requiring new hardware, our solution extends the useful life of existing devices and reduces electronic waste. &
-Reduced need for frequent hardware replacement, lower energy consumption through optimized processing \\
-\midrule
-Economic &
-Our optimization approach provides significant performance improvements while keeping costs accessible for healthcare providers and individuals. &
-Affordable enhancement to existing assistive technology systems, more efficient use of available computing resources, potential reduction in healthcare costs through preventative monitoring \\
-\bottomrule
-\end{tabular}
+	\centering
+	\renewcommand{\arraystretch}{1.2}
+	\caption{Design Context Analysis}
+	\begin{tabular}{p{2.5cm}p{4.5cm}p{5.5cm}}
+		\toprule
+		\textbf{Area}                                                                                                                                                                & \textbf{Description} & \textbf{Examples} \\
+		\midrule
+		Public health, safety, and welfare                                                                                                                                           &
+		Our project directly improves the safety and well-being of individuals with mobility impairments by enhancing the responsiveness of eye-tracking medical monitoring systems. &
+		Faster response times to potential medical issues, more reliable detection of eye movements for wheelchair control, reduced risk of incidents for users                                                                 \\
+		\midrule
+		Global, cultural, and social                                                                                                                                                 &
+		The solution respects the values of independence and dignity for people with disabilities while acknowledging the cultural practices around care and assistance.             &
+		Supports the right to autonomy for people with disabilities, aligns with medical ethics of beneficence~\cite{beauchamp2007ethics}, works within existing healthcare frameworks                                          \\
+		\midrule
+		Ecological                                                                                                                                                                   &
+		By optimizing software rather than requiring new hardware, our solution extends the useful life of existing devices and reduces electronic waste.                            &
+		Reduced need for frequent hardware replacement, lower energy consumption through optimized processing                                                                                                                   \\
+		\midrule
+		Economic                                                                                                                                                                     &
+		Our optimization approach provides significant performance improvements while keeping costs accessible for healthcare providers and individuals.                             &
+		Affordable enhancement to existing assistive technology systems, more efficient use of available computing resources, potential reduction in healthcare costs through preventative monitoring                           \\
+		\bottomrule
+	\end{tabular}
 \end{table}
 
 \subsection{Prior Work and Solutions}\label{subsec:prior-work}
@@ -38,26 +38,26 @@ Affordable enhancement to existing assistive technology systems, more efficient 
 Several approaches have been used to implement semantic segmentation for eye tracking~\cite{garcia2017review}, but most face limitations when deployed on resource-constrained edge devices:
 
 \begin{enumerate}
-\item \textbf{Wang et al. (2021)}~\cite{wang2021} proposed ``EfficientEye: A Lightweight Semantic Segmentation Framework for Eye Tracking'', which achieved good accuracy but still required substantial computational resources. Their approach reduced model size but processing speed remained at approximately 120 ms per frame.
+	\item \textbf{Wang et al. (2021)}~\cite{wang2021} proposed ``EfficientEye: A Lightweight Semantic Segmentation Framework for Eye Tracking'', which achieved good accuracy but still required substantial computational resources. Their approach reduced model size but processing speed remained at approximately 120 ms per frame.
 
-\item \textbf{Previous Project Iteration} implemented a standard U-Net architecture on the Kria KV260 board with high accuracy (99.8\% IoU) but could only process a single frame every 160ms, which is insufficient for real-time application needs.
+	\item \textbf{Previous Project Iteration} implemented a standard U-Net architecture on the Kria KV260 board with high accuracy (99.8\% IoU) but could only process a single frame every 160ms, which is insufficient for real-time application needs.
 
-\item \textbf{Commercial Solutions} like Tobii Pro Fusion offer high-speed eye tracking (250 Hz) but require dedicated hardware and specialized processors, making them expensive and difficult to integrate into existing assistive devices.
+	\item \textbf{Commercial Solutions} like Tobii Pro Fusion offer high-speed eye tracking (250 Hz) but require dedicated hardware and specialized processors, making them expensive and difficult to integrate into existing assistive devices.
 \end{enumerate}
 
 \subsubsection{Advantages of Our Approach}
 \begin{itemize}
-\item Maintains high accuracy while significantly improving processing speed
-\item Utilizes existing hardware (Kria KV260) without requiring costly upgrades
-\item Implements a pipelined approach that maximizes system throughput through overlapped CPU and DPU processing
-\item Integrates with existing assistive wheelchair technology ecosystem
+	\item Maintains high accuracy while significantly improving processing speed
+	\item Utilizes existing hardware (Kria KV260) without requiring costly upgrades
+	\item Implements a pipelined approach that maximizes system throughput through overlapped CPU and DPU processing
+	\item Integrates with existing assistive wheelchair technology ecosystem
 \end{itemize}
 
 \subsubsection{Limitations of Our Approach}
 \begin{itemize}
-\item Requires careful optimization of memory and DPU resources
-\item Complexity in thread synchronization and pipeline management
-\item Dependent on specific hardware architecture (Kria KV260)
+	\item Requires careful optimization of memory and DPU resources
+	\item Complexity in thread synchronization and pipeline management
+	\item Dependent on specific hardware architecture (Kria KV260)
 \end{itemize}
 
 \subsection{Technical Complexity}\label{subsec:technical-complexity}
@@ -65,22 +65,22 @@ Several approaches have been used to implement semantic segmentation for eye tra
 Our project demonstrates significant technical complexity in both its components and requirements:
 
 \begin{enumerate}
-\item \textbf{Multiple Components with Distinct Scientific Principles:}
-   \begin{itemize}
-   \item \textbf{Neural Network Architecture:} The U-Net semantic segmentation algorithm incorporates complex convolutional neural network principles with encoder-decoder architecture~\cite{burden2013}
-   \item \textbf{Pipelined Computing:} Implementation of multithreaded CPU processing and pipeline architecture leverages computer architecture principles~\cite{zhao2023parallel}
-   \item \textbf{Memory Management:} Developing efficient memory allocation strategies based on computer systems principles
-   \item \textbf{Real-time Systems:} Balancing processing load to meet strict timing constraints based on real-time systems theory
-   \item \textbf{Resource Scheduling:} Creating optimal sequential DPU scheduling mechanisms based on operating systems principles, managing the constraint that the DPU can only execute one xmodel inference at a time
-   \end{itemize}
+	\item \textbf{Multiple Components with Distinct Scientific Principles:}
+	      \begin{itemize}
+		      \item \textbf{Neural Network Architecture:} The U-Net semantic segmentation algorithm incorporates complex convolutional neural network principles with encoder-decoder architecture~\cite{burden2013}
+		      \item \textbf{Pipelined Computing:} Implementation of multithreaded CPU processing and pipeline architecture leverages computer architecture principles~\cite{zhao2023parallel}
+		      \item \textbf{Memory Management:} Developing efficient memory allocation strategies based on computer systems principles
+		      \item \textbf{Real-time Systems:} Balancing processing load to meet strict timing constraints based on real-time systems theory
+		      \item \textbf{Resource Scheduling:} Creating optimal sequential DPU scheduling mechanisms based on operating systems principles, managing the constraint that the DPU can only execute one xmodel inference at a time
+	      \end{itemize}
 
-\item \textbf{Challenging Requirements:}
-   \begin{itemize}
-   \item \textbf{Speed Improvement:} Achieving near 5x throughput improvement through pipelining exceeds typical optimization gains in the industry
-   \item \textbf{Accuracy Maintenance:} Preserving high accuracy while implementing complex pipelined processing is significantly more challenging than standard optimization
-   \item \textbf{Resource Constraints:} Working within the limited memory (4GB) and single-DPU architecture of the Kria board requires innovative scheduling solutions
-   \item \textbf{Real-time Performance:} Meeting the 60 frames per second requirement is at the upper end of what is possible with current embedded AI systems
-   \end{itemize}
+	\item \textbf{Challenging Requirements:}
+	      \begin{itemize}
+		      \item \textbf{Speed Improvement:} Achieving near 5x throughput improvement through pipelining exceeds typical optimization gains in the industry
+		      \item \textbf{Accuracy Maintenance:} Preserving high accuracy while implementing complex pipelined processing is significantly more challenging than standard optimization
+		      \item \textbf{Resource Constraints:} Working within the limited memory (4GB) and single-DPU architecture of the Kria board requires innovative scheduling solutions
+		      \item \textbf{Real-time Performance:} Meeting the 60 frames per second requirement is at the upper end of what is possible with current embedded AI systems
+	      \end{itemize}
 \end{enumerate}
 
 The combination of these elements, particularly maintaining accuracy while implementing efficient pipelined execution with resource scheduling across multiple algorithms, represents technical complexity beyond standard engineering solutions.
@@ -92,30 +92,30 @@ The combination of these elements, particularly maintaining accuracy while imple
 We have identified the following key design decisions that are critical to the success of our Semantic Segmentation Optimization project:
 
 \begin{enumerate}
-\item \textbf{Resource Scheduling Approach}
-   \begin{itemize}
-   \item \textbf{Decision:} Implement an efficient sequential scheduling system for DPU access, recognizing that the DPU can only execute one xmodel inference at a time. The system uses round-robin or priority-based scheduling to coordinate access among semantic segmentation and other algorithms.
-   \item \textbf{Importance:} This is fundamental to achieving our throughput goal while ensuring other algorithms (blink detection and eye tracking) can collect their required periodic data. Without effective sequential scheduling, semantic segmentation would monopolize the DPU, preventing other critical algorithms from functioning correctly. The scheduling approach must provide fair resource allocation while maintaining the 99.8\% IoU accuracy target.
-   \end{itemize}
+	\item \textbf{Resource Scheduling Approach}
+	      \begin{itemize}
+		      \item \textbf{Decision:} Implement an efficient sequential scheduling system for DPU access, recognizing that the DPU can only execute one xmodel inference at a time. The system uses round-robin or priority-based scheduling to coordinate access among semantic segmentation and other algorithms.
+		      \item \textbf{Importance:} This is fundamental to achieving our throughput goal while ensuring other algorithms (blink detection and eye tracking) can collect their required periodic data. Without effective sequential scheduling, semantic segmentation would monopolize the DPU, preventing other critical algorithms from functioning correctly. The scheduling approach must provide fair resource allocation while maintaining the 99.8\% IoU accuracy target.
+	      \end{itemize}
 
-\item \textbf{DPU Access Management}
-   \begin{itemize}
-   \item \textbf{Decision:} Implement a fair access scheduling approach that prevents semantic segmentation from `starving' other algorithms of DPU resources.
-   \item \textbf{Importance:} The Kria board has four DDR4 memory banks (1GB each), but the single DPU is a shared resource that must be carefully managed. Our approach ensures that while semantic segmentation runs, it doesn't prevent other algorithms (blink detection and eye tracking) from collecting their required periodic data. This strategy prevents scenarios where the information gathered becomes incorrect due to delayed or missed data collection cycles.
-   \end{itemize}
+	\item \textbf{DPU Access Management}
+	      \begin{itemize}
+		      \item \textbf{Decision:} Implement a fair access scheduling approach that prevents semantic segmentation from `starving' other algorithms of DPU resources.
+		      \item \textbf{Importance:} The Kria board has four DDR4 memory banks (1GB each), but the single DPU is a shared resource that must be carefully managed. Our approach ensures that while semantic segmentation runs, it doesn't prevent other algorithms (blink detection and eye tracking) from collecting their required periodic data. This strategy prevents scenarios where the information gathered becomes incorrect due to delayed or missed data collection cycles.
+	      \end{itemize}
 
-\item \textbf{Resource Allocation Strategy}
-   \begin{itemize}
-   \item \textbf{Decision:} Develop a resource management system that coordinates access to the DPU and ensures each algorithm receives appropriate processing time.
-   \item \textbf{Importance:} With multiple algorithms needing DPU access (semantic segmentation, blink detection, and eye tracking), proper resource allocation is essential to maintain data integrity and prevent starvation. This decision impacts both performance and accuracy, as our client noted that blink detection and eye tracking require periodic data or the information gathered becomes incorrect. Our scheduling system must ensure that semantic segmentation doesn't monopolize resources while maintaining overall system efficiency.
-   \end{itemize}
+	\item \textbf{Resource Allocation Strategy}
+	      \begin{itemize}
+		      \item \textbf{Decision:} Develop a resource management system that coordinates access to the DPU and ensures each algorithm receives appropriate processing time.
+		      \item \textbf{Importance:} With multiple algorithms needing DPU access (semantic segmentation, blink detection, and eye tracking), proper resource allocation is essential to maintain data integrity and prevent starvation. This decision impacts both performance and accuracy, as our client noted that blink detection and eye tracking require periodic data or the information gathered becomes incorrect. Our scheduling system must ensure that semantic segmentation doesn't monopolize resources while maintaining overall system efficiency.
+	      \end{itemize}
 
-\item \textbf{Single DPU Architecture Constraint}
-   \begin{itemize}
-   \item \textbf{Decision:} Utilize the single B4096 DPU core (300MHz) on the KV260 board rather than exploring dual smaller DPU configurations.
-   \item \textbf{Rationale:} The KV260's FPGA fabric technically supports implementing two smaller DPUs (B1024 or B512) instead of the single large B4096 core. Both our team and a previous ISU team concluded that dual smaller DPUs would be advantageous. Our team formally presented this finding to the client with model size justifications, recommending the dual DPU approach as the optimal path forward, particularly since splitting the model was a core project task. Despite our analysis and recommendation, the client directed us to maintain the existing single B4096 DPU architecture.
-   \item \textbf{Importance:} This client-driven constraint significantly impacts our optimization strategy. The single DPU architecture prevents us from leveraging hardware-level parallelism. Instead, we must focus on efficient time-division scheduling and resource sharing mechanisms to achieve our performance goals. This architecture necessitates careful coordination of algorithm access patterns and optimized scheduling to prevent resource contention while meeting our throughput targets.
-   \end{itemize}
+	\item \textbf{Single DPU Architecture Constraint}
+	      \begin{itemize}
+		      \item \textbf{Decision:} Utilize the single B4096 DPU core (300MHz) on the KV260 board rather than exploring dual smaller DPU configurations.
+		      \item \textbf{Rationale:} The KV260's FPGA fabric technically supports implementing two smaller DPUs (B1024 or B512) instead of the single large B4096 core. Both our team and a previous ISU team concluded that dual smaller DPUs would be advantageous. Our team formally presented this finding to the client with model size justifications, recommending the dual DPU approach as the optimal path forward, particularly since splitting the model was a core project task. Despite our analysis and recommendation, the client directed us to maintain the existing single B4096 DPU architecture.
+		      \item \textbf{Importance:} This client-driven constraint significantly impacts our optimization strategy. The single DPU architecture prevents us from leveraging hardware-level parallelism. Instead, we must focus on efficient time-division scheduling and resource sharing mechanisms to achieve our performance goals. This architecture necessitates careful coordination of algorithm access patterns and optimized scheduling to prevent resource contention while meeting our throughput targets.
+	      \end{itemize}
 \end{enumerate}
 
 \subsection{Ideation}\label{subsec:ideation}
@@ -123,26 +123,26 @@ We have identified the following key design decisions that are critical to the s
 For our resource scheduling approach, we explored several potential scheduling strategies through a structured ideation process:
 
 \begin{enumerate}
-\item \textbf{Round-Robin Scheduling}
-   \begin{itemize}
-   \item Allocate DPU time in equal slices to each algorithm in circular order
-   \item Simple to implement and ensures each algorithm gets fair access
-   \item May not be optimal for variable processing requirements
-   \end{itemize}
+	\item \textbf{Round-Robin Scheduling}
+	      \begin{itemize}
+		      \item Allocate DPU time in equal slices to each algorithm in circular order
+		      \item Simple to implement and ensures each algorithm gets fair access
+		      \item May not be optimal for variable processing requirements
+	      \end{itemize}
 
-\item \textbf{Priority-Based Scheduling}
-   \begin{itemize}
-   \item Assign priority levels to algorithms based on urgency of data collection needs
-   \item Higher priority tasks preempt lower priority ones when necessary
-   \item Could be tuned to ensure periodic data collection requirements are met
-   \end{itemize}
+	\item \textbf{Priority-Based Scheduling}
+	      \begin{itemize}
+		      \item Assign priority levels to algorithms based on urgency of data collection needs
+		      \item Higher priority tasks preempt lower priority ones when necessary
+		      \item Could be tuned to ensure periodic data collection requirements are met
+	      \end{itemize}
 
-\item \textbf{Time-Division Multiplexing}
-   \begin{itemize}
-   \item Allocate specific time windows for each algorithm to access the DPU
-   \item Synchronize windows with periodic data collection requirements
-   \item Optimizes for predictable execution patterns
-   \end{itemize}
+	\item \textbf{Time-Division Multiplexing}
+	      \begin{itemize}
+		      \item Allocate specific time windows for each algorithm to access the DPU
+		      \item Synchronize windows with periodic data collection requirements
+		      \item Optimizes for predictable execution patterns
+	      \end{itemize}
 \end{enumerate}
 
 These options were generated through team brainstorming sessions, a literature review of resource scheduling techniques, and an analysis of the periodic data requirements of the algorithms.
@@ -170,10 +170,10 @@ The current implementation processes a single frame in 160ms, which is insuffici
 At a high level, our system:
 
 \begin{enumerate}
-\item Captures eye movement images through a camera
-\item Processes these images using pipelined semantic segmentation to remove reflections and identify the pupil
-\item Tracks the eye's position and detects blinks in real-time
-\item Provides this information to the assistive wheelchair technology for appropriate response
+	\item Captures eye movement images through a camera
+	\item Processes these images using pipelined semantic segmentation to remove reflections and identify the pupil
+	\item Tracks the eye's position and detects blinks in real-time
+	\item Provides this information to the assistive wheelchair technology for appropriate response
 \end{enumerate}
 
 The key innovation in our design is the approach to pipelined processing and efficient sequential DPU scheduling on the AMD Kria KV260 board, which has limited memory and a single DPU, but powerful acceleration capabilities when properly leveraged.
@@ -184,131 +184,131 @@ Our semantic segmentation optimization system consists of the following key comp
 
 \subsubsection{Hardware Platform}
 \begin{itemize}
-\item \textbf{AMD Kria KV260 Development Board}~\cite{xilinx2022kv260} (see Figure~\ref{fig:kv260})
-  \begin{itemize}
-  \item System-on-Module (SoM) with programmable logic
-  \item Quad-core ARM processor
-  \item DPU for accelerating neural network inference
-  \item Four 1GB DDR4 memory banks
-  \item Various I/O interfaces for camera input and system communication
-  \end{itemize}
+	\item \textbf{AMD Kria KV260 Development Board}~\cite{xilinx2022kv260} (see Figure~\ref{fig:kv260})
+	      \begin{itemize}
+		      \item System-on-Module (SoM) with programmable logic
+		      \item Quad-core ARM processor
+		      \item DPU for accelerating neural network inference
+		      \item Four 1GB DDR4 memory banks
+		      \item Various I/O interfaces for camera input and system communication
+	      \end{itemize}
 \end{itemize}
 
 \subsubsection{Software Components}
 \begin{enumerate}
-\item \textbf{U-Net Semantic Segmentation Algorithm} (see Figure~\ref{fig:unet})
-   \begin{itemize}
-   \item \textbf{Purpose:} Processes eye images to create pixel-level segmentation for pupil identification
-   \item \textbf{Capabilities:} Achieves target accuracy while meeting performance requirements
-   \item \textbf{Function:} Enables reliable eye tracking by producing high-quality segmentation maps
-   \end{itemize}
+	\item \textbf{U-Net Semantic Segmentation Algorithm} (see Figure~\ref{fig:unet})
+	      \begin{itemize}
+		      \item \textbf{Purpose:} Processes eye images to create pixel-level segmentation for pupil identification
+		      \item \textbf{Capabilities:} Achieves target accuracy while meeting performance requirements
+		      \item \textbf{Function:} Enables reliable eye tracking by producing high-quality segmentation maps
+	      \end{itemize}
 
-\item \textbf{Preprocessing Module}
-   \begin{itemize}
-   \item Handles image normalization, scaling, and initial filtering
-   \item Prepares raw camera input for semantic segmentation
-   \item Implemented as part of the pipeline before U-Net processing
-   \end{itemize}
+	\item \textbf{Preprocessing Module}
+	      \begin{itemize}
+		      \item Handles image normalization, scaling, and initial filtering
+		      \item Prepares raw camera input for semantic segmentation
+		      \item Implemented as part of the pipeline before U-Net processing
+	      \end{itemize}
 
-\item \textbf{Blink Detection Algorithm}
-   \begin{itemize}
-   \item Lightweight neural network running alongside eye tracking
-   \item Detects eye closure states to identify blinks
-   \item Provides additional user intent information for the control system
-   \end{itemize}
+	\item \textbf{Blink Detection Algorithm}
+	      \begin{itemize}
+		      \item Lightweight neural network running alongside eye tracking
+		      \item Detects eye closure states to identify blinks
+		      \item Provides additional user intent information for the control system
+	      \end{itemize}
 
-\item \textbf{Thread Management System}~\cite{park2022thread}
-   \begin{itemize}
-   \item Coordinates execution across multiple threads
-   \item Ensures proper synchronization between pipeline stages
-   \item Manages resource allocation and conflict resolution
-   \end{itemize}
+	\item \textbf{Thread Management System}~\cite{park2022thread}
+	      \begin{itemize}
+		      \item Coordinates execution across multiple threads
+		      \item Ensures proper synchronization between pipeline stages
+		      \item Manages resource allocation and conflict resolution
+	      \end{itemize}
 \end{enumerate}
 
 \subsubsection{Processing Pipeline}
 Our system implements a four-stage processing pipeline:
 
 \begin{enumerate}
-\item \textbf{Image Capture and Preprocessing}
-   \begin{itemize}
-   \item Raw camera input acquisition
-   \item Image normalization and filtering
-   \item Preparation for neural network processing
-   \end{itemize}
+	\item \textbf{Image Capture and Preprocessing}
+	      \begin{itemize}
+		      \item Raw camera input acquisition
+		      \item Image normalization and filtering
+		      \item Preparation for neural network processing
+	      \end{itemize}
 
-\item \textbf{Pipelined Semantic Segmentation}~\cite{zhao2023parallel}
-   \begin{itemize}
-   \item Processing pipeline optimization with overlapped CPU preprocessing/postprocessing stages and sequential DPU inference (U-Net model architecture unchanged)
-   \item Efficient throughput of multiple frames through pipeline stages
-   \item DPU scheduling to coordinate access among algorithms
-   \end{itemize}
+	\item \textbf{Pipelined Semantic Segmentation}~\cite{zhao2023parallel}
+	      \begin{itemize}
+		      \item Processing pipeline optimization with overlapped CPU preprocessing/postprocessing stages and sequential DPU inference (U-Net model architecture unchanged)
+		      \item Efficient throughput of multiple frames through pipeline stages
+		      \item DPU scheduling to coordinate access among algorithms
+	      \end{itemize}
 
-\item \textbf{Feature Extraction and Analysis}
-   \begin{itemize}
-   \item Pupil identification and tracking
-   \item Blink detection and classification
-   \item Integration with assistive control systems
-   \end{itemize}
+	\item \textbf{Feature Extraction and Analysis}
+	      \begin{itemize}
+		      \item Pupil identification and tracking
+		      \item Blink detection and classification
+		      \item Integration with assistive control systems
+	      \end{itemize}
 
-\item \textbf{Output Generation and Response}
-   \begin{itemize}
-   \item Real-time position calculation
-   \item Medical distress detection
-   \item Autonomous wheelchair control responses
-   \end{itemize}
+	\item \textbf{Output Generation and Response}
+	      \begin{itemize}
+		      \item Real-time position calculation
+		      \item Medical distress detection
+		      \item Autonomous wheelchair control responses
+	      \end{itemize}
 \end{enumerate}
 
 \subsubsection{Memory Allocation Strategy}
 \begin{itemize}
-\item \textbf{Distributed Memory Usage:} Utilize all four DDR4 memory banks efficiently~\cite{chen2022memory}
-\item \textbf{Buffer Management:} Implement circular buffers for smooth data flow
-\item \textbf{Cache Optimization:} Minimize memory transfers between processing stages
-\item \textbf{Thread-Local Storage:} Allocate dedicated memory regions for each processing thread
+	\item \textbf{Distributed Memory Usage:} Utilize all four DDR4 memory banks efficiently~\cite{chen2022memory}
+	\item \textbf{Buffer Management:} Implement circular buffers for smooth data flow
+	\item \textbf{Cache Optimization:} Minimize memory transfers between processing stages
+	\item \textbf{Thread-Local Storage:} Allocate dedicated memory regions for each processing thread
 \end{itemize}
 
 \subsection{Functionality}\label{subsec:functionality}
 
 \subsubsection{Initial Setup:}
 \begin{itemize}
-\item System initialization and hardware configuration
-\item Neural network model loading and DPU programming
-\item Thread creation and synchronization primitive setup
-\item Memory allocation and buffer initialization
+	\item System initialization and hardware configuration
+	\item Neural network model loading and DPU programming
+	\item Thread creation and synchronization primitive setup
+	\item Memory allocation and buffer initialization
 \end{itemize}
 
 \subsubsection{Normal Operation:}
 \begin{itemize}
-\item Continuous image capture at required frame rate
-\item Parallel processing through optimized pipeline
-\item Real-time eye tracking and position calculation
-\item Periodic data collection for auxiliary algorithms
+	\item Continuous image capture at required frame rate
+	\item Parallel processing through optimized pipeline
+	\item Real-time eye tracking and position calculation
+	\item Periodic data collection for auxiliary algorithms
 \end{itemize}
 
 \subsubsection{Response to Detected Issues:}
 \begin{itemize}
-\item Automatic error detection and recovery mechanisms
-\item Graceful degradation under resource constraints
-\item User alert system for detected medical issues
-\item Safe positioning and emergency response protocols
+	\item Automatic error detection and recovery mechanisms
+	\item Graceful degradation under resource constraints
+	\item User alert system for detected medical issues
+	\item Safe positioning and emergency response protocols
 \end{itemize}
 
 \subsubsection{User Control Mode:}
 \begin{itemize}
-\item Manual override capabilities for caregivers
-\item Adjustable sensitivity and response parameters
-\item System status monitoring and diagnostics
-\item Configuration interface for personalization
+	\item Manual override capabilities for caregivers
+	\item Adjustable sensitivity and response parameters
+	\item System status monitoring and diagnostics
+	\item Configuration interface for personalization
 \end{itemize}
 
 \subsection{Areas of Concern and Development}\label{subsec:areas-concern}
 
 \begin{itemize}
-\item \textbf{Performance Optimization:} Achieving target throughput while maintaining accuracy
-\item \textbf{Resource Management:} Efficient DPU utilization across multiple algorithms
-\item \textbf{Thread Synchronization:} Preventing race conditions and deadlocks
-\item \textbf{Memory Efficiency:} Minimizing memory footprint and transfer overhead
-\item \textbf{Error Handling:} Robust recovery from system failures
-\item \textbf{Real-time Constraints:} Meeting strict timing requirements
+	\item \textbf{Performance Optimization:} Achieving target throughput while maintaining accuracy
+	\item \textbf{Resource Management:} Efficient DPU utilization across multiple algorithms
+	\item \textbf{Thread Synchronization:} Preventing race conditions and deadlocks
+	\item \textbf{Memory Efficiency:} Minimizing memory footprint and transfer overhead
+	\item \textbf{Error Handling:} Robust recovery from system failures
+	\item \textbf{Real-time Constraints:} Meeting strict timing requirements
 \end{itemize}
 
 \section{Technology Considerations}\label{sec:technology-considerations}
@@ -317,26 +317,25 @@ Our system implements a four-stage processing pipeline:
 The AMD Kria KV260 provides a balance of performance and power efficiency for our application:
 
 \begin{figure}[htbp]
-\centering
-\includegraphics[width=0.7\textwidth]{assets/kv260.png}
-\caption{AMD Kria KV260 Development Board featuring Zynq UltraScale+ MPSoC with integrated DPU for AI acceleration.}
-~\label{fig:kv260}
+	\centering
+	\includegraphics[width=0.7\textwidth]{assets/kv260.png}
+	\caption{AMD Kria KV260 Development Board featuring Zynq UltraScale+ MPSoC with integrated DPU for AI acceleration.}~\label{fig:kv260}
 \end{figure}
 
 \begin{itemize}
-\item \textbf{Processing Power:} Quad-core ARM Cortex-A53 with 1.5 GHz clock speed
-\item \textbf{AI Acceleration:} Integrated DPU for neural network inference
-\item \textbf{Memory System:} 4GB DDR4 memory with four banks for parallel access
-\item \textbf{Connectivity:} Multiple I/O interfaces for camera integration and system communication
-\item \textbf{Power Efficiency:} Low power consumption suitable for mobile applications
+	\item \textbf{Processing Power:} Quad-core ARM Cortex-A53 with 1.5 GHz clock speed
+	\item \textbf{AI Acceleration:} Integrated DPU for neural network inference
+	\item \textbf{Memory System:} 4GB DDR4 memory with four banks for parallel access
+	\item \textbf{Connectivity:} Multiple I/O interfaces for camera integration and system communication
+	\item \textbf{Power Efficiency:} Low power consumption suitable for mobile applications
 \end{itemize}
 
 \subsubsection{DPU Architecture Options}
 The KV260's FPGA fabric offers flexibility in DPU configuration. The maximum single-core DPU configuration for K26 SoM and KV260 is the B4096 architecture (feature customized at 300MHz)~\cite{amd_ug1354_kv260,amd_kv260_b4096_forum}. However, the FPGA fabric technically supports alternative configurations:
 
 \begin{itemize}
-\item \textbf{Single Large Core:} B4096 DPU at 300MHz (current implementation)
-\item \textbf{Dual Smaller Cores:} Two B1024 or B512 DPUs enabling true multi-core parallel processing
+	\item \textbf{Single Large Core:} B4096 DPU at 300MHz (current implementation)
+	\item \textbf{Dual Smaller Cores:} Two B1024 or B512 DPUs enabling true multi-core parallel processing
 \end{itemize}
 
 While dual smaller DPUs could provide benefits for our workload—particularly with reduced semantic segmentation requirements and multiple concurrent algorithms—our client specified maintaining the single B4096 configuration. This architectural constraint was established based on the existing system design and integration considerations, necessitating our focus on software-level optimization and efficient resource scheduling rather than hardware-level parallelism.
@@ -345,34 +344,32 @@ While dual smaller DPUs could provide benefits for our workload—particularly w
 The U-Net architecture~\cite{ronneberger2015} is particularly well-suited for our eye tracking application:
 
 \begin{figure}[htbp]
-\centering
-\includegraphics[width=\textwidth]{assets/unet.png}
-\caption{U-Net encoder-decoder architecture with skip connections for semantic segmentation. The architecture features contracting path (left) for context capture and expansive path (right) for precise localization.}
-~\label{fig:unet}
+	\centering
+	\includegraphics[width=\textwidth]{assets/unet.png}
+	\caption{U-Net encoder-decoder architecture with skip connections for semantic segmentation. The architecture features contracting path (left) for context capture and expansive path (right) for precise localization.}~\label{fig:unet}
 \end{figure}
 
 \begin{itemize}
-\item \textbf{Encoder-Decoder Structure:} Provides both high-level context and detailed localization
-\item \textbf{Skip Connections:} Preserves fine-grained spatial information crucial for pupil detection
-\item \textbf{Proven Performance:} Demonstrated required accuracy in baseline implementation
-\item \textbf{Modular Design:} Amenable to division across multiple processing cores
+	\item \textbf{Encoder-Decoder Structure:} Provides both high-level context and detailed localization
+	\item \textbf{Skip Connections:} Preserves fine-grained spatial information crucial for pupil detection
+	\item \textbf{Proven Performance:} Demonstrated required accuracy in baseline implementation
+	\item \textbf{Modular Design:} Amenable to division across multiple processing cores
 \end{itemize}
 
 \subsection{Vitis-AI and Vitis-Runtime}
 The Xilinx Vitis-AI development ecosystem~\cite{amd2023vitis} and ONNX Runtime~\cite{onnxruntime} provide essential tools for our optimization:
 
 \begin{itemize}
-\item \textbf{Model Optimization:} Quantization and pruning capabilities for performance improvement
-\item \textbf{DPU Integration:} Seamless interface with hardware acceleration resources
-\item \textbf{Performance Profiling:} Detailed analysis tools for bottleneck identification
-\item \textbf{Memory Management:} Efficient buffer allocation and transfer optimization
+	\item \textbf{Model Optimization:} Quantization and pruning capabilities for performance improvement
+	\item \textbf{DPU Integration:} Seamless interface with hardware acceleration resources
+	\item \textbf{Performance Profiling:} Detailed analysis tools for bottleneck identification
+	\item \textbf{Memory Management:} Efficient buffer allocation and transfer optimization
 \end{itemize}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{assets/xilinx-vart-stack.png}
-\caption{Xilinx Vitis AI Runtime (VART) stack architecture showing the layered approach from application level through runtime libraries to hardware acceleration.}
-~\label{fig:vart-stack}
+	\centering
+	\includegraphics[width=0.8\textwidth]{assets/xilinx-vart-stack.png}
+	\caption{Xilinx Vitis AI Runtime (VART) stack architecture showing the layered approach from application level through runtime libraries to hardware acceleration.}~\label{fig:vart-stack}
 \end{figure}
 
 The VART stack architecture (Figure~\ref{fig:vart-stack}) illustrates the complete software stack from the application layer down to the Deep Learning Processing Unit (DPU) hardware. This layered approach enables efficient neural network inference by providing optimized runtime libraries and hardware abstraction layers that maximize utilization of the Kria KV260's acceleration capabilities.
@@ -381,10 +378,10 @@ The VART stack architecture (Figure~\ref{fig:vart-stack}) illustrates the comple
 During our design process, we evaluated several alternative approaches:
 
 \begin{itemize}
-\item \textbf{Cloud-Based Processing:} Rejected due to latency and connectivity requirements
-\item \textbf{Hardware Upgrades:} Considered but would increase system cost and complexity
-\item \textbf{Model Simplification:} Would compromise accuracy below medical requirements
-\item \textbf{Alternative Neural Networks:} U-Net provides optimal balance of accuracy and performance
+	\item \textbf{Cloud-Based Processing:} Rejected due to latency and connectivity requirements
+	\item \textbf{Hardware Upgrades:} Considered but would increase system cost and complexity
+	\item \textbf{Model Simplification:} Would compromise accuracy below medical requirements
+	\item \textbf{Alternative Neural Networks:} U-Net provides optimal balance of accuracy and performance
 \end{itemize}
 
 \section{Design Analysis}\label{sec:design-analysis}
@@ -394,16 +391,16 @@ Our comprehensive benchmarking has evaluated both single-model and split-model i
 
 \subsection{Implementation Challenges:}
 \begin{itemize}
-\item Single DPU constraint requiring scheduling among multiple algorithms
-\item Memory bandwidth constraints affecting data flow between processing stages
-\item Thread synchronization overhead in pipelined processing
-\item Balancing DPU access time allocation between multiple algorithms
+	\item Single DPU constraint requiring scheduling among multiple algorithms
+	\item Memory bandwidth constraints affecting data flow between processing stages
+	\item Thread synchronization overhead in pipelined processing
+	\item Balancing DPU access time allocation between multiple algorithms
 \end{itemize}
 
 \subsection{Future Implementation Plans:}
 \begin{itemize}
-\item Complete pipelined architecture implementation with optimized CPU processing stages
-\item Implement comprehensive DPU scheduling system
-\item Optimize memory access patterns and buffer management
-\item Develop robust testing and validation framework
+	\item Complete pipelined architecture implementation with optimized CPU processing stages
+	\item Implement comprehensive DPU scheduling system
+	\item Optimize memory access patterns and buffer management
+	\item Develop robust testing and validation framework
 \end{itemize}

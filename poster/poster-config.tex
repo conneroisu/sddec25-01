@@ -16,75 +16,75 @@
 
 % Define custom color palette for tikzposter
 \definecolorstyle{ISUStyle}{
-    % Fill colors
-    \colorlet{colorOne}{isucardinal}
-    \colorlet{colorTwo}{isugold}
-    \colorlet{colorThree}{lightgray}
+	% Fill colors
+	\colorlet{colorOne}{isucardinal}
+	\colorlet{colorTwo}{isugold}
+	\colorlet{colorThree}{lightgray}
 }{
-    % Derived colors for various poster elements
-    \colorlet{backgroundcolor}{white}
-    \colorlet{framecolor}{isucardinal}
-    \colorlet{titlefgcolor}{white}
-    \colorlet{titlebgcolor}{isucardinal}
-    \colorlet{blocktitlebgcolor}{isucardinal}
-    \colorlet{blocktitlefgcolor}{white}
-    \colorlet{blockbodybgcolor}{white}
-    \colorlet{blockbodyfgcolor}{darkgray}
-    \colorlet{innerblocktitlebgcolor}{isugold}
-    \colorlet{innerblocktitlefgcolor}{darkgray}
-    \colorlet{innerblockbodybgcolor}{lightgray}
-    \colorlet{innerblockbodyfgcolor}{darkgray}
-    \colorlet{notefgcolor}{darkgray}
-    \colorlet{notebgcolor}{isugold!50}
+	% Derived colors for various poster elements
+	\colorlet{backgroundcolor}{white}
+	\colorlet{framecolor}{isucardinal}
+	\colorlet{titlefgcolor}{white}
+	\colorlet{titlebgcolor}{isucardinal}
+	\colorlet{blocktitlebgcolor}{isucardinal}
+	\colorlet{blocktitlefgcolor}{white}
+	\colorlet{blockbodybgcolor}{white}
+	\colorlet{blockbodyfgcolor}{darkgray}
+	\colorlet{innerblocktitlebgcolor}{isugold}
+	\colorlet{innerblocktitlefgcolor}{darkgray}
+	\colorlet{innerblockbodybgcolor}{lightgray}
+	\colorlet{innerblockbodyfgcolor}{darkgray}
+	\colorlet{notefgcolor}{darkgray}
+	\colorlet{notebgcolor}{isugold!50}
 }
 
 % ===== BACKGROUND STYLE =====
 
 \definebackgroundstyle{ISUBackground}{
-    \draw[line width=0pt, color=white, fill=white]
-        (bottomleft) rectangle (topright);
+	\draw[line width=0pt, color=white, fill=white]
+	(bottomleft) rectangle (topright);
 }
 
 % ===== BLOCK STYLING =====
 
 % Custom block style with rounded corners and cardinal border
 \defineblockstyle{ISUBlock}{
-    titlewidthscale=1.0, bodywidthscale=1.0, titleleft,
-    titleoffsetx=0pt, titleoffsety=0pt, bodyoffsetx=0pt, bodyoffsety=0pt,
-    bodyverticalshift=0pt, roundedcorners=15, linewidth=5pt,
-    titleinnersep=15pt, bodyinnersep=20pt
+	titlewidthscale=1.0, bodywidthscale=1.0, titleleft,
+	titleoffsetx=0pt, titleoffsety=0pt, bodyoffsetx=0pt, bodyoffsety=0pt,
+	bodyverticalshift=0pt, roundedcorners=15, linewidth=5pt,
+	titleinnersep=15pt, bodyinnersep=20pt
 }{
-    \draw[color=framecolor, fill=blocktitlebgcolor,
-          rounded corners=\blockroundedcorners, line width=\blocklinewidth]
-        (blocktitle.south west) rectangle (blocktitle.north east);
-    \draw[color=framecolor, fill=blockbodybgcolor,
-          rounded corners=\blockroundedcorners, line width=\blocklinewidth]
-        (blockbody.south west) rectangle (blockbody.north east);
+	\draw[color=framecolor, fill=blocktitlebgcolor,
+		rounded corners=\blockroundedcorners, line width=\blocklinewidth]
+	(blocktitle.south west) rectangle (blocktitle.north east);
+	\draw[color=framecolor, fill=blockbodybgcolor,
+		rounded corners=\blockroundedcorners, line width=\blocklinewidth]
+	(blockbody.south west) rectangle (blockbody.north east);
 }
 
 % Inner block style for nested content
 \defineinnerblockstyle{ISUInnerBlock}{
-    titlewidthscale=1.0, bodywidthscale=1.0, titleleft,
-    titleoffsetx=0pt, titleoffsety=0pt, bodyoffsetx=0pt, bodyoffsety=0pt,
-    bodyverticalshift=0pt, roundedcorners=10, linewidth=3pt,
-    titleinnersep=10pt, bodyinnersep=15pt
+	titlewidthscale=1.0, bodywidthscale=1.0, titleleft,
+	titleoffsetx=0pt, titleoffsety=0pt, bodyoffsetx=0pt, bodyoffsety=0pt,
+	bodyverticalshift=0pt, roundedcorners=10, linewidth=3pt,
+	titleinnersep=10pt, bodyinnersep=15pt
 }{
-    \draw[color=framecolor, fill=innerblocktitlebgcolor,
-          rounded corners=\innerblockroundedcorners]
-        (innerblocktitle.south west) rectangle (innerblocktitle.north east);
-    \draw[color=framecolor, fill=innerblockbodybgcolor,
-          rounded corners=\innerblockroundedcorners]
-        (innerblockbody.south west) rectangle (innerblockbody.north east);
+	\draw[color=framecolor, fill=innerblocktitlebgcolor,
+		rounded corners=\innerblockroundedcorners]
+	(innerblocktitle.south west) rectangle (innerblocktitle.north east);
+	\draw[color=framecolor, fill=innerblockbodybgcolor,
+		rounded corners=\innerblockroundedcorners]
+	(innerblockbody.south west) rectangle (innerblockbody.north east);
 }
 
 % ===== TITLE STYLE =====
 
 \definetitlestyle{ISUTitle}{
-    width=\paperwidth, roundedcorners=0, linewidth=5pt, innersep=20pt,
-    titletotopverticalspace=0mm, titletoblockverticalspace=30mm
+	width=\paperwidth, roundedcorners=0, linewidth=5pt, innersep=20pt,
+	titletotopverticalspace=0mm, titletoblockverticalspace=30mm
 }{
-    \draw[color=framecolor, fill=titlebgcolor, line width=\titlelinewidth]
-        (\titleposleft,\titleposbottom) rectangle (\titleposright,\titlepostop);
+	\draw[color=framecolor, fill=titlebgcolor, line width=\titlelinewidth]
+	(\titleposleft,\titleposbottom) rectangle (\titleposright,\titlepostop);
 }
 
 % ===== FONT CONFIGURATION =====
