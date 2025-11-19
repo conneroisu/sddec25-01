@@ -106,7 +106,8 @@ jobs:
       - name: Build Poster PDF with LaTeX
         uses: xu-cheng/latex-action@v4
         with:
-          root_file: poster/poster.tex
+          root_file: poster.tex
+          working_directory: poster
 
       - name: Rename Poster PDF with version
         run: |
