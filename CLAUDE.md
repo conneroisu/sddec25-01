@@ -703,7 +703,7 @@ nix develop -c ltx-compile poster/poster.tex
 - Designed for physical printing, not digital reading
 
 **Build Integration**:
-- Poster files included in lint checks (`nix develop -c lint`)
+- Poster files included in lint checks (`nix develop -c 'lint'`)
 - Same development environment as main document (TeX Live Full)
 - Separate PDF output (poster.pdf vs main.pdf)
 
