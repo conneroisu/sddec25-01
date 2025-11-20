@@ -236,25 +236,54 @@ application.
 
 \subsection{Automated Testing}\label{subsec:automated-testing}
 
-Automated regression tests executed following code changes to verify
-system stability:
+Automated \textbf{continuous integration (CI)} regression testing was not implemented for this project due
+to hardware access constraints. While individual system tests (such as stress and long-term tests) used automated scripts,
+these scripts required manual initiation and direct hardware access, and could not be run in a CI/CD pipeline.
+The following limitations prevented the establishment of a continuous integration (CI) testing workflow:
+
+  \begin{itemize}
+    \item \textbf{Hardware Location}: The AMD Kria KV260 development
+      board was deployed at the client location rather than in a
+      team-accessible development environment
+    \item \textbf{Network Requirements}: Remote access to the board
+      required connection through the Iowa State University VPN,
+      creating network dependencies incompatible with standard CI/CD
+      infrastructure
+    \item \textbf{Physical Access Constraints}: Testing required direct
+      physical access to the hardware for deployment, configuration, and
+      debugging, which was not feasible in an automated workflow
+  \end{itemize}
+
+In an ideal development environment with co-located hardware,
+automated regression tests would have included:
 
 \begin{enumerate}
-  \item \textbf{Performance Check}: Compare speed to previous tests
+  \item \textbf{Performance Check}: Compare processing speed to
+    previous test runs
     \begin{itemize}
-      \item \textbf{Tool}: Test runner with history database
+      \item \textbf{Tool}: Test runner with historical performance database
     \end{itemize}
 
-  \item \textbf{Accuracy Check}: Make sure algorithm changes don't hurt accuracy
+  \item \textbf{Accuracy Check}: Verify algorithm changes maintain
+    segmentation accuracy
     \begin{itemize}
-      \item \textbf{Tool}: Test dataset with known answers
+      \item \textbf{Tool}: Validation against test dataset with known
+        ground truth
     \end{itemize}
 
-  \item \textbf{Resource Check}: Make sure changes don't use more memory or CPU
+  \item \textbf{Resource Check}: Ensure changes do not increase memory
+    or CPU utilization beyond acceptable thresholds
     \begin{itemize}
-      \item \textbf{Tool}: Vitis-AI Profiler with logging
+      \item \textbf{Tool}: Vitis-AI Profiler with automated logging
+        and comparison
     \end{itemize}
 \end{enumerate}
+
+As a result, regression testing was conducted manually following code
+changes, with developers directly executing test suites on the target
+hardware via VPN connection. While this approach provided equivalent
+validation coverage, it increased testing latency and required
+coordination for hardware access.
 
 \subsection{Monitoring}\label{subsec:monitoring}
 
