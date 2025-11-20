@@ -1,0 +1,32 @@
+% System Architecture section for VisionAssist poster
+% Visual pipeline diagram
+
+\textbf{End-to-End Processing Pipeline:}
+
+\vspace{1em}
+
+\begin{center}
+% TODO: Create system block diagram showing:
+% Camera → Preprocessing → U-Net Segmentation (DPU) → Feature Extraction → Output
+% Include timing annotations (8.3ms per frame, 60 FPS total)
+% Show pipelined scheduling visualization
+\fbox{\parbox{0.9\linewidth}{
+  \centering
+  \vspace{2em}
+  \textbf{[System Architecture Diagram]}\\[1em]
+  Camera Input $\rightarrow$ Preprocessing $\rightarrow$ U-Net (DPU) $\rightarrow$ Feature Extraction $\rightarrow$ Eye Tracking Output\\[1em]
+  \textit{8.3ms per frame | 60 FPS throughput | Pipelined DPU scheduling}
+  \vspace{2em}
+}}
+\end{center}
+
+\vspace{1em}
+
+\textbf{Processing Steps:}
+
+\begin{enumerate}
+  \item Image capture \& preprocessing (gamma, CLAHE)
+  \item U-Net segmentation on DPU accelerator
+  \item Pupil detection \& blink classification
+  \item Real-time feature tracking
+\end{enumerate}

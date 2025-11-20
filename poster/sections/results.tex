@@ -1,57 +1,44 @@
 % Results section for VisionAssist poster
 % Performance metrics and achievements
 
-\textbf{Performance Metrics:}
+\textbf{Achieved Performance:}
 
-Our optimized system achieves real-time performance suitable for
-medical assistive applications:
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+\textbf{Metric} & \textbf{Result} \\
+\midrule
+Throughput & 60 FPS \\
+Latency (4 frames) & <33.2 ms \\
+Segmentation Accuracy (IoU) & 98.8\% \\
+Continuous Operation & 24+ hours \\
+\bottomrule
+\end{tabular}
+\end{center}
 
-\vspace{0.5em}
+\vspace{1em}
 
-\textbf{Model Training Performance:}
+\textbf{What This Means:}
 
-Advanced training infrastructure achieved significant improvements:
 \begin{itemize}
-  \item 15x speedup over CPU baseline (50 minutes vs. 12 hours for 50 epochs)
-  \item Multi-component loss function combining boundary-aware cross
-    entropy, generalized dice loss, and surface loss
-  \item GPU-optimized training pipeline with batched operations
-  \item Comprehensive augmentation for robustness to lighting variations
+  \item \textbf{60 FPS:} Enables smooth, responsive eye movement tracking
+  \item \textbf{98.8\% IoU:} Accurate pupil detection across lighting conditions
+  \item \textbf{24+ hours:} Reliable for all-day wheelchair use
+  \item \textbf{On-device:} No network dependency, preserves privacy
 \end{itemize}
 
-\vspace{0.5em}
+\vspace{1em}
 
 \textbf{System Validation:}
 
-Comprehensive testing confirms system reliability:
 \begin{itemize}
-  \item \textbf{Continuous Operation:} 24+ hour stress testing
-    without performance degradation
-  \item \textbf{Lighting Robustness:} >98\% accuracy across varied
-    lighting conditions
-  \item \textbf{Real-Time Stability:} Consistent 60 FPS throughput under load
-  \item \textbf{Fair Scheduling:} Zero missed periodic data
-    collection deadlines across extended operation
+  \item \textbf{Lighting robustness:} >98\% accuracy in varied conditions
+  \item \textbf{Scheduling fairness:} Zero missed deadlines under load
+  \item \textbf{IEEE compliance:} Testing per IEEE 3129-2023 \& IEEE 2802-2022
 \end{itemize}
 
-\vspace{0.5em}
+\vspace{1em}
 
-\textbf{IEEE Standards Compliance:}
+\textbf{Limitations:}
 
-Our testing methodology adheres to:
-\begin{itemize}
-  \item \textbf{IEEE 3129--2023:} Robustness testing for AI-based
-    image recognition
-  \item \textbf{IEEE 2802--2022:} Performance evaluation for AI-based
-    medical devices
-\end{itemize}
-
-\vspace{0.5em}
-
-\textbf{Impact on Medical Assistive Technology:}
-
-VisionAssist demonstrates that edge-based AI can provide
-medical-grade monitoring without compromising user privacy or
-requiring expensive cloud infrastructure. The system enables
-proactive safety interventions while maintaining user autonomy,
-representing a significant advancement in assistive wheelchair technology.
+This is a \textit{proof-of-concept}. Clinical validation with wheelchair users is required before deployment. Current focus: engineering performance, not medical efficacy.

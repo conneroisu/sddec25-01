@@ -1,25 +1,17 @@
 % Methodology section for VisionAssist poster
 % Technical approach and system architecture
 
-\textbf{System Architecture:}
-
-VisionAssist implements a sophisticated pipelined processing
-architecture optimized for real-time medical monitoring on
-resource-constrained embedded hardware.
-
-\vspace{0.5em}
-
 \textbf{Hardware Platform:}
 
-\begin{itemize}
-  \item \textbf{AMD Kria KV260:} Zynq UltraScale+ MPSoC development board
-  \item Quad-core ARM Cortex-A53 processor (1.5 GHz)
-  \item Deep Learning Processing Unit (DPU) for neural network acceleration
-  \item 4GB DDR4 memory with four banks for parallel access
-  \item Optimized for edge AI with low power consumption
-\end{itemize}
+\textbf{AMD Kria KV260} with Quad-core ARM Cortex-A53 + DPU accelerator
 
-\vspace{0.5em}
+\vspace{1em}
+
+\begin{center}
+  \includegraphics[width=0.65\linewidth]{../assets/kv260.png}
+\end{center}
+
+\vspace{1em}
 
 \textbf{AI Model: U-Net Semantic Segmentation}
 
@@ -27,51 +19,20 @@ resource-constrained embedded hardware.
   \includegraphics[width=0.9\linewidth]{../assets/unet.png}
 \end{center}
 
-The U-Net architecture provides optimal balance for eye tracking:
-\begin{itemize}
-  \item Encoder-decoder structure with skip connections
-  \item Preserves fine-grained spatial information for pupil detection
-  \item Model compressed and quantized for DPU acceleration
-  \item 98.8\% IoU accuracy maintained through optimization
-\end{itemize}
+Encoder-decoder with skip connections for fine-grained pupil detection. Model compressed and quantized for DPU acceleration.
 
-\vspace{0.5em}
+\vspace{1em}
 
-\textbf{Processing Pipeline:}
+\textbf{Key Innovation: 5× Throughput via Pipelined Scheduling}
 
-\begin{enumerate}
-  \item \textbf{Image Capture:} Raw camera input acquisition from eye
-    tracking camera
-  \item \textbf{Preprocessing:} Image normalization, gamma correction
-    (0.8 exponent), CLAHE contrast enhancement
-  \item \textbf{Semantic Segmentation:} U-Net inference on DPU with
-    pipelined processing
-  \item \textbf{Feature Extraction:} Pupil identification, blink
-    detection, position tracking
-  \item \textbf{Medical Monitoring:} Real-time analysis for distress indicators
-  \item \textbf{Safety Response:} Autonomous wheelchair repositioning
-    when medical episode detected
-\end{enumerate}
+Efficient DPU resource sharing across multiple algorithms (segmentation, blink detection, tracking) with fair allocation—no starvation.
 
-\vspace{0.5em}
+\vspace{1em}
 
-\textbf{Key Technical Innovation:}
-
-Our pipelined architecture achieves near 5x throughput improvement
-through efficient scheduling of the single DPU resource across
-multiple algorithms (semantic segmentation, blink detection, eye
-tracking) while maintaining accuracy. The system implements
-sequential DPU scheduling with fair resource allocation, ensuring all
-algorithms meet their periodic data collection requirements without starvation.
-
-\vspace{0.5em}
-
-\textbf{Critical Requirements Met:}
+\textbf{Target Performance:}
 
 \begin{itemize}
-  \item \textbf{Latency:} <100ms for medical emergency detection and response
-  \item \textbf{Accuracy:} 98.8\% IoU for semantic segmentation (target: 99.8\%)
   \item \textbf{Throughput:} 60 FPS (4 frames in <33.2ms)
-  \item \textbf{Privacy:} All processing on-device, no external data
-    transmission
+  \item \textbf{Accuracy:} 98.8\% IoU (target: 99.8\%)
+  \item \textbf{Privacy:} 100\% on-device processing
 \end{itemize}

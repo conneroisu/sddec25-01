@@ -1,47 +1,24 @@
 % Introduction section for VisionAssist poster
 % Problem statement and motivation
 
-\textbf{The Challenge:}
+\textbf{The Problem:}
 
-Individuals with mobility impairments using powered wheelchairs face
-critical medical safety challenges. Medical episodes such as seizures
-and cardiovascular events can occur suddenly, with limited ability to
-reposition safely during distress. Current healthcare solutions are
-reactive, requiring human intervention after an episode occurs, which
-leads to delayed response times and loss of autonomy.
+Wheelchair users with conditions like cerebral palsy or epilepsy face sudden medical episodes with limited ability to respond. Current solutions are reactive, not proactive.
 
-\vspace{0.5em}
+\vspace{1em}
 
-\textbf{Our Solution:}
+\textbf{Our Approach:}
 
-VisionAssist leverages AI-powered eye tracking to provide proactive
-medical monitoring for wheelchair users with conditions like cerebral
-palsy and epilepsy. The system detects early warning signs of medical
-episodes through real-time eye movement and posture analysis,
-enabling autonomous safety response without compromising user independence.
-
-\vspace{0.5em}
-
-\textbf{Why It Matters:}
+VisionAssist is a \textit{prototype system} designed to explore real-time eye tracking on embedded hardware. It \textit{aims to} enable future medical monitoring capabilities through:
 
 \begin{itemize}
-  \item \textbf{Enhanced Safety:} Proactive detection prevents
-    critical incidents before they escalate
-  \item \textbf{User Independence:} Automated monitoring reduces
-    caregiver burden while maintaining autonomy
-  \item \textbf{Privacy-Preserving:} All processing occurs on-device
-    with no cloud dependency
-  \item \textbf{Real-Time Response:} Sub-100ms latency enables
-    immediate safety interventions
+  \item \textbf{Real-time eye tracking:} 60 FPS semantic segmentation on AMD Kria KV260
+  \item \textbf{Privacy-first:} All processing on-device, no cloud
+  \item \textbf{Embedded AI:} Optimized U-Net model for edge deployment
 \end{itemize}
 
-\vspace{0.5em}
+\vspace{1em}
 
-\textbf{Clinical Foundation:}
+\textbf{Research Scope:}
 
-Our approach is grounded in neurological research demonstrating that
-eye movement patterns contain seizure-specific anomalies that
-distinguish ictal events from normal behavior. Eyelid dynamics and
-blink reflex patterns are physiologically linked to neurological
-state through well-characterized motor control pathways, providing
-clinically meaningful indicators of medical distress.
+This senior design project focuses on \textit{engineering challenges} of real-time embedded AI, not clinical validation. Future work requires IRB-approved user studies.

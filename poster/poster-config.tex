@@ -51,8 +51,8 @@
 \defineblockstyle{ISUBlock}{
   titlewidthscale=1.0, bodywidthscale=1.0, titleleft,
   titleoffsetx=0pt, titleoffsety=0pt, bodyoffsetx=0pt, bodyoffsety=0pt,
-  bodyverticalshift=0pt, roundedcorners=15, linewidth=5pt,
-  titleinnersep=15pt, bodyinnersep=20pt
+  bodyverticalshift=15pt, roundedcorners=15, linewidth=5pt,  % Added vertical shift for spacing
+  titleinnersep=18pt, bodyinnersep=25pt  % Increased padding for better whitespace
 }{
   \draw[color=framecolor, fill=blocktitlebgcolor,
   rounded corners=\blockroundedcorners, line width=\blocklinewidth]
@@ -81,7 +81,7 @@
 
 \definetitlestyle{ISUTitle}{
   width=\paperwidth, roundedcorners=0, linewidth=5pt, innersep=20pt,
-  titletotopverticalspace=0mm, titletoblockverticalspace=30mm
+  titletotopverticalspace=0mm, titletoblockverticalspace=40mm  % More space after title
 }{
   \draw[color=framecolor, fill=titlebgcolor, line width=\titlelinewidth]
   (\titleposleft,\titleposbottom) rectangle (\titleposright,\titlepostop);
@@ -93,8 +93,8 @@
 \renewcommand{\familydefault}{\sfdefault}
 
 % Adjust spacing for large format
-\setlength{\parskip}{1em}
-\setlength{\columnsep}{4cm}
+\setlength{\parskip}{1.5em}  % Increased paragraph spacing for readability
+\setlength{\columnsep}{5cm}  % More whitespace between columns
 
 % ===== APPLY STYLES =====
 
