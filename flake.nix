@@ -165,25 +165,11 @@
             # Core LaTeX for compilation
             texliveFull
 
-            # Nix formatter for CI checks
-            alejandra
-
-            # Git for version operations
-            git
-
             # PDF utilities for validation
             poppler_utils
           ]
           ++ builtins.attrValues scriptPackages
           ++ preCommitCheck.enabledPackages;
-
-        shellHook = ''
-          echo "🤖 LaTeX CI Environment 🤖"
-          echo "Available commands:"
-          echo "  ltx-compile <file.tex>  - Compile LaTeX document"
-          echo "  lint                    - Run LaTeX linting"
-          echo "  ltx-wordcount <file.tex> - Count words in document"
-        '';
       };
 
       formatter = treefmt-nix.lib.mkWrapper pkgs treefmtModule;
