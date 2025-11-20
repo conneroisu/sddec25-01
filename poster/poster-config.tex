@@ -47,44 +47,79 @@
 
 % ===== BLOCK STYLING =====
 
-% Custom block style with rounded corners and cardinal border
+% Custom block style with rounded corners, cardinal border, and shadow effect
 \defineblockstyle{ISUBlock}{
   titlewidthscale=1.0, bodywidthscale=1.0, titleleft,
   titleoffsetx=0pt, titleoffsety=0pt, bodyoffsetx=0pt, bodyoffsety=0pt,
-  bodyverticalshift=15pt, roundedcorners=15, linewidth=5pt,  % Added vertical shift for spacing
-  titleinnersep=18pt, bodyinnersep=25pt  % Increased padding for better whitespace
+  bodyverticalshift=15pt, roundedcorners=15, linewidth=4pt,
+  titleinnersep=20pt, bodyinnersep=25pt
 }{
+  % Draw shadow effect for title
+  \draw[color=black!20, fill=black!20,
+  rounded corners=\blockroundedcorners]
+  ([shift={(3pt,-3pt)}]blocktitle.south west) rectangle ([shift={(3pt,-3pt)}]blocktitle.north east);
+
+  % Draw title block with gradient-like effect using two layers
   \draw[color=framecolor, fill=blocktitlebgcolor,
   rounded corners=\blockroundedcorners, line width=\blocklinewidth]
   (blocktitle.south west) rectangle (blocktitle.north east);
+
+  % Add subtle top highlight to title
+  \draw[color=white, opacity=0.15, line width=0pt, fill=white,
+  rounded corners=\blockroundedcorners]
+  (blocktitle.north west) rectangle ([yshift=-8pt]blocktitle.north east);
+
+  % Draw shadow for body
+  \draw[color=black!15, fill=black!15,
+  rounded corners=\blockroundedcorners]
+  ([shift={(2pt,-2pt)}]blockbody.south west) rectangle ([shift={(2pt,-2pt)}]blockbody.north east);
+
+  % Draw body block
   \draw[color=framecolor, fill=blockbodybgcolor,
   rounded corners=\blockroundedcorners, line width=\blocklinewidth]
   (blockbody.south west) rectangle (blockbody.north east);
 }
 
-% Inner block style for nested content
+% Inner block style for nested content with subtle styling
 \defineinnerblockstyle{ISUInnerBlock}{
   titlewidthscale=1.0, bodywidthscale=1.0, titleleft,
   titleoffsetx=0pt, titleoffsety=0pt, bodyoffsetx=0pt, bodyoffsety=0pt,
-  bodyverticalshift=0pt, roundedcorners=10, linewidth=3pt,
-  titleinnersep=10pt, bodyinnersep=15pt
+  bodyverticalshift=5pt, roundedcorners=10, linewidth=2pt,
+  titleinnersep=12pt, bodyinnersep=15pt
 }{
+  % Draw subtle shadow for inner title
+  \draw[color=black!10, fill=black!10,
+  rounded corners=\innerblockroundedcorners]
+  ([shift={(2pt,-2pt)}]innerblocktitle.south west) rectangle ([shift={(2pt,-2pt)}]innerblocktitle.north east);
+
+  % Draw inner title with gold background
   \draw[color=framecolor, fill=innerblocktitlebgcolor,
-  rounded corners=\innerblockroundedcorners]
+  rounded corners=\innerblockroundedcorners, line width=\innerblocklinewidth]
   (innerblocktitle.south west) rectangle (innerblocktitle.north east);
-  \draw[color=framecolor, fill=innerblockbodybgcolor,
-  rounded corners=\innerblockroundedcorners]
+
+  % Draw inner body with light gray background
+  \draw[color=framecolor!30, fill=innerblockbodybgcolor,
+  rounded corners=\innerblockroundedcorners, line width=\innerblocklinewidth]
   (innerblockbody.south west) rectangle (innerblockbody.north east);
 }
 
 % ===== TITLE STYLE =====
 
 \definetitlestyle{ISUTitle}{
-  width=\paperwidth, roundedcorners=0, linewidth=5pt, innersep=20pt,
-  titletotopverticalspace=0mm, titletoblockverticalspace=40mm  % More space after title
+  width=\paperwidth, roundedcorners=0, linewidth=5pt, innersep=25pt,
+  titletotopverticalspace=0mm, titletoblockverticalspace=40mm
 }{
+  % Draw shadow for title area
+  \draw[color=black!25, fill=black!25, line width=0pt]
+  ([shift={(0pt,-4pt)}]\titleposleft,\titleposbottom) rectangle ([shift={(0pt,-4pt)}]\titleposright,\titlepostop);
+
+  % Draw main title background with cardinal red
   \draw[color=framecolor, fill=titlebgcolor, line width=\titlelinewidth]
   (\titleposleft,\titleposbottom) rectangle (\titleposright,\titlepostop);
+
+  % Add subtle gradient effect with gold accent at bottom
+  \draw[color=isugold, fill=isugold, line width=0pt, opacity=0.3]
+  (\titleposleft,\titleposbottom) rectangle (\titleposright,[yshift=15pt]\titleposbottom);
 }
 
 % ===== FONT CONFIGURATION =====
