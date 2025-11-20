@@ -1,38 +1,37 @@
-
 name: Build Preview
- 
+
 on:
   pull_request:
     paths:
-      - '**.tex'
-      - '**.bib'
-      - '**.cls'
-      - 'flake.nix'
-      - 'flake.lock'
-      - '.github/workflows/build-preview.yml'
- 
+      - "**.tex"
+      - "**.bib"
+      - "**.cls"
+      - "flake.nix"
+      - "flake.lock"
+      - ".github/workflows/build-preview.yml"
+
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
- 
+
     steps:
       - uses: actions/checkout@v4
- 
+
       - name: Install Nix
         uses: cachix/install-nix-action@v27
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
- 
+
       - name: Build main document
         run: nix develop .#ci -c ltx-compile main.tex
- 
+
       - name: Build poster
-        run: nix develop .#ci -c ltx-compile poster/poster.tex
- 
+        run: cd poster && nix develop .#ci -c ltx-compile poster.tex
+
       - name: Upload PDFs
         uses: actions/upload-artifact@v4
         with:
@@ -40,20 +39,20 @@ jobs:
           path: |
             main.pdf
             poster/poster.pdf
- 
+
       - name: Update PR comment
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: build-preview
           message: |
             ## 📄 Build Preview
- 
+
             ✅ Documents built successfully!
- 
+
             **[⬇️ Download PDFs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})**
- 
+
             This artifact contains:
             - 📘 `main.pdf` - Design document
             - 🖼️ `poster.pdf` - A0 poster
- 
+
             <sub>Build #${{ github.run_number }} from commit `${{ github.event.pull_request.head.sha }}`</sub>
