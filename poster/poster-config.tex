@@ -58,22 +58,22 @@
   \draw[color=black!20, fill=black!20,
   rounded corners=\blockroundedcorners]
   ([shift={(3pt,-3pt)}]blocktitle.south west) rectangle ([shift={(3pt,-3pt)}]blocktitle.north east);
-
+  %
   % Draw title block with gradient-like effect using two layers
   \draw[color=framecolor, fill=blocktitlebgcolor,
   rounded corners=\blockroundedcorners, line width=\blocklinewidth]
   (blocktitle.south west) rectangle (blocktitle.north east);
-
+  %
   % Add subtle top highlight to title
   \draw[color=white, opacity=0.15, line width=0pt, fill=white,
   rounded corners=\blockroundedcorners]
   (blocktitle.north west) rectangle ([yshift=-8pt]blocktitle.north east);
-
+  %
   % Draw shadow for body
   \draw[color=black!15, fill=black!15,
   rounded corners=\blockroundedcorners]
   ([shift={(2pt,-2pt)}]blockbody.south west) rectangle ([shift={(2pt,-2pt)}]blockbody.north east);
-
+  %
   % Draw body block
   \draw[color=framecolor, fill=blockbodybgcolor,
   rounded corners=\blockroundedcorners, line width=\blocklinewidth]
@@ -91,12 +91,12 @@
   \draw[color=black!10, fill=black!10,
   rounded corners=\innerblockroundedcorners]
   ([shift={(2pt,-2pt)}]innerblocktitle.south west) rectangle ([shift={(2pt,-2pt)}]innerblocktitle.north east);
-
+  %
   % Draw inner title with gold background
   \draw[color=framecolor, fill=innerblocktitlebgcolor,
   rounded corners=\innerblockroundedcorners, line width=\innerblocklinewidth]
   (innerblocktitle.south west) rectangle (innerblocktitle.north east);
-
+  %
   % Draw inner body with light gray background
   \draw[color=framecolor!30, fill=innerblockbodybgcolor,
   rounded corners=\innerblockroundedcorners, line width=\innerblocklinewidth]
@@ -112,14 +112,10 @@
   % Draw shadow for title area
   \draw[color=black!25, fill=black!25, line width=0pt]
   ([shift={(0pt,-4pt)}]\titleposleft,\titleposbottom) rectangle ([shift={(0pt,-4pt)}]\titleposright,\titlepostop);
-
+  %
   % Draw main title background with cardinal red
   \draw[color=framecolor, fill=titlebgcolor, line width=\titlelinewidth]
   (\titleposleft,\titleposbottom) rectangle (\titleposright,\titlepostop);
-
-  % Add subtle gradient effect with gold accent at bottom
-  \draw[color=isugold, fill=isugold, line width=0pt, opacity=0.3]
-  (\titleposleft,\titleposbottom) rectangle (\titleposright,[yshift=15pt]\titleposbottom);
 }
 
 % ===== FONT CONFIGURATION =====
@@ -141,6 +137,5 @@
 
 % ===== TIKZPOSTER OPTIONS =====
 
-% Additional configuration for better layout
-\tikzposterlatexaffectionproofoff{}
 % Remove tikzposter watermark
+\tikzposterlatexaffectionproofoff%

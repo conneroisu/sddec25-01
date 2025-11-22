@@ -14,12 +14,17 @@
 \usepackage{microtype}
 \usepackage{booktabs}
 
+% TikZ libraries for coordinate calculations
+\usetikzlibrary{calc}
+
 % Bibliography setup - using relative path to main project references
 \usepackage[backend=biber, style=ieee, sorting=none]{biblatex}
 \addbibresource{../references.bib}
 
 % Load poster theme configuration
+\makeatletter
 \input{poster-config.tex}
+\makeatother
 
 % Document metadata
 \title{\parbox{\linewidth}{\centering VisionAssist:\\Real-Time AI Eye
