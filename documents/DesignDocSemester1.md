@@ -483,7 +483,7 @@ For risks with probability exceeding 30%, the team will develop detailed conting
 
 #### Hardware Resources
 
-- **Xilinx Kria Evaluation Board (Kv260):** Main development platform with built-in DPU for model inferences
+- **Xilinx Kria Evaluation Board (Kv260):** Main development platform with DPU synthesized onto FPGA fabric via bitstream for model inferences
 - **Development Computer:** Linux-based system for development, testing, and remote access to the board
 
 #### Software Resources
@@ -783,7 +783,7 @@ The team's project utilizes several key technologies, each with distinct strengt
 #### Kria Board KV260
 
 **Strengths:**
-- Built-in DPU (Deep Processing Unit) accelerates neural network inference
+- DPU (Deep Processing Unit) synthesized onto FPGA fabric via bitstream accelerates neural network inference
 - Multiple DDR4 memory banks enable parallel processing
 - Low power consumption suitable for mobile applications
 - Supports Vitis-AI for ML model optimization
