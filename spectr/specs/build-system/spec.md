@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TODO: Add purpose description
+Provides reproducible LaTeX compilation, linting, and CI/CD automation for academic documentation and poster projects using Nix development environment and GitHub Actions workflows.
 
 ## Requirements
 
