@@ -36,17 +36,15 @@
   \centering
   \vbox{
     \centering
-    \@titlegraphic \\[\TP@titlegraphictotitledistance]
-    \vspace*{1em}
     \color{titlefgcolor}
     {\bfseries \Huge \@title \par}
-    \vspace*{1.5em}
+    \vspace*{0.25em}
     {\LARGE \textbf{Senior Design Project SDDEC25--01} \par}
-    \vspace*{0.8em}
+    \vspace*{0.15em}
     {\Large Conner Ohnesorge, Tyler Schaefer, Aidan Perry, Joey Metzen \par}
-    \vspace*{0.5em}
+    \vspace*{0.1em}
     {\Large Iowa State University \par}
-    \vspace*{0.3em}
+    \vspace*{0.05em}
     {\large Department of Electrical and Computer Engineering}
   }
 }
@@ -57,44 +55,44 @@
 
 % Two-column layout for better content organization
 \begin{columns}
-  \column{0.5}
+	\column{0.5}
 
-  % LEFT COLUMN
+	% LEFT COLUMN
 
-  \block{Problem \& Approach}{
-    \input{sections/introduction.tex}
-  }
+	\block{Problem \& Approach}{
+		\input{sections/introduction.tex}
+	}
 
-  \block{System Architecture}{
-    \input{sections/architecture.tex}
-  }
+	\block{System Architecture}{
+		\input{sections/architecture.tex}
+	}
 
-  \block{Hardware \& AI Model}{
-    \input{sections/methodology.tex}
-  }
+	\block{Hardware \& AI Model}{
+		\input{sections/methodology.tex}
+	}
 
-  \column{0.5}
+	\column{0.5}
 
-  % RIGHT COLUMN
+	% RIGHT COLUMN
 
-  \block{Performance \& Validation}{
-    \input{sections/results.tex}
-  }
+	\block{Performance \& Validation}{
+		\input{sections/results.tex}
+	}
 
-  \block{Impact \& Next Steps}{
-    \input{sections/conclusion.tex}
-  }
+	\block{Impact \& Next Steps}{
+		\input{sections/conclusion.tex}
+	}
 
 \end{columns}
 
 % Bottom section spanning full width
 \block{Acknowledgments}{
-  \input{sections/acknowledgments.tex}
+	\input{sections/acknowledgments.tex}
 }
 
 % Bibliography section at bottom
 \block{References}{
-  \printbibliography[heading=none]
+	\printbibliography[heading=none]
 }
 
 \end{document}
