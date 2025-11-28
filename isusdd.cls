@@ -102,8 +102,8 @@
 \newcommand{\@department}{}
 \newcommand{\department}[1]{\renewcommand{\@department}{#1}}
 
-\newcommand{\@semester}{}
-\newcommand{\semester}[1]{\renewcommand{\@semester}{#1}}
+\let\@semester\@empty
+\newcommand{\semester}[1]{\def\@semester{#1}}
 
 \newcommand{\@teamname}{}
 \newcommand{\teamname}[1]{\renewcommand{\@teamname}{#1}}
@@ -114,14 +114,14 @@
 \newcommand{\@documenttype}{}
 \newcommand{\documenttype}[1]{\renewcommand{\@documenttype}{#1}}
 
-\newcommand{\@location}{}
-\newcommand{\location}[1]{\renewcommand{\@location}{#1}}
+\let\@location\@empty
+\newcommand{\location}[1]{\def\@location{#1}}
 
 \newcommand{\@projectdescription}{}
 \newcommand{\projectdescription}[1]{\renewcommand{\@projectdescription}{#1}}
 
-\newcommand{\@version}{}
-\newcommand{\version}[1]{\renewcommand{\@version}{#1}}
+\let\@version\@empty
+\newcommand{\version}[1]{\def\@version{#1}}
 
 % Custom title page
 \renewcommand{\maketitle}{
@@ -148,8 +148,8 @@
 
     \vfill
 
-    {\large\@location\\}
-    {\large\@semester\\}
+    \ifx\@location\@empty\else{\large\@location\\}\fi
+    \ifx\@semester\@empty\else{\large\@semester\\}\fi
     \vspace{1cm}
 
   \end{titlepage}
