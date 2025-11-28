@@ -3,44 +3,44 @@
 \section{Project Management and Tracking
 Procedures}\label{sec:management-procedures}
 
-Our team adopted a hybrid Waterfall + Agile project management
-approach for this project. This methodology provided us with both the
-structured framework of Waterfall for critical path activities and
-the flexibility of Agile for iterative development and testing. This
-hybrid approach was particularly well-suited for this project because:
+Our team adopted a hybrid Waterfall + Agile approach. This methodology
+provided Waterfall's structured framework for critical path activities
+and Agile's flexibility for iterative development. This approach suited
+the project because:
 
 \begin{enumerate}
-  \item The semantic segmentation optimization had clearly defined
-    phases (pipeline architecture design, implementation, testing)
-    that benefited from Waterfall planning
-  \item The technical nature of implementing pipelined processing,
-    DPU scheduling, and optimizing algorithms required adaptive
-    iterations that benefited from Agile sprints
-  \item Working with specialized hardware (Kria Board KV260) required
-    careful planning of resource allocation and sequential DPU access scheduling
+  \item Our project has clearly defined phases (pipeline architecture design,
+    implementation, testing) that benefited from Waterfall planning
+  \item Implementing pipelined processing, DPU scheduling, and algorithm
+    optimization required adaptive iterations benefiting from Agile sprints
+  \item Specialized hardware (Kria Board KV260) required careful resource
+    allocation and DPU scheduling
 \end{enumerate}
 
-For project tracking, the team utilized the following tools:
+For project tracking, the team used:
 
 \begin{itemize}
-  \item \textbf{GitHub}: Primary code repository for version control,
-    documentation, and collaboration. Our client also had access to
-    this repository to track progress in real-time.
-  \item \textbf{Telegram}: Main communication channel with our client
-    and previous years' team members for quick updates and questions.
+  \item \textbf{GitHub}: Code repository for version control and collaboration.
+    The client had access to track progress in real-time.
+  \item \textbf{Telegram}: Communication channel with the client and previous
+    team members for quick updates.
+  \item \textbf{GitLab}: The team transitioned to GitLab during the project
+    for enhanced tracking capabilities. GitLab provided storage for model
+    weights, training run tracking, and additional features at no cost to
+    the client. While we proposed that the client invite future team members
+    (who signed NDAs) to the GitLab organization to keep all teams informed,
+    the client opted for a more manual process of information management
+    between teams.
 \end{itemize}
 
-Weekly team meetings were held to review sprint progress, address
-blockers, and plan upcoming work. Monthly meetings with the client
-ensured alignment with project goals and requirements.
+Weekly team meetings reviewed sprint progress and addressed blockers.
+Monthly client meetings ensured alignment with project goals.
 
 \section{Task Decomposition}\label{sec:task-decomposition}
 
-Our project involved optimizing the semantic segmentation U-Net
-algorithm by implementing a pipelined architecture that leveraged
-multi-threaded CPU processing alongside sequential DPU execution\@.
-The key objective was to achieve target throughput of 60 FPS for
-real-time medical monitoring. The following tasks and subtasks were identified:
+Our project optimized the U-Net algorithm by implementing a pipelined
+architecture with multi-threaded CPU processing and sequential DPU execution.
+The target: 60 FPS for real-time medical monitoring. Tasks identified:
 
 \subsection{Task 1: Algorithm Performance Optimization}
 \begin{itemize}
@@ -91,14 +91,12 @@ real-time medical monitoring. The following tasks and subtasks were identified:
   \item Subtask 6.4: Prepare final project presentation
 \end{itemize}
 
-These tasks were further broken down into sprint activities with
-specific team members assigned based on their expertise.
+Tasks were broken into sprint activities with members assigned by expertise.
 
 \section{Project Milestones, Metrics, and Evaluation
 Criteria}\label{sec:milestones}
 
-The following key milestones were identified for the project, along
-with their associated metrics and evaluation criteria:
+Key milestones with associated metrics and evaluation criteria:
 
 \subsection{Milestone 1: Pipeline Architecture Design}
 \begin{itemize}
@@ -146,8 +144,7 @@ with their associated metrics and evaluation criteria:
     33.2\ ms for 4 frames (vs.\ current 160\ ms for 1 frame)
 \end{itemize}
 
-For each milestone, our team tracked progress using the following
-quantifiable metrics:
+For each milestone, we tracked progress using these metrics:
 
 \begin{itemize}
   \item \textbf{Processing time}: Measured in milliseconds per frame
@@ -159,9 +156,7 @@ quantifiable metrics:
 
 \section{Project Timeline and Schedule}\label{sec:timeline}
 
-The project spanned approximately 16 weeks, with work organized into
-sprints. The project timeline followed a structured approach with
-major milestones and deliverable dates:
+The project spanned 16 weeks with work organized into sprints:
 
 \subsection{Key Deliverable Dates}
 \begin{itemize}
@@ -171,10 +166,8 @@ major milestones and deliverable dates:
 \end{itemize}
 
 \subsection{Critical Path}
-The critical path for this project follows the U-Net model
-optimization and pipelining, implementation of the eye-tracking
-components, integration of the processing pipeline, and final
-optimization of throughput.
+The critical path follows U-Net optimization, eye-tracking implementation,
+pipeline integration, and throughput optimization.
 
 \subsection{Sprint Organization}
 \begin{itemize}
@@ -267,9 +260,8 @@ optimization of throughput.
     \end{itemize}
 \end{itemize}
 
-For risks with probability exceeding 30\%, our team developed
-detailed contingency plans, including alternative implementation
-approaches and resource reallocation strategies.
+For risks exceeding 30\% probability, we developed contingency plans
+including alternative approaches and resource reallocation.
 
 \section{Resource Requirements}\label{sec:resource-requirements}
 

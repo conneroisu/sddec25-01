@@ -2,10 +2,8 @@
 
 \section{Testing Strategy Overview}\label{sec:testing-overview}
 
-Testing was essential for the Semantic Segmentation system.
-Comprehensive validation ensured that the system met critical
-performance objectives: fast processing (<16.6ms between frames) and
-high accuracy (99.8\%).
+Comprehensive validation ensured the system met critical performance
+objectives: fast processing (<16.6ms between frames) and high accuracy (99.8\%).
 
 \begin{quote}
   \textit{Note: Numerical values are representative placeholders due
@@ -14,8 +12,8 @@ high accuracy (99.8\%).
 
 \subsection{Testing Philosophy}\label{subsec:testing-philosophy}
 
-Early and continuous testing enabled rapid detection and resolution
-of issues before they compounded. This methodology involved:
+Early and continuous testing enabled rapid issue detection and resolution.
+This methodology involved:
 
 \begin{itemize}
   \item Testing each pipeline stage and the U-Net algorithm
@@ -27,7 +25,7 @@ of issues before they compounded. This methodology involved:
 
 \subsection{Testing Challenges}\label{subsec:testing-challenges}
 
-The project encountered several significant testing challenges:
+Testing challenges encountered:
 
 \begin{itemize}
   \item Testing on FPGA hardware was different from normal software testing
@@ -178,15 +176,10 @@ Testing}\label{subsec:system-coordination-testing}
 
 \subsection{Test Plan}\label{subsec:test-plan}
 
-The following test plan was developed and executed to rigorously validate
-the demonstration system which is separate to the solution delivered to the client.
-In accordance with the comprehensive testing philosophy outlined above, all critical 
-performance,accuracy, and reliability requirements were thoroughly tested. Scenario
-coverage was designed to be representative of real-world operating
-conditions, ensuring the system met stringent safety and medical standards.
-The test suite provided robust evidence of system reliability, accuracy,
-and operational stability, supporting the safety-critical nature of the
-application.
+The following test plan validated the demonstration system (separate from
+the client solution). All critical performance, accuracy, and reliability
+requirements were tested with scenario coverage representative of real-world
+conditions.
 
 \begin{enumerate}
   \item \textbf{Continuous Running Test:}
@@ -236,26 +229,20 @@ application.
 
 \subsection{Automated Testing}\label{subsec:automated-testing}
 
-Automated \textbf{continuous integration (CI)} regression testing was not implemented for this project due
-to hardware access constraints. While individual system tests (such as stress and long-term tests) used automated scripts,
-these scripts required manual initiation and direct hardware access, and could not be run in a CI/CD pipeline.
-The following limitations prevented the establishment of a continuous integration (CI) testing workflow:
+Automated CI regression testing was not implemented due to hardware access
+constraints. Individual tests used automated scripts but required manual
+initiation. Limitations preventing CI workflow:
 
   \begin{itemize}
-    \item \textbf{Hardware Location}: The AMD Kria KV260 development
-      board was deployed at the client location rather than in a
-      team-accessible development environment
-    \item \textbf{Network Requirements}: Remote access to the board
-      required connection through the Iowa State University VPN,
-      creating network dependencies incompatible with standard CI/CD
-      infrastructure
+    \item \textbf{Hardware Location}: The AMD Kria KV260 was deployed at
+      the client location, not team-accessible
+    \item \textbf{Network Requirements}: Remote access required ISU VPN,
+      incompatible with standard CI/CD infrastructure
     \item \textbf{Physical Access Constraints}: Testing required direct
-      physical access to the hardware for deployment, configuration, and
-      debugging, which was not feasible in an automated workflow
+      hardware access for deployment and debugging
   \end{itemize}
 
-In an ideal development environment with co-located hardware,
-automated regression tests would have included:
+With co-located hardware, automated regression tests would include:
 
 \begin{enumerate}
   \item \textbf{Performance Check}: Compare processing speed to
@@ -279,11 +266,8 @@ automated regression tests would have included:
     \end{itemize}
 \end{enumerate}
 
-As a result, regression testing was conducted manually following code
-changes, with developers directly executing test suites on the target
-hardware via VPN connection. While this approach provided equivalent
-validation coverage, it increased testing latency and required
-coordination for hardware access.
+Regression testing was conducted manually via VPN connection, providing
+equivalent validation but increased testing latency.
 
 \subsection{Monitoring}\label{subsec:monitoring}
 
@@ -333,25 +317,16 @@ Integration}\label{subsec:hardware-software-integration}
 
 \subsection{IEEE Standards Compliance}\label{subsec:ieee-compliance}
 
-The testing methodology was designed in accordance with applicable
-IEEE standards for AI-based medical devices:
+The testing methodology was designed in accordance with applicable IEEE standards for AI-based medical devices:
 
 \begin{itemize}
   \item \textbf{IEEE 3129--2023}~\cite{ieee3129-2023}: Our robustness
-    testing approach follows this standard's guidelines for
-    evaluating AI-based image recognition systems. We conducted
-    comprehensive testing across varying lighting conditions, stress
-    scenarios, and long-term stability validation to ensure the U-Net
-    semantic segmentation model maintains reliability under diverse
-    operating conditions.
+    testing follows guidelines for AI-based image recognition systems,
+    including lighting variation, stress scenarios, and long-term stability.
 
-  \item \textbf{IEEE 2802--2022}~\cite{ieee2802-2022}: Our
-    performance and safety evaluation methodology aligns with this
-    standard's terminology and best practices for AI-based medical
-    devices. Testing focused on critical performance metrics
-    (throughput, accuracy, latency) and safety-critical validation to
-    ensure the system is reliable for real-world medical monitoring
-    applications.
+  \item \textbf{IEEE 2802--2022}~\cite{ieee2802-2022}: Our evaluation
+    methodology follows terminology and best practices for AI-based
+    medical devices, focusing on throughput, accuracy, and latency.
 \end{itemize}
 
 \subsection{Test Documentation}\label{subsec:test-documentation}

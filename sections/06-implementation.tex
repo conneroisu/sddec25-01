@@ -2,244 +2,204 @@
 
 \section{Current Implementation Status}\label{sec:current-status}
 
-Our project has completed comprehensive performance evaluation of
-both single-model and split-model architectures on the AMD Kria KV260
-development board. The implementation follows a structured approach
-focusing on the critical path items while maintaining flexibility for
-iterative improvements.
+Our project completed performance evaluation of both single-model and
+split-model architectures on the AMD Kria KV260. The implementation
+follows a structured approach focusing on critical path items.
 
 \subsection{Development Environment Setup}\label{subsec:development-environment}
 
 \begin{itemize}
-  \item \textbf{Hardware Configuration}: AMD Kria KV260 development
-    board (Figure~\ref{fig:kv260}) fully configured with necessary peripherals
-  \item \textbf{Software Stack}: Vitis AI development
-    environment~\cite{amd2023vitis} installed and operational
-  \item \textbf{Version Control}: Git repository established with
-    comprehensive documentation
-  \item \textbf{Build System}: Cross-compilation toolchain for
-    ARM-based development
+	\item \textbf{Hardware Configuration}: AMD Kria KV260 development
+	      board (Figure~\ref{fig:kv260}) fully configured with necessary peripherals
+	\item \textbf{Software Stack}: Vitis AI development
+	      environment~\cite{amd2023vitis} installed and operational
+	\item \textbf{Version Control}: Git repository established with
+	      comprehensive documentation
+	\item \textbf{Build System}: Cross-compilation toolchain for
+	      ARM-based development
 \end{itemize}
 
 \subsection{Performance Results}\label{subsec:performance-results}
 
-We have conducted extensive benchmarking of both single-model and
-split-model implementations to evaluate the trade-offs between
-different parallelization strategies.
+We benchmarked single-model and split-model implementations to evaluate
+parallelization trade-offs.
 
 \subsubsection{Single Model
-Performance}\label{subsubsec:single-model-performance}
+	Performance}\label{subsubsec:single-model-performance}
 
-The baseline U-Net implementation running as a single unified model
-demonstrates the following performance characteristics:
+Baseline U-Net single unified model performance:
 
 \begin{itemize}
-  \item \textbf{Mean Total Latency}: 529.39 ms ($\pm$ 0.26 ms)
-  \item \textbf{Mean DPU Time}: 474.32 ms ($\pm$ 0.05 ms)
-  \item \textbf{Mean Preprocess}: 27.43 ms ($\pm$ 0.23 ms)
-  \item \textbf{Mean Postprocess}: 27.64 ms ($\pm$ 0.08 ms)
-  \item \textbf{Memory Usage}: 45.00 MB
+	\item \textbf{Mean Total Latency}: 529.39 ms ($\pm$ 0.26 ms)
+	\item \textbf{Mean DPU Time}: 474.32 ms ($\pm$ 0.05 ms)
+	\item \textbf{Mean Preprocess}: 27.43 ms ($\pm$ 0.23 ms)
+	\item \textbf{Mean Postprocess}: 27.64 ms ($\pm$ 0.08 ms)
+	\item \textbf{Memory Usage}: 45.00 MB
 \end{itemize}
 
-The single model implementation provides a stable baseline with low
-variance in processing times, indicating consistent performance
-across frames. The dominant processing time is spent in DPU execution
-(89.6\% of total latency), with preprocessing and postprocessing
-contributing approximately 10\% of overall latency.
+Single model provides stable baseline with low variance. DPU execution
+dominates (89.6\% of latency), with pre/postprocessing contributing approximately 10\%.
 
 \subsubsection{Split Model Performance (4
-Segments)}\label{subsubsec:split-model-performance}
+	Segments)}\label{subsubsec:split-model-performance}
 
-The parallelized implementation dividing the U-Net algorithm into
-four segments demonstrates the following characteristics:
+Parallelized U-Net (four segments) characteristics:
 
 \begin{itemize}
-  \item \textbf{Mean Total Latency}: 784.29 ms ($\pm$ 3.39 ms)
-  \item \textbf{Mean DPU Time}: 729.00 ms ($\pm$ 3.38 ms)
-  \item \textbf{Mean Preprocess}: 27.64 ms ($\pm$ 0.18 ms)
-  \item \textbf{Mean Postprocess}: 27.64 ms ($\pm$ 0.01 ms)
+	\item \textbf{Mean Total Latency}: 784.29 ms ($\pm$ 3.39 ms)
+	\item \textbf{Mean DPU Time}: 729.00 ms ($\pm$ 3.38 ms)
+	\item \textbf{Mean Preprocess}: 27.64 ms ($\pm$ 0.18 ms)
+	\item \textbf{Mean Postprocess}: 27.64 ms ($\pm$ 0.01 ms)
 \end{itemize}
 
-The split model approach incurs additional overhead from thread
-coordination and data transfer between segments, resulting in 48.2\%
-higher total latency compared to the single model. The increased
-variance ($\pm$ 3.39 ms vs. $\pm$ 0.26 ms) indicates synchronization
-overhead and resource contention between parallel threads.
+Split model incurs 48.2\% higher latency from thread coordination and data
+transfer. Increased variance ($\pm$3.39ms vs $\pm$0.26ms) indicates
+synchronization overhead.
 
 \subsection{Performance Analysis}\label{subsec:performance-analysis}
 
 \begin{itemize}
-  \item \textbf{Parallelization Overhead}: The split model
-    demonstrates that naive algorithm division introduces significant
-    overhead (255 ms increase) due to thread synchronization and
-    inter-segment data transfer
-  \item \textbf{Memory Efficiency}: Single model maintains a lower
-    memory footprint (45 MB) when compared to split model inference
-    (111.01 MB). This increase in memory footprint is caused by the
-    intermediate storage of tensors needed as inputs for further UNet segments.
+	\item \textbf{Parallelization Overhead}: Naive algorithm division
+	      introduces 255ms overhead from thread synchronization and data transfer
+	\item \textbf{Memory Efficiency}: Single model: 45MB vs split model:
+	      111.01MB due to intermediate tensor storage between segments
 \end{itemize}
 
 \subsection{Algorithm Analysis and Division}\label{subsec:algorithm-analysis}
 
-The U-Net semantic segmentation algorithm (Figure~\ref{fig:unet}) has
-been thoroughly analyzed for pipelined processing
-optimization~\cite{zhao2023parallel}:
+U-Net analysis for pipelined optimization~\cite{zhao2023parallel}:
 
 \begin{itemize}
-  \item \textbf{Architecture Review}: Complete understanding of
-    encoder-decoder structure and skip connections
-  \item \textbf{Pipeline Strategy}: Architectural approach developed
-    for efficient pipelined processing with overlapped CPU and DPU stages
-  \item \textbf{Accuracy Validation}: Current implementation achieves
-    98.8\% IoU accuracy, within target range of 99.8\%~\cite{wang2021}
-  \item \textbf{Performance Baseline}: Comprehensive benchmarking
-    completed for both single and split model architectures
+	\item \textbf{Architecture Review}: Complete understanding of
+	      encoder-decoder structure and skip connections
+	\item \textbf{Pipeline Strategy}: Architectural approach developed
+	      for efficient pipelined processing with overlapped CPU and DPU stages
+	\item \textbf{Accuracy Validation}: Current implementation achieves
+	      98.8\% IoU accuracy, within target range of 99.8\%~\cite{wang2021}
+	\item \textbf{Performance Baseline}: Comprehensive benchmarking
+	      completed for both single and split model architectures
 \end{itemize}
 
 \subsubsection{ONNX Graph Analysis with
-Netron}\label{subsubsec:onnx-graph-analysis}
+	Netron}\label{subsubsec:onnx-graph-analysis}
 
-To identify appropriate split points for dividing the U-Net model
-into segments for parallel processing, we utilized
-Netron~\cite{netron}, an open-source neural network visualization
-tool. Netron provides comprehensive visualization of ONNX model
-graphs, enabling detailed inspection of the network architecture including:
+We used Netron~\cite{netron} to identify split points for dividing U-Net
+into segments. Netron provides ONNX model visualization including:
 
 \begin{itemize}
-  \item \textbf{Node Identification}: Visual representation of all
-    computational nodes in the ONNX graph, including convolutional
-    layers, activation functions, pooling operations, and skip connections
-  \item \textbf{Layer Connectivity}: Clear visualization of data flow
-    between layers, essential for identifying valid split points that
-    preserve model integrity
-  \item \textbf{Tensor Dimensions}: Display of intermediate tensor
-    shapes at each node, critical for understanding memory
-    requirements and data transfer overhead between split segments
-  \item \textbf{Operation Parameters}: Detailed inspection of layer
-    parameters and attributes to understand computational complexity
-    of each segment
+	\item \textbf{Node Identification}: Visual representation of all
+	      computational nodes in the ONNX graph, including convolutional
+	      layers, activation functions, pooling operations, and skip connections
+	\item \textbf{Layer Connectivity}: Clear visualization of data flow
+	      between layers, essential for identifying valid split points that
+	      preserve model integrity
+	\item \textbf{Tensor Dimensions}: Display of intermediate tensor
+	      shapes at each node, critical for understanding memory
+	      requirements and data transfer overhead between split segments
+	\item \textbf{Operation Parameters}: Detailed inspection of layer
+	      parameters and attributes to understand computational complexity
+	      of each segment
 \end{itemize}
 
-Using Netron's interactive graph visualization, we identified
-strategic nodes in the U-Net encoder-decoder architecture where the
-model could be divided into four segments while maintaining the skip
-connection pathways essential for semantic segmentation accuracy.
-This analysis informed the split model implementation evaluated in
-Section~\ref{subsubsec:split-model-performance}, where intermediate
-tensors between segments are stored and passed to subsequent processing stages.
+Using Netron, we identified nodes where U-Net could be divided into four
+segments while maintaining skip connections. This informed the split model
+in Section~\ref{subsubsec:split-model-performance}.
 
 \subsubsection{Model Extraction with ONNX
-Utilities}\label{subsubsec:onnx-model-extraction}
+	Utilities}\label{subsubsec:onnx-model-extraction}
 
-After identifying the appropriate split points using Netron
-visualization, we utilized the ONNX utilities library~\cite{onnx2023}
-to programmatically extract sub-models from the original U-Net
-architecture. The \texttt{onnx.utils.extract\_model} function enables
-precise extraction of model segments by specifying input and output
-tensor names:
+We used ONNX utilities~\cite{onnx2023} to extract sub-models from U-Net.
+The \texttt{onnx.utils.extract\_model} function extracts segments by
+specifying tensor names:
 
 \begin{itemize}
-  \item \textbf{Extraction Method}: The \texttt{extract\_model}
-    function~\cite{onnx_extract_model} creates sub-models by defining
-    boundaries through input and output tensor names, preserving the
-    computational graph structure between specified points
-  \item \textbf{Model Validation}: The extraction process includes
-    optional model checking to ensure the extracted sub-model
-    maintains valid ONNX graph structure and type consistency
-  \item \textbf{Shape Inference}: Automatic shape inference ensures
-    all intermediate tensors have properly defined dimensions,
-    critical for memory allocation during DPU execution
-  \item \textbf{Large Model Support}: For extracted models exceeding
-    2GB, the utility automatically externalizes weight data to
-    separate files (e.g., \texttt{output\_path.data}), maintaining
-    compatibility with file system limitations
+	\item \textbf{Extraction Method}: The \texttt{extract\_model}
+	      function~\cite{onnx_extract_model} creates sub-models by defining
+	      boundaries through input and output tensor names, preserving the
+	      computational graph structure between specified points
+	\item \textbf{Model Validation}: The extraction process includes
+	      optional model checking to ensure the extracted sub-model
+	      maintains valid ONNX graph structure and type consistency
+	\item \textbf{Shape Inference}: Automatic shape inference ensures
+	      all intermediate tensors have properly defined dimensions,
+	      critical for memory allocation during DPU execution
+	\item \textbf{Large Model Support}: For extracted models exceeding
+	      2GB, the utility automatically externalizes weight data to
+	      separate files (e.g., \texttt{output\_path.data}), maintaining
+	      compatibility with file system limitations
 \end{itemize}
 
-The extraction process allowed us to systematically divide the U-Net
-architecture into four independent segments, each represented as a
-separate ONNX model file. This modular approach enables flexible
-deployment strategies, including the split model implementation
-evaluated in Section~\ref{subsubsec:split-model-performance}. Each
-extracted segment maintains the precise computational semantics of
-the corresponding portion of the original model, ensuring that when
-executed sequentially with proper intermediate tensor passing, the
-split model produces identical results to the unified architecture.
+The extraction divided U-Net into four segments as separate ONNX files.
+Each segment maintains computational semantics, ensuring sequential
+execution produces identical results to the unified architecture.
 
-Key considerations during the extraction process included:
+Key extraction considerations:
 
 \begin{itemize}
-  \item \textbf{Boundary Selection}: Ensuring extraction boundaries
-    do not cut through control-flow operators (e.g., If, Loop) that
-    would disconnect subgraphs from the main computational graph
-  \item \textbf{Tensor Naming}: Identifying correct tensor names from
-    Netron visualization to specify precise extraction boundaries
-  \item \textbf{Skip Connection Preservation}: Maintaining U-Net skip
-    connections that span multiple segments by carefully selecting
-    output tensors that include both the primary data path and skip
-    connection tensors
-  \item \textbf{Segment Balance}: Distributing computational load
-    approximately evenly across the four segments to optimize
-    parallel processing opportunities
+	\item \textbf{Boundary Selection}: Ensuring extraction boundaries
+	      do not cut through control-flow operators (e.g., If, Loop) that
+	      would disconnect subgraphs from the main computational graph
+	\item \textbf{Tensor Naming}: Identifying correct tensor names from
+	      Netron visualization to specify precise extraction boundaries
+	\item \textbf{Skip Connection Preservation}: Maintaining U-Net skip
+	      connections that span multiple segments by carefully selecting
+	      output tensors that include both the primary data path and skip
+	      connection tensors
+	\item \textbf{Segment Balance}: Distributing computational load
+	      approximately evenly across the four segments to optimize
+	      parallel processing opportunities
 \end{itemize}
 
-This extraction methodology provided the foundation for our
-multi-segment deployment experiments, enabling direct comparison
-between single-model and split-model architectures on the Kria KV260
-hardware platform.
+This methodology enabled direct comparison between single-model and
+split-model architectures on the Kria KV260.
 
 \subsection{Resource Scheduling
-Implementation}\label{subsec:scheduling-implementation}
+	Implementation}\label{subsec:scheduling-implementation}
 
 \begin{itemize}
-  \item \textbf{DPU Access Management}: Sequential scheduling system
-    (round-robin) designed for fair DPU access allocation
-  \item \textbf{Thread Coordination}: multithreaded framework
-    implemented for CPU-based preprocessing and
-    postprocessing~\cite{park2022thread}
-  \item \textbf{Memory Management}: Optimized memory allocation
-    strategy for efficient pipelined data flow~\cite{chen2022memory}
-  \item \textbf{Synchronization}: Inter-thread communication
-    mechanisms established for pipeline stage coordination
+	\item \textbf{DPU Access Management}: Sequential scheduling system
+	      (round-robin) designed for fair DPU access allocation
+	\item \textbf{Thread Coordination}: multithreaded framework
+	      implemented for CPU-based preprocessing and
+	      postprocessing~\cite{park2022thread}
+	\item \textbf{Memory Management}: Optimized memory allocation
+	      strategy for efficient pipelined data flow~\cite{chen2022memory}
+	\item \textbf{Synchronization}: Inter-thread communication
+	      mechanisms established for pipeline stage coordination
 \end{itemize}
 
 \section{Model Training}\label{sec:model-training}
 
 \subsection{Training Infrastructure}\label{subsec:training-infrastructure}
 
-The U-Net semantic segmentation model training process underwent
-comprehensive redesign to improve training efficiency, model
-performance, and deployment readiness. Our enhanced training
-infrastructure leverages cloud-based GPU acceleration through
-Modal.com~\cite{modal2024} with PyTorch~\cite{pytorch2023},
-implementing sophisticated loss functions, comprehensive experiment
-tracking, and automated model export for the deployment pipeline.
+Training infrastructure was redesigned for efficiency and deployment
+readiness, using cloud-based GPU acceleration through Modal.com~\cite{modal2024}
+with PyTorch~\cite{pytorch2023}, sophisticated loss functions, experiment
+tracking, and automated model export.
 
 \subsubsection{Cloud-Based Training Environment}
 
-The training infrastructure utilizes Modal.com for scalable,
-reproducible GPU training with the following specifications:
+Modal.com provides scalable, reproducible GPU training:
 
 \begin{itemize}
-  \item \textbf{Hardware Acceleration}: NVIDIA T4 GPU with CUDA
-    12.8.0 for neural network training
-  \item \textbf{Software Stack}: PyTorch 2.8.0, ONNX Runtime 1.17.0,
-    MLflow 3.5.0 for experiment management
-  \item \textbf{Extended Training Sessions}: 4-hour timeout
-    configuration supporting comprehensive hyperparameter exploration
-  \item \textbf{Containerized Environment}: Reproducible training
-    environment with versioned dependencies via Modal image specification
+	\item \textbf{Hardware Acceleration}: NVIDIA T4 GPU with CUDA
+	      12.8.0 for neural network training
+	\item \textbf{Software Stack}: PyTorch 2.8.0, ONNX Runtime 1.17.0,
+	      MLflow 3.5.0 for experiment management
+	\item \textbf{Extended Training Sessions}: 4-hour timeout
+	      configuration supporting comprehensive hyperparameter exploration
+	\item \textbf{Containerized Environment}: Reproducible training
+	      environment with versioned dependencies via Modal image specification
 \end{itemize}
 
 \subsection{Advanced Loss Function Design}\label{subsec:advanced-loss}
 
-The training implementation employs a sophisticated multi-component
-loss function that combines three complementary objectives to achieve
-superior segmentation quality:
+Training employs a multi-component loss function combining three objectives:
 
 \begin{equation}
-  \mathcal{L}_{\text{total}} = \mathcal{L}_{\text{CE-boundary}} +
-  \alpha(t) \cdot \mathcal{L}_{\text{Dice}} + (1 - \alpha(t)) \cdot
-  \mathcal{L}_{\text{Surface}}
+	\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{CE-boundary}} +
+	\alpha(t) \cdot \mathcal{L}_{\text{Dice}} + (1 - \alpha(t)) \cdot
+	\mathcal{L}_{\text{Surface}}
 \end{equation}
 
 where $\alpha(t)$ is a time-dependent weighting factor that
@@ -249,310 +209,282 @@ first 125 epochs.
 \subsubsection{Loss Components}
 
 \begin{itemize}
-  \item \textbf{Boundary-Aware Cross Entropy
-    ($\mathcal{L}_{\text{CE-boundary}}$)}: Standard cross entropy
-    loss weighted by boundary proximity maps generated via Canny edge
-    detection with dilation. Boundary pixels receive 20x higher
-    weight to improve segmentation precision at pupil edges, critical
-    for accurate eye tracking.
+	\item \textbf{Boundary-Aware Cross Entropy
+	      ($\mathcal{L}_{\text{CE-boundary}}$)}: Standard cross entropy
+	      loss weighted by boundary proximity maps generated via Canny edge
+	      detection with dilation. Boundary pixels receive 20x higher
+	      weight to improve segmentation precision at pupil edges, critical
+	      for accurate eye tracking.
 
-  \item \textbf{Generalized Dice Loss ($\mathcal{L}_{\text{Dice}}$)}:
-    Class-weighted dice coefficient that addresses class imbalance
-    between background and pupil pixels. Weights are inversely
-    proportional to the square of class pixel counts, ensuring the
-    minority pupil class receives appropriate optimization attention
-    despite representing only 2--5\% of image pixels.
+	\item \textbf{Generalized Dice Loss ($\mathcal{L}_{\text{Dice}}$)}:
+	      Class-weighted dice coefficient that addresses class imbalance
+	      between background and pupil pixels. Weights are inversely
+	      proportional to the square of class pixel counts, ensuring the
+	      minority pupil class receives appropriate optimization attention
+	      despite representing only 2--5\% of image pixels.
 
-  \item \textbf{Surface Loss ($\mathcal{L}_{\text{Surface}}$)}:
-    Distance-based loss computed from signed distance transforms of
-    ground truth masks~\cite{kervadec2019boundary}. Penalizes
-    predictions based on their Euclidean distance from true
-    boundaries, encouraging topologically accurate segmentation maps
-    essential for medical applications.
+	\item \textbf{Surface Loss ($\mathcal{L}_{\text{Surface}}$)}:
+	      Distance-based loss computed from signed distance transforms of
+	      ground truth masks~\cite{kervadec2019boundary}. Penalizes
+	      predictions based on their Euclidean distance from true
+	      boundaries, encouraging topologically accurate segmentation maps
+	      essential for medical applications.
 \end{itemize}
 
 \subsubsection{Dynamic Loss Weighting Strategy}
 
-The alpha scheduling mechanism implements a curriculum learning approach:
+Alpha scheduling implements curriculum learning:
 
 \begin{equation}
-  \alpha(t) =
-  \begin{cases}
-    1 - \frac{t}{125} & \text{if } t \leq 125 \\
-    1                 & \text{if } t > 125
-  \end{cases}
+	\alpha(t) =
+	\begin{cases}
+		1 - \frac{t}{125} & \text{if } t \leq 125 \\
+		1                 & \text{if } t > 125
+	\end{cases}
 \end{equation}
 
-Early training (epochs 1--125) emphasizes surface loss to establish
-correct boundary topology, while later training focuses on dice loss
-to optimize overall segmentation quality. This two-phase approach
-prevents the model from learning topologically incorrect solutions
-that would be difficult to correct in later training.
+Early training emphasizes surface loss for boundary topology; later
+training focuses on dice loss for segmentation quality. This prevents
+topologically incorrect solutions difficult to correct later.
 
 \subsection{GPU-Optimized Training
-Pipeline}\label{subsec:gpu-optimized-training}
+	Pipeline}\label{subsec:gpu-optimized-training}
 
-The training implementation prioritizes GPU-native operations to
-minimize performance overhead from CPU-GPU data transfers:
+Training prioritizes GPU-native operations to minimize CPU-GPU transfer overhead:
 
 \begin{itemize}
-  \item \textbf{Batched Operations}: All training operations utilize
-    batched GPU kernels with batch size 8, eliminating sequential
-    per-sample processing
-  \item \textbf{In-GPU Metrics Calculation}: Performance metrics
-    (mIoU, per-class IoU) computed directly on GPU tensors without
-    CPU transfer~\cite{elvinger2025gpu}
-  \item \textbf{Persistent Workers}: DataLoader configured with 4
-    persistent workers and pinned memory for efficient data pipeline
-  \item \textbf{Optimized Preprocessing}: Pre-computed gamma
-    correction lookup table (exponent 0.8) applied via vectorized
-    operations, CLAHE preprocessing with clip limit 1.5 and tile grid
-    $8 \times 8$
+	\item \textbf{Batched Operations}: All training operations utilize
+	      batched GPU kernels with batch size 8, eliminating sequential
+	      per-sample processing
+	\item \textbf{In-GPU Metrics Calculation}: Performance metrics
+	      (mIoU, per-class IoU) computed directly on GPU tensors without
+	      CPU transfer~\cite{elvinger2025gpu}
+	\item \textbf{Persistent Workers}: DataLoader configured with 4
+	      persistent workers and pinned memory for efficient data pipeline
+	\item \textbf{Optimized Preprocessing}: Pre-computed gamma
+	      correction lookup table (exponent 0.8) applied via vectorized
+	      operations, CLAHE preprocessing with clip limit 1.5 and tile grid
+	      $8 \times 8$
 \end{itemize}
 
 \subsection{Data Augmentation Strategy}\label{subsec:data-augmentation}
 
-The training pipeline implements comprehensive augmentation to
-improve model robustness to real-world variations:
+Augmentation improves model robustness to real-world variations:
 
 \begin{itemize}
-  \item \textbf{Geometric Augmentation}: Random horizontal flip (50\%
-    probability), translation up to 40 pixels in any direction (40\%
-    probability)
-  \item \textbf{Appearance Augmentation}: Gaussian blur with kernel
-    size $7 \times 7$ and random sigma 2--6 (20\% probability), line
-    augmentation simulating occlusions (20\% probability)
-  \item \textbf{Preprocessing Pipeline}: Fixed gamma correction (0.8
-    exponent), CLAHE for local contrast enhancement, normalization to
-    [-1, 1] range
+	\item \textbf{Geometric Augmentation}: Random horizontal flip (50\%
+	      probability), translation up to 40 pixels in any direction (40\%
+	      probability)
+	\item \textbf{Appearance Augmentation}: Gaussian blur with kernel
+	      size $7 \times 7$ and random sigma 2--6 (20\% probability), line
+	      augmentation simulating occlusions (20\% probability)
+	\item \textbf{Preprocessing Pipeline}: Fixed gamma correction (0.8
+	      exponent), CLAHE for local contrast enhancement, normalization to
+		      [-1, 1] range
 \end{itemize}
 
 \subsection{Training Performance
-Improvements}\label{subsec:training-performance}
+	Improvements}\label{subsec:training-performance}
 
-The optimized training infrastructure achieved substantial
-improvements over the baseline implementation:
+Improvements over baseline:
 
 \begin{itemize}
-  \item \textbf{Training Time Reduction}: Complete 50-epoch training
-    completes in approximately 50 minutes on T4 GPU, representing 15x
-    speedup over CPU-based baseline (12 hours)
-  \item \textbf{Model Performance}: Achieved 98.9\% mIoU on
-    validation set, 0.01 improvement over baseline (98.8\%)
-  \item \textbf{Per-Class Performance}: Background IoU 99.2\%, Pupil
-    IoU 98.6\%, demonstrating balanced performance across minority
-    and majority classes
-  \item \textbf{Convergence Stability}: Reduced validation loss
-    variance through batched gradient estimates and adaptive learning
-    rate scheduling (ReduceLROnPlateau with patience 5)
+	\item \textbf{Training Time Reduction}: Complete 50-epoch training
+	      completes in approximately 50 minutes on T4 GPU, representing 15x
+	      speedup over CPU-based baseline (12 hours)
+	\item \textbf{Model Performance}: Achieved 98.9\% mIoU on
+	      validation set, 0.01 improvement over baseline (98.8\%)
+	\item \textbf{Per-Class Performance}: Background IoU 99.2\%, Pupil
+	      IoU 98.6\%, demonstrating balanced performance across minority
+	      and majority classes
+	\item \textbf{Convergence Stability}: Reduced validation loss
+	      variance through batched gradient estimates and adaptive learning
+	      rate scheduling (ReduceLROnPlateau with patience 5)
 \end{itemize}
 
-The performance gains result from: (1) GPU-accelerated training
-eliminating CPU-GPU synchronization overhead, (2) sophisticated loss
-function improving convergence quality, (3) optimized data pipeline
-maximizing GPU utilization, and (4) comprehensive augmentation
-enabling efficient learning from limited data.
+Gains from: (1) GPU-accelerated training eliminating synchronization
+overhead, (2) sophisticated loss function improving convergence, (3) optimized
+data pipeline, and (4) comprehensive augmentation.
 
 \subsection{Experiment Tracking and Artifact
-Management}\label{subsec:experiment-tracking}
+	Management}\label{subsec:experiment-tracking}
 
-Training experiments are tracked using MLflow~\cite{mlflow2023}
-integrated with GitLab's ML model registry, providing comprehensive
-logging of training artifacts, performance metrics, and automated
-model versioning for the deployment pipeline.
+Training tracked via MLflow~\cite{mlflow2023} integrated with GitLab's
+ML registry, logging artifacts, metrics, and automated model versioning.
 
 \subsubsection{Comprehensive Metadata Logging}
 
-The training system logs extensive metadata for complete experiment
-reproducibility:
+Extensive metadata logged for reproducibility:
 
 \begin{itemize}
-  \item \textbf{Hyperparameter Tracking}: Learning rate (1e-3), batch
-    size (8), optimizer configuration (Adam with ReduceLROnPlateau),
-    scheduler parameters (patience=5), epoch count (50), number of workers (4)
-  \item \textbf{Model Architecture}: DenseNet2D parameters including
-    channel size (32), dropout probability (0.2), depthwise separable
-    convolution configuration, total trainable parameters
-  \item \textbf{System Information}: Python version, platform
-    details, GPU name and memory, CUDA version for reproducibility
-  \item \textbf{Dataset Statistics}: Training samples, validation
-    samples, image dimensions ($640 \times 400$), class distribution,
-    augmentation probabilities
+	\item \textbf{Hyperparameter Tracking}: Learning rate (1e-3), batch
+	      size (8), optimizer configuration (Adam with ReduceLROnPlateau),
+	      scheduler parameters (patience=5), epoch count (50), number of workers (4)
+	\item \textbf{Model Architecture}: DenseNet2D parameters including
+	      channel size (32), dropout probability (0.2), depthwise separable
+	      convolution configuration, total trainable parameters
+	\item \textbf{System Information}: Python version, platform
+	      details, GPU name and memory, CUDA version for reproducibility
+	\item \textbf{Dataset Statistics}: Training samples, validation
+	      samples, image dimensions ($640 \times 400$), class distribution,
+	      augmentation probabilities
 \end{itemize}
 
 \subsubsection{Multi-Dimensional Metric Tracking}
 
-The training pipeline tracks comprehensive metrics across multiple dimensions:
+Comprehensive metrics tracked:
 
 \begin{itemize}
-  \item \textbf{Loss Components}: Cross entropy loss, generalized
-    dice loss, surface loss, total loss tracked separately for both
-    training and validation sets
-  \item \textbf{Segmentation Quality}: Overall mIoU, per-class IoU
-    (background and pupil), enabling detailed performance analysis
-    across class imbalance
-  \item \textbf{Training Dynamics}: Learning rate schedule, alpha
-    weighting factor evolution, gradient statistics for convergence monitoring
-  \item \textbf{Computational Efficiency}: GPU memory utilization,
-    training throughput (samples/second), epoch duration
+	\item \textbf{Loss Components}: Cross entropy loss, generalized
+	      dice loss, surface loss, total loss tracked separately for both
+	      training and validation sets
+	\item \textbf{Segmentation Quality}: Overall mIoU, per-class IoU
+	      (background and pupil), enabling detailed performance analysis
+	      across class imbalance
+	\item \textbf{Training Dynamics}: Learning rate schedule, alpha
+	      weighting factor evolution, gradient statistics for convergence monitoring
+	\item \textbf{Computational Efficiency}: GPU memory utilization,
+	      training throughput (samples/second), epoch duration
 \end{itemize}
 
 \subsubsection{Visualization and Model Artifacts}
 
-Automated artifact generation provides visual insight into training progress:
+Automated artifact generation:
 
 \begin{itemize}
-  \item \textbf{Training Curves}: Loss curves (training/validation),
-    mIoU curves, learning rate schedule, loss component breakdown
-    generated every 10 epochs
-  \item \textbf{Prediction Visualizations}: Sample predictions on
-    validation set with input image, ground truth, and model
-    prediction side-by-side comparison, generated every 5 epochs
-  \item \textbf{Model Checkpoints}: ONNX-format model exports at each
-    epoch for deployment pipeline compatibility, best model selection
-    based on validation mIoU
-  \item \textbf{Performance Reports}: Automated generation of
-    training summary reports with final metrics, convergence
-    analysis, and per-class performance breakdown
+	\item \textbf{Training Curves}: Loss curves (training/validation),
+	      mIoU curves, learning rate schedule, loss component breakdown
+	      generated every 10 epochs
+	\item \textbf{Prediction Visualizations}: Sample predictions on
+	      validation set with input image, ground truth, and model
+	      prediction side-by-side comparison, generated every 5 epochs
+	\item \textbf{Model Checkpoints}: ONNX-format model exports at each
+	      epoch for deployment pipeline compatibility, best model selection
+	      based on validation mIoU
+	\item \textbf{Performance Reports}: Automated generation of
+	      training summary reports with final metrics, convergence
+	      analysis, and per-class performance breakdown
 \end{itemize}
 
 \subsubsection{GitLab MLflow Integration Strategy}
 
-Due to current limitations in GitLab's MLflow backend (inability to
-properly visualize step-based metrics), the training system
-implements a pragmatic workaround:
+Due to GitLab MLflow limitations, a workaround was implemented:
 
 \begin{itemize}
-  \item \textbf{Per-Epoch Runs}: Each training epoch creates a
-    separate top-level MLflow run with complete metadata, enabling
-    GitLab UI to display and compare epochs side-by-side
-  \item \textbf{Best Model Tracking}: The epoch achieving highest
-    validation mIoU is tagged with ``is\_best\_model=true'' for easy
-    identification in the model registry
-  \item \textbf{Self-Contained Runs}: Each run includes all
-    hyperparameters, system info, and dataset statistics for
-    independent analysis without requiring parent run context
-  \item \textbf{Future Migration Path}: Implementation documented to
-    enable straightforward conversion to standard step-based logging
-    once GitLab improves MLflow support (Issue \#421164)
+	\item \textbf{Per-Epoch Runs}: Each training epoch creates a
+	      separate top-level MLflow run with complete metadata, enabling
+	      GitLab UI to display and compare epochs side-by-side
+	\item \textbf{Best Model Tracking}: The epoch achieving highest
+	      validation mIoU is tagged with ``is\_best\_model=true'' for easy
+	      identification in the model registry
+	\item \textbf{Self-Contained Runs}: Each run includes all
+	      hyperparameters, system info, and dataset statistics for
+	      independent analysis without requiring parent run context
+	\item \textbf{Future Migration Path}: Implementation documented to
+	      enable straightforward conversion to standard step-based logging
+	      once GitLab improves MLflow support (Issue \#421164)
 \end{itemize}
 
-This approach trades run count for compatibility with GitLab's
-current MLflow implementation, ensuring experiment tracking
-functionality while awaiting platform improvements.
+This trades run count for GitLab compatibility while awaiting improvements.
 
 \subsection{GPU Metrics Methodology}\label{subsec:gpu-metrics-methodology}
 
-Following best practices for GPU performance
-measurement~\cite{elvinger2025gpu}, our training implementation
-computes all performance metrics directly within GPU kernels rather
-than relying on CPU-side calculations. This approach provides several
-advantages:
+Following GPU measurement best practices~\cite{elvinger2025gpu}, metrics
+are computed within GPU kernels rather than CPU-side. Advantages:
 
 \begin{itemize}
-  \item \textbf{Fine-Grained Profiling}: Access to device-level
-    performance counters including instruction throughput (IPC),
-    streaming multiprocessor (SM) utilization, and memory bandwidth usage
-  \item \textbf{Reduced Synchronization Overhead}: Eliminating
-    host-device synchronization points that would otherwise stall the
-    GPU pipeline
-  \item \textbf{Accurate Resource Measurement}: Direct measurement of
-    kernel-level resource interference and L1/L2 cache utilization
-  \item \textbf{Real-Time Monitoring}: Continuous performance
-    tracking without impacting training throughput
+	\item \textbf{Fine-Grained Profiling}: Access to device-level
+	      performance counters including instruction throughput (IPC),
+	      streaming multiprocessor (SM) utilization, and memory bandwidth usage
+	\item \textbf{Reduced Synchronization Overhead}: Eliminating
+	      host-device synchronization points that would otherwise stall the
+	      GPU pipeline
+	\item \textbf{Accurate Resource Measurement}: Direct measurement of
+	      kernel-level resource interference and L1/L2 cache utilization
+	\item \textbf{Real-Time Monitoring}: Continuous performance
+	      tracking without impacting training throughput
 \end{itemize}
 
-The methodology aligns with recent research demonstrating that
-conventional ``GPU utilization'' metrics measured from the CPU side
-are insufficient for understanding true GPU resource
-usage~\cite{elvinger2025gpu}. By measuring performance at the kernel
-level using device-side counters, we achieve more accurate
-characterization of computational efficiency and identify
-optimization opportunities that would be invisible to host-side profiling tools.
+CPU-side ``GPU utilization'' metrics are insufficient~\cite{elvinger2025gpu}.
+Kernel-level measurement provides accurate efficiency characterization.
 
 \subsection{ONNX Model Export and Deployment
-Integration}\label{subsec:onnx-export}
+	Integration}\label{subsec:onnx-export}
 
-The training pipeline automatically exports trained models to ONNX
-format for seamless integration with the Vitis AI quantization and
-deployment workflow:
+Training automatically exports models to ONNX for Vitis AI integration:
 
 \begin{itemize}
-  \item \textbf{Automatic ONNX Conversion}: Models exported to ONNX
-    format (opset version 10) at each epoch using PyTorch's native
-    export functionality with dynamic batch size support
-  \item \textbf{Best Model Selection}: Best-performing model (by
-    validation mIoU) automatically identified and exported for
-    downstream quantization pipeline
-  \item \textbf{Deployment Compatibility}: ONNX format enables
-    compatibility with Xilinx Vitis AI quantizer for INT8
-    post-training quantization calibration (PTQC)
-  \item \textbf{Model Verification}: Exported models automatically
-    verified for correct input/output dimensions ($1 \times 1 \times
-    640 \times 400$ input, $1 \times 2 \times 640 \times 400$ output)
-    and operation count
-  \item \textbf{Artifact Management}: ONNX models logged to MLflow
-    with metadata including input shape, parameter count, and
-    performance metrics for traceability
+	\item \textbf{Automatic ONNX Conversion}: Models exported to ONNX
+	      format (opset version 10) at each epoch using PyTorch's native
+	      export functionality with dynamic batch size support
+	\item \textbf{Best Model Selection}: Best-performing model (by
+	      validation mIoU) automatically identified and exported for
+	      downstream quantization pipeline
+	\item \textbf{Deployment Compatibility}: ONNX format enables
+	      compatibility with Xilinx Vitis AI quantizer for INT8
+	      post-training quantization calibration (PTQC)
+	\item \textbf{Model Verification}: Exported models automatically
+	      verified for correct input/output dimensions ($1 \times 1 \times
+		      640 \times 400$ input, $1 \times 2 \times 640 \times 400$ output)
+	      and operation count
+	\item \textbf{Artifact Management}: ONNX models logged to MLflow
+	      with metadata including input shape, parameter count, and
+	      performance metrics for traceability
 \end{itemize}
 
-This automated export eliminates manual conversion steps and ensures
-training outputs directly feed into the FPGA deployment pipeline,
-reducing potential for errors in model transfer between training and
-deployment environments.
+Automated export eliminates manual conversion and ensures training outputs
+feed directly into the FPGA deployment pipeline.
 
 \subsection{Training Dataset and Validation}\label{subsec:training-dataset}
 
-The model training process utilizes the OpenEDS (Open Eye
-Dataset)~\cite{openeds2019} with automated acquisition and
-comprehensive quality validation:
+Training uses OpenEDS~\cite{openeds2019} with automated acquisition:
 
 \subsubsection{Dataset Acquisition and Preprocessing}
 
 \begin{itemize}
-  \item \textbf{Automated Download}: Training pipeline automatically
-    downloads OpenEDS dataset from Kaggle using authenticated API
-    access, eliminating manual dataset preparation
-  \item \textbf{Dataset Organization}: OpenEDS structured with
-    train/validation/test splits, each containing aligned images/ and
-    labels/ directories with per-pixel semantic annotations
-  \item \textbf{Label Mapping}: Four-class OpenEDS annotations
-    (background, sclera, iris, pupil) mapped to binary segmentation
-    (pupil vs non-pupil) for eye tracking application
-  \item \textbf{Quality Verification}: Automated validation of
-    image-label alignment, dimension consistency ($640 \times 400$),
-    and annotation completeness before training initiation
+	\item \textbf{Automated Download}: Training pipeline automatically
+	      downloads OpenEDS dataset from Kaggle using authenticated API
+	      access, eliminating manual dataset preparation
+	\item \textbf{Dataset Organization}: OpenEDS structured with
+	      train/validation/test splits, each containing aligned images/ and
+	      labels/ directories with per-pixel semantic annotations
+	\item \textbf{Label Mapping}: Four-class OpenEDS annotations
+	      (background, sclera, iris, pupil) mapped to binary segmentation
+	      (pupil vs non-pupil) for eye tracking application
+	\item \textbf{Quality Verification}: Automated validation of
+	      image-label alignment, dimension consistency ($640 \times 400$),
+	      and annotation completeness before training initiation
 \end{itemize}
 
 \subsubsection{Dataset Characteristics}
 
 \begin{itemize}
-  \item \textbf{Scale}: Multiple thousand annotated eye images with
-    pixel-level segmentation masks for training and validation
-  \item \textbf{Diversity}: Images captured across varied lighting
-    conditions, eye anatomies, and gaze angles for robust generalization
-  \item \textbf{Challenge Factors}: Dataset includes reflections,
-    occlusions, motion blur, and variable pupil sizes representative
-    of real-world deployment conditions
-  \item \textbf{Medical Relevance}: OpenEDS designed for assistive
-    technology applications, aligning with project's medical monitoring use case
+	\item \textbf{Scale}: Multiple thousand annotated eye images with
+	      pixel-level segmentation masks for training and validation
+	\item \textbf{Diversity}: Images captured across varied lighting
+	      conditions, eye anatomies, and gaze angles for robust generalization
+	\item \textbf{Challenge Factors}: Dataset includes reflections,
+	      occlusions, motion blur, and variable pupil sizes representative
+	      of real-world deployment conditions
+	\item \textbf{Medical Relevance}: OpenEDS designed for assistive
+	      technology applications, aligning with project's medical monitoring use case
 \end{itemize}
 
 \subsubsection{Validation Strategy}
 
 \begin{itemize}
-  \item \textbf{Hold-Out Validation}: Dedicated validation set
-    (approximately 20\% of data) never used for training, providing
-    unbiased performance estimates
-  \item \textbf{Per-Class Metrics}: Separate IoU tracking for
-    background and pupil classes to detect class-specific performance
-    degradation
-  \item \textbf{Early Stopping}: Training monitored for validation
-    loss plateau, preventing overfitting through adaptive learning
-    rate reduction (ReduceLROnPlateau scheduler)
-  \item \textbf{Best Model Selection}: Model checkpoint with highest
-    validation mIoU across all epochs selected for deployment, not
-    necessarily the final epoch
+	\item \textbf{Hold-Out Validation}: Dedicated validation set
+	      (approximately 20\% of data) never used for training, providing
+	      unbiased performance estimates
+	\item \textbf{Per-Class Metrics}: Separate IoU tracking for
+	      background and pupil classes to detect class-specific performance
+	      degradation
+	\item \textbf{Early Stopping}: Training monitored for validation
+	      loss plateau, preventing overfitting through adaptive learning
+	      rate reduction (ReduceLROnPlateau scheduler)
+	\item \textbf{Best Model Selection}: Model checkpoint with highest
+	      validation mIoU across all epochs selected for deployment, not
+	      necessarily the final epoch
 \end{itemize}
 
 \section{Implementation Challenges}\label{subsec:implementation-challenges}
@@ -560,71 +492,41 @@ comprehensive quality validation:
 \subsection{Technical Challenges}\label{subsec:technical-challenges}
 
 \begin{itemize}
-  \item \textbf{Memory Constraints}: Working within 4GB DDR memory
-    limitations while supporting pipelined processing across multiple algorithms
-  \item \textbf{Thread Synchronization}: Ensuring proper coordination
-    between pipeline processing threads without deadlocks or race conditions
-  \item \textbf{Sequential DPU Scheduling}: Efficiently scheduling
-    the single DPU to balance semantic segmentation requirements with
-    periodic data collection needs of auxiliary algorithms
-  \item \textbf{Performance Optimization}: Achieving target pipelined
-    throughput for real-time operation
-\end{itemize}
-
-\section{Future Implementation Plans}\label{subsec:future-implementation}
-
-\subsection{Short-term Goals (Next 4 weeks)}\label{subsec:short-term-goals}
-
-\begin{itemize}
-  \item Complete implementation of pipelined U-Net processing
-  \item Optimize DPU scheduling system for maximum throughput
-  \item Implement comprehensive testing framework
-  \item Validate accuracy maintenance across pipelined implementation
-\end{itemize}
-
-\subsection{Medium-term Goals (Next 8 weeks)}\label{subsec:medium-term-goals}
-
-\begin{itemize}
-  \item Achieve target pipelined performance for real-time operation
-  \item Complete integration testing with all auxiliary algorithms
-    and DPU scheduling
-  \item Optimize memory usage and buffer management for pipelined data flow
-  \item Implement robust error handling and recovery mechanisms
-\end{itemize}
-
-\subsection{Long-term Goals (Next 12 weeks)}\label{subsec:long-term-goals}
-
-\begin{itemize}
-  \item Full system validation against all requirements
-  \item Performance optimization and fine-tuning
-  \item Documentation and preparation for deployment
-  \item User acceptance testing and feedback incorporation
+	\item \textbf{Memory Constraints}: Working within 4GB DDR memory
+	      limitations while supporting pipelined processing across multiple algorithms
+	\item \textbf{Thread Synchronization}: Ensuring proper coordination
+	      between pipeline processing threads without deadlocks or race conditions
+	\item \textbf{Sequential DPU Scheduling}: Efficiently scheduling
+	      the single DPU to balance semantic segmentation requirements with
+	      periodic data collection needs of auxiliary algorithms
+	\item \textbf{Performance Optimization}: Achieving target pipelined
+	      throughput for real-time operation
 \end{itemize}
 
 \section{Implementation Methodology}\label{subsec:implementation-methodology}
 
 \subsection{Agile Development Approach}\label{subsec:agile-approach}
 
-Our implementation follows an agile methodology with:
+Implementation follows agile methodology:
 
 \begin{itemize}
-  \item \textbf{Sprint Planning}: 2-week sprints with specific deliverables
-  \item \textbf{Daily Standups}: Progress tracking and issue identification
-  \item \textbf{Sprint Reviews}: Demonstration of completed features
-  \item \textbf{Retrospectives}: Process improvement and adaptation
+	\item \textbf{Sprint Planning}: 2-week sprints with specific deliverables
+	\item \textbf{Daily Standups}: Progress tracking and issue identification
+	\item \textbf{Sprint Reviews}: Demonstration of completed features
+	\item \textbf{Retrospectives}: Process improvement and adaptation
 \end{itemize}
 
 \subsection{Version Control and Documentation}\label{subsec:version-control}
 
 \begin{itemize}
-  \item \textbf{Git Workflow}: Feature branch development with code
-    review process
-  \item \textbf{Documentation}: Comprehensive documentation of
-    implementation decisions and progress
-  \item \textbf{Testing Integration}: Automated testing integrated
-    into development workflow
-  \item \textbf{Client Communication}: Regular updates and
-    demonstrations for stakeholder alignment
+	\item \textbf{Git Workflow}: Feature branch development with code
+	      review process
+	\item \textbf{Documentation}: Comprehensive documentation of
+	      implementation decisions and progress
+	\item \textbf{Testing Integration}: Automated testing integrated
+	      into development workflow
+	\item \textbf{Client Communication}: Regular updates and
+	      demonstrations for stakeholder alignment
 \end{itemize}
 
 \section{Tools and Technologies}\label{subsec:tools-technologies}
@@ -632,44 +534,44 @@ Our implementation follows an agile methodology with:
 \subsection{Development Tools}\label{subsec:development-tools}
 
 \begin{itemize}
-  \item \textbf{Xilinx Vitis AI}~\cite{amd2023vitis}: Primary
-    development environment for AI acceleration
-  \item \textbf{GCC/G++}: C++ development with optimization flags for
-    performance
-  \item \textbf{Git}: Version control and collaboration platform
-  \item \textbf{Make/CMake}: Build automation for embedded system compilation
+	\item \textbf{Xilinx Vitis AI}~\cite{amd2023vitis}: Primary
+	      development environment for AI acceleration
+	\item \textbf{GCC/G++}: C++ development with optimization flags for
+	      performance
+	\item \textbf{Git}: Version control and collaboration platform
+	\item \textbf{Make/CMake}: Build automation for embedded system compilation
 \end{itemize}
 
 \subsection{Testing and Debugging Tools}\label{subsec:testing-tools}
 
 \begin{itemize}
-  \item \textbf{Vitis AI Profiler}: Performance analysis and
-    bottleneck identification
-  \item \textbf{Custom Logging Framework}: Real-time system
-    monitoring and debugging
-  \item \textbf{Automated Testing Suite}: Comprehensive validation framework
-  \item \textbf{Hardware Monitoring Tools}: Resource utilization tracking
+	\item \textbf{Vitis AI Profiler}: Performance analysis and
+	      bottleneck identification
+	\item \textbf{Custom Logging Framework}: Real-time system
+	      monitoring and debugging
+	\item \textbf{Automated Testing Suite}: Comprehensive validation framework
+	\item \textbf{Hardware Monitoring Tools}: Resource utilization tracking
 \end{itemize}
 
 \section{Performance Metrics and
-Monitoring}\label{subsec:performance-monitoring}
+  Monitoring}\label{subsec:performance-monitoring}
 
 \subsection{Key Performance Indicators}\label{subsec:kpis}
 
 \begin{itemize}
-  \item \textbf{Processing Throughput}: Frames per second (target: >60 FPS)
-  \item \textbf{Accuracy}: Intersection over Union (target: 99.8\%)
-  \item \textbf{Latency}: End-to-end processing time (target: <16.6ms per frame)
-  \item \textbf{Resource Utilization}: CPU, memory, and DPU usage efficiency
+	\item \textbf{Processing Throughput}: Frames per second (target: >60 FPS)
+	\item \textbf{Accuracy}: Intersection over Union (target: 99.8\%)
+	\item \textbf{Latency}: End-to-end processing time (target: <16.6ms per frame)
+	\item \textbf{Resource Utilization}: CPU, memory, and DPU usage efficiency
 \end{itemize}
 
 \subsection{Monitoring Implementation}\label{subsec:monitoring-implementation}
 
 \begin{itemize}
-  \item \textbf{Real-time Metrics}: Live performance monitoring during operation
-  \item \textbf{Historical Tracking}: Performance trend analysis over time
-  \item \textbf{Alert System}: Automatic notification of performance degradation
-  \item \textbf{Reporting}: Comprehensive performance analysis reports
+	\item \textbf{Real-time Metrics}: Live performance monitoring during operation
+	\item \textbf{Historical Tracking}: Performance trend analysis over time
+	\item \textbf{Alert System}: Automatic notification of performance degradation
+	\item \textbf{Reporting}: Comprehensive performance analysis reports
 \end{itemize}
 
 \section{Code Architecture}\label{subsec:code-architecture}
@@ -677,21 +579,21 @@ Monitoring}\label{subsec:performance-monitoring}
 \subsection{Modular Design}\label{subsec:modular-design}
 
 \begin{itemize}
-  \item \textbf{Separation of Concerns}: Clear boundaries between
-    algorithm components
-  \item \textbf{Interface Design}: Well-defined APIs between system components
-  \item \textbf{Error Handling}: Comprehensive error management and recovery
-  \item \textbf{Scalability}: Architecture designed for future enhancements
+	\item \textbf{Separation of Concerns}: Clear boundaries between
+	      algorithm components
+	\item \textbf{Interface Design}: Well-defined APIs between system components
+	\item \textbf{Error Handling}: Comprehensive error management and recovery
+	\item \textbf{Scalability}: Architecture designed for future enhancements
 \end{itemize}
 
 \subsection{Thread Management}\label{subsec:thread-management}
 
 \begin{itemize}
-  \item \textbf{Thread Pool}: Efficient thread creation and management
-  \item \textbf{Synchronization}: Mutexes, semaphores, and condition
-    variables for coordination~\cite{park2022thread}
-  \item \textbf{Load Balancing}: Dynamic workload distribution across
-    available cores
-  \item \textbf{Deadlock Prevention}: Strategies to avoid thread
-    deadlock scenarios
+	\item \textbf{Thread Pool}: Efficient thread creation and management
+	\item \textbf{Synchronization}: Mutexes, semaphores, and condition
+	      variables for coordination~\cite{park2022thread}
+	\item \textbf{Load Balancing}: Dynamic workload distribution across
+	      available cores
+	\item \textbf{Deadlock Prevention}: Strategies to avoid thread
+	      deadlock scenarios
 \end{itemize}

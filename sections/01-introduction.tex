@@ -5,50 +5,37 @@
 Individuals with mobility impairments and underlying conditions face
 the challenge of detecting and responding to medical episodes before
 they occur, which can happen anytime and anywhere, posing risks to
-their safety and independence. In a broader societal context,
-individuals with disabilities often encounter inadequate assistive
-technologies that fail to proactively ensure their well-being.
+their safety and independence. Current assistive
+technologies often fail to proactively ensure user well-being.
 Current healthcare solutions are reactive, requiring human
 intervention after an episode occurs, which can lead to delayed
 response times, severe medical complications, and loss of autonomy.
 
-This issue is particularly significant as advancements in artificial
-intelligence and edge computing offer new opportunities for real-time
-health monitoring~\cite{lakshminarayanan2023health}. However, these
-technologies remain underutilized in the field of assistive mobility
-devices. The ability to predict and respond to medical emergencies in
+Advances in artificial intelligence and edge computing offer new opportunities
+for real-time health monitoring~\cite{lakshminarayanan2023health}, yet these
+technologies remain underutilized in assistive mobility devices. The ability to predict and respond to medical emergencies in
 real-time would not only enhance personal safety but also reduce the
 burden on caregivers and emergency medical services, improving
 overall healthcare efficiency.
 
-To address this problem, our project focuses on leveraging semantic
-segmentation at the edge to analyze physiological indicators such as
-eye movement and body posture. The validity of these indicators is
-well-established in the neurological literature: abnormal eyelid
-dynamics contain seizure-specific anomalies that distinguish ictal
-events from normal behavior~\cite{sedighsarvestani2012eyelid}, while
-blink reflex patterns and eye movements are physiologically linked to
-neurological state through well-characterized motor control
+Our project leverages semantic segmentation at the edge to analyze
+physiological indicators such as eye movement and body posture. Neurological literature establishes these indicators: abnormal eyelid
+dynamics contain seizure-specific anomalies~\cite{sedighsarvestani2012eyelid},
+and blink reflex patterns link to neurological state through motor control
 pathways~\cite{evinger2011blinking}. Eyelid myoclonia has been
 identified as a distinct ictal sign in idiopathic generalized
 epilepsy~\cite{stefan2007eyelid}, demonstrating that eye-related
 movements provide clinically meaningful indicators of seizure
-activity. Prior work in eye tracking for seizure detection has
-demonstrated that eye and head motion patterns can serve as
-indicators of certain seizure types~\cite{provost2022eye}. By
-integrating this technology into wheelchairs, we aim to create an
-intelligent system that detects early warning signs of medical
-distress and autonomously moves the user to a safer position before a
-critical incident occurs. This approach addresses the need for
-proactive, real-time health monitoring using established U-Net
-architectures for biomedical image segmentation~\cite{ronneberger2015}.
+activity. Prior work demonstrates that eye and head motion patterns serve as
+seizure indicators~\cite{provost2022eye}. Integrating this technology
+into wheelchairs creates an intelligent system that detects early warning
+signs and autonomously repositions the user before critical incidents occur,
+using established U-Net architectures for biomedical segmentation~\cite{ronneberger2015}.
 
 \section{Intended Users}\label{sec:intended-users}
 
-This system serves three user groups: (1) wheelchair users with
-mobility impairments and conditions such as cerebral palsy, epilepsy,
-or cardiovascular disorders who require autonomous medical episode
-detection; (2) caregivers and family members who need real-time
-health alerts without constant supervision; and (3) healthcare
-providers and emergency responders who rely on accurate physiological
-data for rapid medical decision-making~\cite{beauchamp2007ethics}.
+The system serves three user groups: (1) wheelchair users with conditions
+such as cerebral palsy, epilepsy, or cardiovascular disorders requiring
+autonomous episode detection; (2) caregivers needing real-time health alerts
+without constant supervision; and (3) healthcare providers relying on accurate
+physiological data for rapid decision-making~\cite{beauchamp2007ethics}.
