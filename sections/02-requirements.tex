@@ -44,10 +44,8 @@
 
 \subsection{User Interface (UI) Requirements}\label{subsec:ui-requirements}
 
-For the demonstration of the VisionAssist system, the user interface
-requirements are tailored to provide a clear and effective visual
-presentation of the eye tracking and semantic segmentation
-capabilities in real-time.
+The demonstration user interface requirements provide clear visual
+presentation of eye tracking and semantic segmentation in real-time.
 
 \begin{enumerate}
   \item \textbf{Display Hardware:}
@@ -149,80 +147,60 @@ capabilities in real-time.
 
 \subsection{Client Constraints}\label{subsec:client-constraints}
 
-The client imposed several critical constraints on the project that
-significantly shaped the design and optimization approach:
+The client imposed constraints that shaped the design and optimization approach:
 
 \begin{enumerate}
   \item \textbf{FPGA Fabric Modification Prohibition:}
     \begin{itemize}
-      \item The team was explicitly directed not to modify or touch
-        the FPGA fabric or the DPU bitstream configuration.
-      \item This constraint prevents hardware-level reconfiguration
-        and requires all optimizations to be implemented at the software level.
+      \item The team cannot modify the FPGA fabric or DPU bitstream configuration.
+      \item All optimizations must be implemented at the software level.
       \item The existing FPGA bitstream (which synthesizes the DPU onto the programmable logic) must
         remain unchanged throughout development.
     \end{itemize}
 
   \item \textbf{Single DPU Architecture Mandate:}
     \begin{itemize}
-      \item The client specified maintaining the existing single
-        B4096 DPU core (300MHz) configuration on the KV260 board.
-      \item Despite technical analysis showing potential benefits of
-        dual smaller DPUs (B1024 or B512), experimentation with
-        alternative DPU configurations was not permitted.
-      \item Both our team and a previous Iowa State team concluded
-        that dual smaller DPUs would be advantageous for the
-        workload. Our team formally presented this finding to the
-        client with model size justifications and recommended the
-        dual DPU approach as the optimal path forward. However, the
-        client rejected this recommendation and directed the team to
-        maintain the single B4096 architecture.
-      \item This architectural constraint was established based on
-        existing system design and integration considerations,
-        necessitating focus on efficient time-division scheduling and
-        resource sharing mechanisms rather than hardware-level parallelism.
+      \item The client requires maintaining the single B4096 DPU core (300MHz)
+        configuration on the KV260 board.
+      \item Despite analysis showing benefits of dual smaller DPUs (B1024 or B512),
+        alternative configurations were not permitted.
+      \item Both our team and a previous Iowa State team concluded dual smaller
+        DPUs would be advantageous. We presented this finding with model size
+        justifications, but the client directed maintaining the single B4096
+        architecture.
+      \item This constraint necessitates focus on efficient time-division
+        scheduling and resource sharing rather than hardware-level parallelism.
     \end{itemize}
 
   \item \textbf{Accuracy Preservation Requirement:}
     \begin{itemize}
-      \item The client required maintaining the existing 99.8\% IoU
-        accuracy with absolutely no degradation.
-      \item Due to the sensitive medical nature of the product, any
-        reduction in accuracy was unacceptable.
-      \item All performance optimizations must preserve the precision
-        and reliability of eye tracking and medical monitoring capabilities.
+      \item The client requires maintaining 99.8\% IoU accuracy with no degradation.
+      \item Given the medical nature of the product, any accuracy reduction is unacceptable.
+      \item All optimizations must preserve eye tracking and monitoring reliability.
     \end{itemize}
 
   \item \textbf{Algorithm Resource Allocation:}
     \begin{itemize}
-      \item The client specified that blink detection and eye
-        tracking algorithms require periodic data collection, and the
-        information gathered would become incorrect if delayed.
+      \item Blink detection and eye tracking require periodic data collection;
+        delayed collection produces incorrect information.
       \item Semantic segmentation cannot monopolize DPU resources or
         `starve' other critical algorithms of processing time.
-      \item This constraint necessitates implementation of fair
-        scheduling mechanisms to ensure all algorithms receive
+      \item Fair scheduling mechanisms must ensure all algorithms receive
         appropriate DPU access.
     \end{itemize}
 
   \item \textbf{Existing System Integration:}
     \begin{itemize}
-      \item The optimization work must integrate with the existing
-        system architecture developed by previous teams.
-      \item Backward compatibility with existing interfaces and
-        components must be maintained.
-      \item The constraint reflects the reality of working with
-        legacy embedded systems in medical applications where
-        stability and proven reliability are paramount.
+      \item Optimization must integrate with the existing architecture from previous teams.
+      \item Backward compatibility with existing interfaces must be maintained.
+      \item Medical applications require stability and proven reliability.
     \end{itemize}
 \end{enumerate}
 
-These client-imposed constraints collectively defined the boundaries
-within which the optimization strategy was developed. The prohibition
-on FPGA fabric modification and the single DPU architecture mandate
-had the most significant impact on the technical approach, forcing
-reliance on software-level optimization, efficient scheduling
-algorithms, and multi-threaded CPU processing to achieve performance targets.
+These constraints defined the optimization strategy boundaries. The FPGA
+modification prohibition and single DPU mandate had the most impact,
+requiring software-level optimization, efficient scheduling, and
+multi-threaded CPU processing to achieve performance targets.
 
 \subsection{Additional Considerations}\label{subsec:additional-considerations}
 
@@ -255,32 +233,21 @@ algorithms, and multi-threaded CPU processing to achieve performance targets.
 
 \section{Engineering Standards}\label{sec:engineering-standards}
 
-The following IEEE standards are applicable to this project and guide
-the development and evaluation processes:
+The following IEEE standards guide development and evaluation:
 
 \begin{description}
   \item[IEEE 2802--2022~\cite{ieee2802-2022}] \textit{IEEE Standard
       for Performance and Safety Evaluation of AI-Based Medical
     Devices: Terminology} \\
-    This standard provides terminology and definitions for evaluating
-    the performance and safety of AI-based medical devices. It is
-    directly applicable to VisionAssist as an AI-powered assistive
-    technology system for medical monitoring. The standard guides our
-    evaluation methodology to ensure the system is reliable and
-    effective in real-world medical settings, particularly for
-    real-time detection of medical episodes through eye tracking and
-    posture analysis.
+    This standard defines terminology for evaluating AI-based medical
+    devices. It guides our evaluation methodology for reliable real-time
+    detection of medical episodes through eye tracking and posture analysis.
 
   \item[IEEE 3129--2023~\cite{ieee3129-2023}] \textit{IEEE Standard
       for Robustness Testing and Evaluation of AI-Based Image
     Recognition Services} \\
-    This standard provides guidelines for testing AI-based image
-    recognition systems to ensure they operate reliably under varying
-    conditions. It is directly applicable to our U-Net semantic
-    segmentation model for eye tracking, which must maintain 99.8\%
-    accuracy across different lighting conditions, user populations,
-    and environmental factors. The standard informs our robustness
-    testing methodology described in Chapter~\ref{chap:testing},
-    including stress testing, lighting variation testing, and
-    long-term stability validation.
+    This standard guides testing AI-based image recognition systems
+    under varying conditions. Our U-Net model must maintain 99.8\%
+    accuracy across different lighting, users, and environments.
+    The standard informs our robustness testing in Chapter~\ref{chap:testing}.
 \end{description}

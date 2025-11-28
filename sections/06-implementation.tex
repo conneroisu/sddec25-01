@@ -2,11 +2,9 @@
 
 \section{Current Implementation Status}\label{sec:current-status}
 
-Our project has completed comprehensive performance evaluation of
-both single-model and split-model architectures on the AMD Kria KV260
-development board. The implementation follows a structured approach
-focusing on the critical path items while maintaining flexibility for
-iterative improvements.
+Our project completed performance evaluation of both single-model and
+split-model architectures on the AMD Kria KV260. The implementation
+follows a structured approach focusing on critical path items.
 
 \subsection{Development Environment Setup}\label{subsec:development-environment}
 
@@ -23,15 +21,13 @@ iterative improvements.
 
 \subsection{Performance Results}\label{subsec:performance-results}
 
-We have conducted extensive benchmarking of both single-model and
-split-model implementations to evaluate the trade-offs between
-different parallelization strategies.
+We benchmarked single-model and split-model implementations to evaluate
+parallelization trade-offs.
 
 \subsubsection{Single Model
 Performance}\label{subsubsec:single-model-performance}
 
-The baseline U-Net implementation running as a single unified model
-demonstrates the following performance characteristics:
+Baseline U-Net single unified model performance:
 
 \begin{itemize}
   \item \textbf{Mean Total Latency}: 529.39 ms ($\pm$ 0.26 ms)
@@ -41,17 +37,13 @@ demonstrates the following performance characteristics:
   \item \textbf{Memory Usage}: 45.00 MB
 \end{itemize}
 
-The single model implementation provides a stable baseline with low
-variance in processing times, indicating consistent performance
-across frames. The dominant processing time is spent in DPU execution
-(89.6\% of total latency), with preprocessing and postprocessing
-contributing approximately 10\% of overall latency.
+Single model provides stable baseline with low variance. DPU execution
+dominates (89.6\% of latency), with pre/postprocessing contributing approximately 10\%.
 
 \subsubsection{Split Model Performance (4
 Segments)}\label{subsubsec:split-model-performance}
 
-The parallelized implementation dividing the U-Net algorithm into
-four segments demonstrates the following characteristics:
+Parallelized U-Net (four segments) characteristics:
 
 \begin{itemize}
   \item \textbf{Mean Total Latency}: 784.29 ms ($\pm$ 3.39 ms)
@@ -60,30 +52,22 @@ four segments demonstrates the following characteristics:
   \item \textbf{Mean Postprocess}: 27.64 ms ($\pm$ 0.01 ms)
 \end{itemize}
 
-The split model approach incurs additional overhead from thread
-coordination and data transfer between segments, resulting in 48.2\%
-higher total latency compared to the single model. The increased
-variance ($\pm$ 3.39 ms vs. $\pm$ 0.26 ms) indicates synchronization
-overhead and resource contention between parallel threads.
+Split model incurs 48.2\% higher latency from thread coordination and data
+transfer. Increased variance ($\pm$3.39ms vs $\pm$0.26ms) indicates
+synchronization overhead.
 
 \subsection{Performance Analysis}\label{subsec:performance-analysis}
 
 \begin{itemize}
-  \item \textbf{Parallelization Overhead}: The split model
-    demonstrates that naive algorithm division introduces significant
-    overhead (255 ms increase) due to thread synchronization and
-    inter-segment data transfer
-  \item \textbf{Memory Efficiency}: Single model maintains a lower
-    memory footprint (45 MB) when compared to split model inference
-    (111.01 MB). This increase in memory footprint is caused by the
-    intermediate storage of tensors needed as inputs for further UNet segments.
+  \item \textbf{Parallelization Overhead}: Naive algorithm division
+    introduces 255ms overhead from thread synchronization and data transfer
+  \item \textbf{Memory Efficiency}: Single model: 45MB vs split model:
+    111.01MB due to intermediate tensor storage between segments
 \end{itemize}
 
 \subsection{Algorithm Analysis and Division}\label{subsec:algorithm-analysis}
 
-The U-Net semantic segmentation algorithm (Figure~\ref{fig:unet}) has
-been thoroughly analyzed for pipelined processing
-optimization~\cite{zhao2023parallel}:
+U-Net analysis for pipelined optimization~\cite{zhao2023parallel}:
 
 \begin{itemize}
   \item \textbf{Architecture Review}: Complete understanding of
@@ -99,11 +83,8 @@ optimization~\cite{zhao2023parallel}:
 \subsubsection{ONNX Graph Analysis with
 Netron}\label{subsubsec:onnx-graph-analysis}
 
-To identify appropriate split points for dividing the U-Net model
-into segments for parallel processing, we utilized
-Netron~\cite{netron}, an open-source neural network visualization
-tool. Netron provides comprehensive visualization of ONNX model
-graphs, enabling detailed inspection of the network architecture including:
+We used Netron~\cite{netron} to identify split points for dividing U-Net
+into segments. Netron provides ONNX model visualization including:
 
 \begin{itemize}
   \item \textbf{Node Identification}: Visual representation of all
@@ -120,23 +101,16 @@ graphs, enabling detailed inspection of the network architecture including:
     of each segment
 \end{itemize}
 
-Using Netron's interactive graph visualization, we identified
-strategic nodes in the U-Net encoder-decoder architecture where the
-model could be divided into four segments while maintaining the skip
-connection pathways essential for semantic segmentation accuracy.
-This analysis informed the split model implementation evaluated in
-Section~\ref{subsubsec:split-model-performance}, where intermediate
-tensors between segments are stored and passed to subsequent processing stages.
+Using Netron, we identified nodes where U-Net could be divided into four
+segments while maintaining skip connections. This informed the split model
+in Section~\ref{subsubsec:split-model-performance}.
 
 \subsubsection{Model Extraction with ONNX
 Utilities}\label{subsubsec:onnx-model-extraction}
 
-After identifying the appropriate split points using Netron
-visualization, we utilized the ONNX utilities library~\cite{onnx2023}
-to programmatically extract sub-models from the original U-Net
-architecture. The \texttt{onnx.utils.extract\_model} function enables
-precise extraction of model segments by specifying input and output
-tensor names:
+We used ONNX utilities~\cite{onnx2023} to extract sub-models from U-Net.
+The \texttt{onnx.utils.extract\_model} function extracts segments by
+specifying tensor names:
 
 \begin{itemize}
   \item \textbf{Extraction Method}: The \texttt{extract\_model}
@@ -155,17 +129,11 @@ tensor names:
     compatibility with file system limitations
 \end{itemize}
 
-The extraction process allowed us to systematically divide the U-Net
-architecture into four independent segments, each represented as a
-separate ONNX model file. This modular approach enables flexible
-deployment strategies, including the split model implementation
-evaluated in Section~\ref{subsubsec:split-model-performance}. Each
-extracted segment maintains the precise computational semantics of
-the corresponding portion of the original model, ensuring that when
-executed sequentially with proper intermediate tensor passing, the
-split model produces identical results to the unified architecture.
+The extraction divided U-Net into four segments as separate ONNX files.
+Each segment maintains computational semantics, ensuring sequential
+execution produces identical results to the unified architecture.
 
-Key considerations during the extraction process included:
+Key extraction considerations:
 
 \begin{itemize}
   \item \textbf{Boundary Selection}: Ensuring extraction boundaries
@@ -182,10 +150,8 @@ Key considerations during the extraction process included:
     parallel processing opportunities
 \end{itemize}
 
-This extraction methodology provided the foundation for our
-multi-segment deployment experiments, enabling direct comparison
-between single-model and split-model architectures on the Kria KV260
-hardware platform.
+This methodology enabled direct comparison between single-model and
+split-model architectures on the Kria KV260.
 
 \subsection{Resource Scheduling
 Implementation}\label{subsec:scheduling-implementation}
@@ -206,18 +172,14 @@ Implementation}\label{subsec:scheduling-implementation}
 
 \subsection{Training Infrastructure}\label{subsec:training-infrastructure}
 
-The U-Net semantic segmentation model training process underwent
-comprehensive redesign to improve training efficiency, model
-performance, and deployment readiness. Our enhanced training
-infrastructure leverages cloud-based GPU acceleration through
-Modal.com~\cite{modal2024} with PyTorch~\cite{pytorch2023},
-implementing sophisticated loss functions, comprehensive experiment
-tracking, and automated model export for the deployment pipeline.
+Training infrastructure was redesigned for efficiency and deployment
+readiness, using cloud-based GPU acceleration through Modal.com~\cite{modal2024}
+with PyTorch~\cite{pytorch2023}, sophisticated loss functions, experiment
+tracking, and automated model export.
 
 \subsubsection{Cloud-Based Training Environment}
 
-The training infrastructure utilizes Modal.com for scalable,
-reproducible GPU training with the following specifications:
+Modal.com provides scalable, reproducible GPU training:
 
 \begin{itemize}
   \item \textbf{Hardware Acceleration}: NVIDIA T4 GPU with CUDA
@@ -232,9 +194,7 @@ reproducible GPU training with the following specifications:
 
 \subsection{Advanced Loss Function Design}\label{subsec:advanced-loss}
 
-The training implementation employs a sophisticated multi-component
-loss function that combines three complementary objectives to achieve
-superior segmentation quality:
+Training employs a multi-component loss function combining three objectives:
 
 \begin{equation}
   \mathcal{L}_{\text{total}} = \mathcal{L}_{\text{CE-boundary}} +
@@ -273,7 +233,7 @@ first 125 epochs.
 
 \subsubsection{Dynamic Loss Weighting Strategy}
 
-The alpha scheduling mechanism implements a curriculum learning approach:
+Alpha scheduling implements curriculum learning:
 
 \begin{equation}
   \alpha(t) =
@@ -283,17 +243,14 @@ The alpha scheduling mechanism implements a curriculum learning approach:
   \end{cases}
 \end{equation}
 
-Early training (epochs 1--125) emphasizes surface loss to establish
-correct boundary topology, while later training focuses on dice loss
-to optimize overall segmentation quality. This two-phase approach
-prevents the model from learning topologically incorrect solutions
-that would be difficult to correct in later training.
+Early training emphasizes surface loss for boundary topology; later
+training focuses on dice loss for segmentation quality. This prevents
+topologically incorrect solutions difficult to correct later.
 
 \subsection{GPU-Optimized Training
 Pipeline}\label{subsec:gpu-optimized-training}
 
-The training implementation prioritizes GPU-native operations to
-minimize performance overhead from CPU-GPU data transfers:
+Training prioritizes GPU-native operations to minimize CPU-GPU transfer overhead:
 
 \begin{itemize}
   \item \textbf{Batched Operations}: All training operations utilize
@@ -312,8 +269,7 @@ minimize performance overhead from CPU-GPU data transfers:
 
 \subsection{Data Augmentation Strategy}\label{subsec:data-augmentation}
 
-The training pipeline implements comprehensive augmentation to
-improve model robustness to real-world variations:
+Augmentation improves model robustness to real-world variations:
 
 \begin{itemize}
   \item \textbf{Geometric Augmentation}: Random horizontal flip (50\%
@@ -330,8 +286,7 @@ improve model robustness to real-world variations:
 \subsection{Training Performance
 Improvements}\label{subsec:training-performance}
 
-The optimized training infrastructure achieved substantial
-improvements over the baseline implementation:
+Improvements over baseline:
 
 \begin{itemize}
   \item \textbf{Training Time Reduction}: Complete 50-epoch training
@@ -347,24 +302,19 @@ improvements over the baseline implementation:
     rate scheduling (ReduceLROnPlateau with patience 5)
 \end{itemize}
 
-The performance gains result from: (1) GPU-accelerated training
-eliminating CPU-GPU synchronization overhead, (2) sophisticated loss
-function improving convergence quality, (3) optimized data pipeline
-maximizing GPU utilization, and (4) comprehensive augmentation
-enabling efficient learning from limited data.
+Gains from: (1) GPU-accelerated training eliminating synchronization
+overhead, (2) sophisticated loss function improving convergence, (3) optimized
+data pipeline, and (4) comprehensive augmentation.
 
 \subsection{Experiment Tracking and Artifact
 Management}\label{subsec:experiment-tracking}
 
-Training experiments are tracked using MLflow~\cite{mlflow2023}
-integrated with GitLab's ML model registry, providing comprehensive
-logging of training artifacts, performance metrics, and automated
-model versioning for the deployment pipeline.
+Training tracked via MLflow~\cite{mlflow2023} integrated with GitLab's
+ML registry, logging artifacts, metrics, and automated model versioning.
 
 \subsubsection{Comprehensive Metadata Logging}
 
-The training system logs extensive metadata for complete experiment
-reproducibility:
+Extensive metadata logged for reproducibility:
 
 \begin{itemize}
   \item \textbf{Hyperparameter Tracking}: Learning rate (1e-3), batch
@@ -382,7 +332,7 @@ reproducibility:
 
 \subsubsection{Multi-Dimensional Metric Tracking}
 
-The training pipeline tracks comprehensive metrics across multiple dimensions:
+Comprehensive metrics tracked:
 
 \begin{itemize}
   \item \textbf{Loss Components}: Cross entropy loss, generalized
@@ -399,7 +349,7 @@ The training pipeline tracks comprehensive metrics across multiple dimensions:
 
 \subsubsection{Visualization and Model Artifacts}
 
-Automated artifact generation provides visual insight into training progress:
+Automated artifact generation:
 
 \begin{itemize}
   \item \textbf{Training Curves}: Loss curves (training/validation),
@@ -418,9 +368,7 @@ Automated artifact generation provides visual insight into training progress:
 
 \subsubsection{GitLab MLflow Integration Strategy}
 
-Due to current limitations in GitLab's MLflow backend (inability to
-properly visualize step-based metrics), the training system
-implements a pragmatic workaround:
+Due to GitLab MLflow limitations, a workaround was implemented:
 
 \begin{itemize}
   \item \textbf{Per-Epoch Runs}: Each training epoch creates a
@@ -437,17 +385,12 @@ implements a pragmatic workaround:
     once GitLab improves MLflow support (Issue \#421164)
 \end{itemize}
 
-This approach trades run count for compatibility with GitLab's
-current MLflow implementation, ensuring experiment tracking
-functionality while awaiting platform improvements.
+This trades run count for GitLab compatibility while awaiting improvements.
 
 \subsection{GPU Metrics Methodology}\label{subsec:gpu-metrics-methodology}
 
-Following best practices for GPU performance
-measurement~\cite{elvinger2025gpu}, our training implementation
-computes all performance metrics directly within GPU kernels rather
-than relying on CPU-side calculations. This approach provides several
-advantages:
+Following GPU measurement best practices~\cite{elvinger2025gpu}, metrics
+are computed within GPU kernels rather than CPU-side. Advantages:
 
 \begin{itemize}
   \item \textbf{Fine-Grained Profiling}: Access to device-level
@@ -462,20 +405,13 @@ advantages:
     tracking without impacting training throughput
 \end{itemize}
 
-The methodology aligns with recent research demonstrating that
-conventional ``GPU utilization'' metrics measured from the CPU side
-are insufficient for understanding true GPU resource
-usage~\cite{elvinger2025gpu}. By measuring performance at the kernel
-level using device-side counters, we achieve more accurate
-characterization of computational efficiency and identify
-optimization opportunities that would be invisible to host-side profiling tools.
+CPU-side ``GPU utilization'' metrics are insufficient~\cite{elvinger2025gpu}.
+Kernel-level measurement provides accurate efficiency characterization.
 
 \subsection{ONNX Model Export and Deployment
 Integration}\label{subsec:onnx-export}
 
-The training pipeline automatically exports trained models to ONNX
-format for seamless integration with the Vitis AI quantization and
-deployment workflow:
+Training automatically exports models to ONNX for Vitis AI integration:
 
 \begin{itemize}
   \item \textbf{Automatic ONNX Conversion}: Models exported to ONNX
@@ -496,16 +432,12 @@ deployment workflow:
     performance metrics for traceability
 \end{itemize}
 
-This automated export eliminates manual conversion steps and ensures
-training outputs directly feed into the FPGA deployment pipeline,
-reducing potential for errors in model transfer between training and
-deployment environments.
+Automated export eliminates manual conversion and ensures training outputs
+feed directly into the FPGA deployment pipeline.
 
 \subsection{Training Dataset and Validation}\label{subsec:training-dataset}
 
-The model training process utilizes the OpenEDS (Open Eye
-Dataset)~\cite{openeds2019} with automated acquisition and
-comprehensive quality validation:
+Training uses OpenEDS~\cite{openeds2019} with automated acquisition:
 
 \subsubsection{Dataset Acquisition and Preprocessing}
 
@@ -605,7 +537,7 @@ comprehensive quality validation:
 
 \subsection{Agile Development Approach}\label{subsec:agile-approach}
 
-Our implementation follows an agile methodology with:
+Implementation follows agile methodology:
 
 \begin{itemize}
   \item \textbf{Sprint Planning}: 2-week sprints with specific deliverables
