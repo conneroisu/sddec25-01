@@ -148,8 +148,8 @@
 
     \vfill
 
-    {\large\@location\\}
-    {\large\@semester\\}
+    \ifx\@location\@empty\else{\large\@location\\}\fi
+    \ifx\@semester\@empty\else{\large\@semester\\}\fi
     \vspace{1cm}
 
   \end{titlepage}
