@@ -464,10 +464,8 @@ Training uses OpenEDS~\cite{openeds2019} with automated acquisition:
 	\item \textbf{Diversity}: Images captured across varied lighting
 	      conditions, eye anatomies, and gaze angles for robust generalization
 	\item \textbf{Challenge Factors}: Dataset includes reflections,
-	      occlusions, motion blur, and variable pupil sizes representative
-	      of real-world deployment conditions
-	\item \textbf{Medical Relevance}: OpenEDS designed for assistive
-	      technology applications, aligning with project's medical monitoring use case
+	      occlusions, motion blur, and variable pupil sizes that test model
+	      robustness to real-world imaging artifacts
 \end{itemize}
 
 \subsubsection{Validation Strategy}
@@ -486,6 +484,72 @@ Training uses OpenEDS~\cite{openeds2019} with automated acquisition:
 	      validation mIoU across all epochs selected for deployment, not
 	      necessarily the final epoch
 \end{itemize}
+
+\subsubsection{Dataset Selection Rationale}\label{subsubsec:dataset-rationale}
+
+OpenEDS~\cite{openeds2019} was originally developed for VR headset eye
+tracking research at Facebook Reality Labs. The dataset was captured using
+VR headset-mounted cameras under controlled near-infrared illumination at
+200 Hz, producing high-quality eye images with consistent lighting
+conditions. Figure~\ref{fig:openeds-sample} shows a representative sample
+from the dataset.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.7\linewidth]{assets/openeds.png}
+	\caption{Sample image from the OpenEDS dataset showing near-infrared
+		eye capture with pixel-level semantic segmentation annotations for
+		background, sclera, iris, and pupil regions.}~\label{fig:openeds-sample}
+\end{figure}
+
+\paragraph{Benefits of OpenEDS for Training}
+
+\begin{itemize}
+	\item \textbf{Scale and Availability}: OpenEDS provides multiple
+	      thousand annotated eye images freely available through Kaggle,
+	      eliminating data collection overhead
+	\item \textbf{Annotation Quality}: Pixel-level semantic segmentation
+	      masks with four-class labels (background, sclera, iris, pupil)
+	      enable precise boundary learning
+	\item \textbf{Research Benchmark}: Established benchmark dataset
+	      enabling direct comparison with published eye segmentation methods
+	\item \textbf{Preprocessing Pipeline}: Well-documented data format
+	      with aligned image-label pairs simplifies training infrastructure
+	\item \textbf{Diversity}: Captures from 152 participants spanning
+	      varied eye anatomies, gaze angles, and pupil sizes
+\end{itemize}
+
+\paragraph{Limitations and Domain Considerations}
+
+\begin{itemize}
+	\item \textbf{VR vs.\ Medical Domain}: OpenEDS targets VR headset
+	      applications with healthy volunteers, while VisionAssist serves
+	      medical assistive technology users who may have different eye
+	      characteristics due to underlying conditions
+	\item \textbf{Controlled Illumination}: VR headset near-infrared
+	      lighting provides consistent illumination unlike variable ambient
+	      lighting in wheelchair environments
+	\item \textbf{Population Differences}: Dataset participants were
+	      healthy adults; medical users may include patients with conditions
+	      affecting eye appearance (e.g., medication effects, fatigue patterns)
+	\item \textbf{Hardware Configuration}: Fixed VR camera geometry
+	      differs from wheelchair-mounted camera positioning and field of view
+\end{itemize}
+
+\paragraph{Scalable Practices Rationale}
+
+Our client emphasized that while the source domain (VR eye tracking) differs
+from the target domain (medical assistive technology), the training
+methodology, preprocessing pipeline, and evaluation practices transfer
+effectively. The core computer vision task---pupil segmentation from
+near-infrared imagery---remains consistent across domains. Model
+architecture, loss function design, augmentation strategies, and
+quantization procedures developed on OpenEDS apply directly when training on
+future domain-specific medical datasets. This approach enables rapid
+iteration and methodology validation before investing in medical data
+collection, with the understanding that production deployment would benefit
+from domain-specific fine-tuning on data collected from the target user
+population.
 
 \section{Implementation Challenges}\label{subsec:implementation-challenges}
 

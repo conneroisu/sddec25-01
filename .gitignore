@@ -53,5 +53,6 @@ logs
 build/
 *.pdf
 *.png
+!assets/*.png
 /.pre-commit-config.yaml
 *.bak0
