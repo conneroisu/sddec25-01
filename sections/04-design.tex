@@ -207,39 +207,6 @@ Key design decisions critical to project success:
     \end{itemize}
 \end{enumerate}
 
-\subsection{Ideation}\label{subsec:ideation}
-
-We explored several scheduling strategies:
-
-\begin{enumerate}
-  \item \textbf{Round-Robin Scheduling}
-    \begin{itemize}
-      \item Allocate DPU time in equal slices to each algorithm in
-        circular order
-      \item Simple to implement and ensures each algorithm gets fair access
-      \item May not be optimal for variable processing requirements
-    \end{itemize}
-
-  \item \textbf{Priority-Based Scheduling}
-    \begin{itemize}
-      \item Assign priority levels to algorithms based on urgency of
-        data collection needs
-      \item Higher priority tasks preempt lower priority ones when necessary
-      \item Could be tuned to ensure periodic data collection
-        requirements are met
-    \end{itemize}
-
-  \item \textbf{Time-Division Multiplexing}
-    \begin{itemize}
-      \item Allocate specific time windows for each algorithm to access the DPU
-      \item Synchronize windows with periodic data collection requirements
-      \item Optimizes for predictable execution patterns
-    \end{itemize}
-\end{enumerate}
-
-Options generated through brainstorming, literature review, and analysis
-of periodic data requirements.
-
 \subsection{Decision-Making and Trade-Off}\label{subsec:decision-making}
 
 The client required maintaining accuracy with no degradation due to
