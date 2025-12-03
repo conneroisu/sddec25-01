@@ -1,5 +1,7 @@
 # Assistive Eye Tracking System
 
+Eduroam Accessible Site: https://sddec25-01.sd.ece.iastate.edu/
+
 ## Real-Time Semantic Segmentation Optimization for Medical Assistance Applications
 
 **Project Focus**: Optimizing AI-powered eye tracking systems for real-time medical monitoring and assistive technology deployment on edge computing platforms.
