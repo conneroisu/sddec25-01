@@ -150,16 +150,24 @@
     {\Large\@teamname\\}
     \vspace{0.5cm}
     {\large\@teammembers\\}
-    \vspace{1cm}
 
-    \ifx\@client\@empty\else
+    \ifx\@client\@empty
+      \ifx\@advisor\@empty
+        \vspace{2cm}
+      \else
+        \vspace{1cm}
+      \fi
+    \else
+      \vspace{1cm}
       {\large\textbf{Client:} \@client\\}
-      \vspace{0.3cm}
+      \ifx\@advisor\@empty\else
+        \vspace{0.3cm}
+      \fi
     \fi
     \ifx\@advisor\@empty\else
       {\large\textbf{Faculty Advisor:} \@advisor\\}
-      \vspace{0.3cm}
     \fi
+    \vspace{1cm}
 
     \vfill
 
