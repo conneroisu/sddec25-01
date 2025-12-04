@@ -129,6 +129,12 @@
 \newcommand{\@advisor}{}
 \newcommand{\advisor}[1]{\renewcommand{\@advisor}{#1}}
 
+\newcommand{\@teamemail}{}
+\newcommand{\teamemail}[1]{\renewcommand{\@teamemail}{#1}}
+
+\newcommand{\@teamwebsite}{}
+\newcommand{\teamwebsite}[1]{\renewcommand{\@teamwebsite}{#1}}
+
 % Custom title page
 \renewcommand{\maketitle}{
   \begin{titlepage}
@@ -167,7 +173,23 @@
     \ifx\@advisor\@empty\else
       {\large\textbf{Faculty Advisor:} \@advisor\\}
     \fi
-    \vspace{1cm}
+    \ifx\@teamemail\@empty
+      \ifx\@teamwebsite\@empty
+        \vspace{1cm}
+      \else
+        \vspace{0.5cm}
+      \fi
+    \else
+      \vspace{0.5cm}
+      {\large\textbf{Team Email:} \@teamemail\\}
+      \ifx\@teamwebsite\@empty\else
+        \vspace{0.3cm}
+      \fi
+    \fi
+    \ifx\@teamwebsite\@empty\else
+      {\large\textbf{Team Website:} \@teamwebsite\\}
+      \vspace{0.5cm}
+    \fi
 
     \vfill
 
