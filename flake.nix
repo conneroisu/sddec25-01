@@ -144,9 +144,18 @@
             ghostscript # PostScript/PDF manipulation
             poppler_utils # PDF utilities (pdfinfo, pdftotext, etc.)
             watchexec # File watcher alternative to latexmk -pvc
+            pyrefly
+
+            # Python tooling for training scripts
+            uv # Python package manager
           ]
           ++ builtins.attrValues scriptPackages
           ++ preCommitCheck.enabledPackages;
+
+        env.LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
+          pkgs.glib
+          pkgs.libGL
+        ];
 
         shellHook =
           preCommitCheck.shellHook
