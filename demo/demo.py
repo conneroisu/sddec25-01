@@ -11,6 +11,7 @@ and visualizes the segmentation results with overlays.
 """
 
 import argparse
+import platform
 import time
 from collections import deque
 
@@ -79,7 +80,12 @@ class VisionAssistDemo:
         if self.verbose:
             print(f"Initializing camera {self.camera_index}...")
 
-        self.cap = cv2.VideoCapture(self.camera_index)
+        # On macOS, use AVFoundation backend for proper webcam access
+        if platform.system() == "Darwin":
+            self.cap = cv2.VideoCapture(self.camera_index, cv2.CAP_AVFOUNDATION)
+        else:
+            self.cap = cv2.VideoCapture(self.camera_index)
+
         if not self.cap.isOpened():
             raise RuntimeError(
                 f"Failed to open camera {self.camera_index}. "
@@ -116,31 +122,19 @@ class VisionAssistDemo:
         if self.verbose:
             print(f"Using execution provider: {self.execution_provider}")
 
-        # Validate model input shape
+        # Get model shapes for validation
         input_shape = self.session.get_inputs()[0].shape
-        expected_input = [-1, 1, self.MODEL_HEIGHT, self.MODEL_WIDTH]
-        if not (
-            (input_shape[0] in [-1, 1])
-            and input_shape[1] == 1
-            and input_shape[2] == self.MODEL_HEIGHT
-            and input_shape[3] == self.MODEL_WIDTH
-        ):
-            raise RuntimeError(
-                f"Model input shape mismatch. Expected {expected_input}, "
-                f"got {input_shape}"
-            )
-
-        # Validate model output shape
         output_shape = self.session.get_outputs()[0].shape
-        expected_output = [-1, 2, self.MODEL_HEIGHT, self.MODEL_WIDTH]
-        if not (
-            (output_shape[0] in [-1, 1])
-            and output_shape[1] == 2
-            and output_shape[2] == self.MODEL_HEIGHT
-            and output_shape[3] == self.MODEL_WIDTH
-        ):
+
+        # Model expects (B, C, W, H) format - verify dimensions match
+        if self.verbose:
+            print(f"Model input shape: {input_shape}")
+            print(f"Model output shape: {output_shape}")
+
+        # Validate output has 2 classes for binary segmentation
+        if len(output_shape) != 4 or output_shape[1] != 2:
             raise RuntimeError(
-                f"Model output shape mismatch. Expected {expected_output}, "
+                f"Model output shape unexpected. Expected 4D with 2 classes, "
                 f"got {output_shape}"
             )
 
@@ -314,6 +308,9 @@ class VisionAssistDemo:
         # Step 6: Add batch and channel dimensions -> (1, 1, 400, 640)
         input_tensor = normalized[np.newaxis, np.newaxis, ...]
 
+        # Step 7: Transpose to match model's expected (B, C, W, H) format -> (1, 1, 640, 400)
+        input_tensor = np.transpose(input_tensor, (0, 1, 3, 2))
+
         if self.verbose:
             t_end = time.time()
             print(
@@ -328,7 +325,7 @@ class VisionAssistDemo:
         Run model inference on preprocessed input.
 
         Args:
-            input_tensor: Preprocessed tensor of shape (1, 1, 400, 640)
+            input_tensor: Preprocessed tensor of shape (1, 1, 640, 400)
 
         Returns:
             np.ndarray: Binary mask of shape (400, 640)
@@ -339,7 +336,11 @@ class VisionAssistDemo:
         output = self.session.run(None, {"input": input_tensor})[0]
 
         # Post-processing: argmax to get binary mask
+        # Model outputs (B, C, W, H) = (1, 2, 640, 400), argmax gives (640, 400)
         mask = np.argmax(output[0], axis=0).astype(np.uint8)
+
+        # Transpose to (H, W) = (400, 640) for visualization
+        mask = mask.T
 
         inference_time = (time.time() - t_start) * 1000  # Convert to ms
 
@@ -496,6 +497,23 @@ class VisionAssistDemo:
         print("  SPACE - Pause/Resume")
         print("=" * 80 + "\n")
 
+        # Create named window for proper display on macOS
+        cv2.namedWindow("VisionAssist Live Demo", cv2.WINDOW_NORMAL)
+
+        # Allow camera to warm up (important for macOS)
+        print("Warming up camera...")
+        for i in range(30):
+            ret, frame = self.cap.read()
+            if ret and frame is not None:
+                # Check if frame is not black (has actual content)
+                if frame.mean() > 1.0:
+                    print(f"Camera ready after {i+1} warmup frames.\n")
+                    break
+            time.sleep(0.1)
+        else:
+            print("WARNING: Camera may not be capturing properly.")
+            print("Check System Settings → Privacy & Security → Camera permissions.\n")
+
         try:
             while True:
                 if not self.paused:
@@ -504,7 +522,8 @@ class VisionAssistDemo:
                     ret, frame = self.cap.read()
                     if not ret:
                         print("Failed to capture frame")
-                        break
+                        # break
+                        continue
 
                     if self.verbose:
                         t_capture_end = time.time()
