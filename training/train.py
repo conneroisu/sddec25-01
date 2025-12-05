@@ -40,6 +40,7 @@ dataset_volume = modal.Volume.from_name(
 )
 VOLUME_PATH = "/data/openeds"
 
+
 @app.function(
     gpu="L4",
     cpu=16.0,
@@ -119,9 +120,7 @@ def train():
             target_flat = target_onehot.flatten(start_dim=2)
             intersection = (probs_flat * target_flat).sum(dim=2)
             cardinality = (probs_flat + target_flat).sum(dim=2)
-            class_weights = 1.0 / (target_flat.sum(dim=2) ** 2).clamp(
-                min=self.epsilon
-            )
+            class_weights = 1.0 / (target_flat.sum(dim=2) ** 2).clamp(min=self.epsilon)
             dice = (
                 2.0
                 * (class_weights * intersection).sum(dim=1)
@@ -134,9 +133,7 @@ def train():
                 .mean(dim=1)
                 .mean()
             )
-            total_loss = (
-                weighted_ce + alpha * dice_loss + (1.0 - alpha) * surface_loss
-            )
+            total_loss = weighted_ce + alpha * dice_loss + (1.0 - alpha) * surface_loss
             return (
                 total_loss,
                 weighted_ce,
@@ -185,9 +182,7 @@ def train():
         total_intersection,
         total_union,
     ):
-        iou_per_class = (
-            (total_intersection / total_union.clamp(min=1)).cpu().numpy()
-        )
+        iou_per_class = (total_intersection / total_union.clamp(min=1)).cpu().numpy()
         return (
             float(np.mean(iou_per_class)),
             iou_per_class.tolist(),
@@ -361,7 +356,14 @@ def train():
                 "surface_loss",
             ]
         ):
-            fig, axes = plt.subplots( 2, 2, figsize=( 14, 10,),)
+            fig, axes = plt.subplots(
+                2,
+                2,
+                figsize=(
+                    14,
+                    10,
+                ),
+            )
             axes[0, 0].plot(
                 epochs,
                 train_metrics["ce_loss"],
@@ -509,9 +511,7 @@ def train():
                     break
                 single_img = img[0:1].to(device)
                 if USE_CHANNELS_LAST:
-                    single_img = single_img.to(
-                        memory_format=torch.channels_last
-                    )
+                    single_img = single_img.to(memory_format=torch.channels_last)
                 single_target = labels[0:1].to(device).long()
                 output = model(single_img)
                 predictions = get_predictions(output)
@@ -699,9 +699,7 @@ def train():
                 )
                 x22 = self.relu(
                     self.dropout2(
-                        self.pointwise_conv22(
-                            self.depthwise_conv22(self.conv21(x21))
-                        )
+                        self.pointwise_conv22(self.depthwise_conv22(self.conv21(x21)))
                     )
                 )
                 x31 = torch.cat(
@@ -713,9 +711,7 @@ def train():
                 )
                 out = self.relu(
                     self.dropout3(
-                        self.pointwise_conv32(
-                            self.depthwise_conv32(self.conv31(x31))
-                        )
+                        self.pointwise_conv32(self.depthwise_conv32(self.conv31(x31)))
                     )
                 )
             else:
@@ -725,9 +721,7 @@ def train():
                     dim=1,
                 )
                 x22 = self.relu(
-                    self.pointwise_conv22(
-                        self.depthwise_conv22(self.conv21(x21))
-                    )
+                    self.pointwise_conv22(self.depthwise_conv22(self.conv21(x21)))
                 )
                 x31 = torch.cat(
                     (
@@ -737,9 +731,7 @@ def train():
                     dim=1,
                 )
                 out = self.relu(
-                    self.pointwise_conv32(
-                        self.depthwise_conv32(self.conv31(x31))
-                    )
+                    self.pointwise_conv32(self.depthwise_conv32(self.conv31(x31)))
                 )
             return self.bn(out)
 
@@ -819,9 +811,7 @@ def train():
             if self.dropout:
                 x1 = self.relu(
                     self.dropout1(
-                        self.pointwise_conv12(
-                            self.depthwise_conv12(self.conv11(x))
-                        )
+                        self.pointwise_conv12(self.depthwise_conv12(self.conv11(x)))
                     )
                 )
                 x21 = torch.cat(
@@ -830,9 +820,7 @@ def train():
                 )
                 out = self.relu(
                     self.dropout2(
-                        self.pointwise_conv22(
-                            self.depthwise_conv22(self.conv21(x21))
-                        )
+                        self.pointwise_conv22(self.depthwise_conv22(self.conv21(x21)))
                     )
                 )
             else:
@@ -844,9 +832,7 @@ def train():
                     dim=1,
                 )
                 out = self.relu(
-                    self.pointwise_conv22(
-                        self.depthwise_conv22(self.conv21(x21))
-                    )
+                    self.pointwise_conv22(self.depthwise_conv22(self.conv21(x21)))
                 )
             return out
 
@@ -953,10 +939,7 @@ def train():
                     m,
                     nn.Conv2d,
                 ):
-                    if (
-                        m.groups == m.in_channels
-                        and m.in_channels == m.out_channels
-                    ):
+                    if m.groups == m.in_channels and m.in_channels == m.out_channels:
                         n = m.kernel_size[0] * m.kernel_size[1]
                         m.weight.data.normal_(
                             0,
@@ -1483,9 +1466,7 @@ def train():
                     non_blocking=True,
                 )
                 if USE_CHANNELS_LAST:
-                    dist_map_gpu = dist_map_gpu.to(
-                        memory_format=torch.channels_last
-                    )
+                    dist_map_gpu = dist_map_gpu.to(memory_format=torch.channels_last)
                 optimizer.zero_grad(set_to_none=True)
                 if use_amp:
                     with torch.amp.autocast("cuda"):
@@ -1553,9 +1534,7 @@ def train():
             loss_train: float = (train_loss_sum / train_batch_count).item()
             ce_loss_train: float = (train_ce_sum / train_batch_count).item()
             dice_loss_train: float = (train_dice_sum / train_batch_count).item()
-            surface_loss_train: float = (
-                train_surface_sum / train_batch_count
-            ).item()
+            surface_loss_train: float = (train_surface_sum / train_batch_count).item()
             train_metrics["loss"].append(loss_train)
             train_metrics["iou"].append(miou_train)
             train_metrics["ce_loss"].append(ce_loss_train)
@@ -1683,9 +1662,7 @@ def train():
             loss_valid: float = (valid_loss_sum / valid_batch_count).item()
             ce_loss_valid: float = (valid_ce_sum / valid_batch_count).item()
             dice_loss_valid: float = (valid_dice_sum / valid_batch_count).item()
-            surface_loss_valid: float = (
-                valid_surface_sum / valid_batch_count
-            ).item()
+            surface_loss_valid: float = (valid_surface_sum / valid_batch_count).item()
             valid_metrics["loss"].append(loss_valid)
             valid_metrics["iou"].append(miou_valid)
             valid_metrics["ce_loss"].append(ce_loss_valid)
@@ -1716,12 +1693,8 @@ def train():
             )
             scheduler.step(loss_valid)
             print(f"\nEpoch {epoch+1}/{EPOCHS}")
-            print(
-                f"Train Loss: {loss_train:.4f} | Valid Loss: {loss_valid:.4f}"
-            )
-            print(
-                f"Train mIoU: {miou_train:.4f} | Valid mIoU: {miou_valid:.4f}"
-            )
+            print(f"Train Loss: {loss_train:.4f} | Valid Loss: {loss_valid:.4f}")
+            print(f"Train mIoU: {miou_train:.4f} | Valid mIoU: {miou_valid:.4f}")
             print(
                 f"Train BG IoU: {bg_iou_train:.4f} | Train Pupil IoU: {pupil_iou_train:.4f}"
             )
@@ -1788,9 +1761,7 @@ def train():
         print("\n" + "=" * 80)
         print("Training completed!")
         print(f"Final validation mIoU: {miou_valid:.4f}")
-        print(
-            f"Best validation mIoU: {best_valid_iou:.4f} (epoch {best_epoch})"
-        )
+        print(f"Best validation mIoU: {best_valid_iou:.4f} (epoch {best_epoch})")
         print(f"Final train mIoU: {miou_train:.4f}")
         print(f"MLflow run ID: {run.info.run_id}")
         print("=" * 80)
