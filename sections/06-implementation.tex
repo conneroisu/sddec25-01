@@ -204,7 +204,8 @@ Training employs a multi-component loss function combining three objectives:
 
 where $\alpha(t)$ is a time-dependent weighting factor that
 transitions from surface loss emphasis to dice loss emphasis over the
-first 125 epochs.
+training period. With GPU acceleration enabling batch sizes of 32, the
+current training configuration uses 15 epochs.
 
 \subsubsection{Loss Components}
 
@@ -233,19 +234,23 @@ first 125 epochs.
 
 \subsubsection{Dynamic Loss Weighting Strategy}
 
-Alpha scheduling implements curriculum learning:
+Alpha scheduling implements curriculum learning, adapting to the total
+number of epochs $E$:
 
 \begin{equation}
 	\alpha(t) =
 	\begin{cases}
-		1 - \frac{t}{125} & \text{if } t \leq 125 \\
-		1                 & \text{if } t > 125
+		1 - \frac{t}{\min(E, 125)} & \text{if } t \leq \min(E, 125) \\
+		1                          & \text{if } t > \min(E, 125)
 	\end{cases}
 \end{equation}
 
-Early training emphasizes surface loss for boundary topology; later
-training focuses on dice loss for segmentation quality. This prevents
-topologically incorrect solutions difficult to correct later.
+For the GPU-accelerated training with batch size 32 and 15 epochs
+($E=15$), alpha transitions linearly from 1.0 to approximately 0.07
+over all training epochs. Early training emphasizes surface loss for
+boundary topology; later training focuses on dice loss for
+segmentation quality. This prevents topologically incorrect solutions
+difficult to correct later.
 
 \subsection{GPU-Optimized Training
 	Pipeline}\label{subsec:gpu-optimized-training}
