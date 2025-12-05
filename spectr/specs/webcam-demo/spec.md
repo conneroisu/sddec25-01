@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TODO: Add purpose description
+Define requirements for a real-time webcam demonstration that showcases pupil segmentation inference, designed for academic presentations with face detection, preprocessing, and visualization overlays.
 
 ## Requirements
 

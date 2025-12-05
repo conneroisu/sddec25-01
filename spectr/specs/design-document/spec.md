@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TODO: Add purpose description
+Define requirements for the VisionAssist senior design document, including dataset selection rationale, architecture documentation, and transparency about design tradeoffs.
 
 ## Requirements
 

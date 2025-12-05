@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TODO: Add purpose description
+Define requirements for training scripts that train neural network models for eye pupil segmentation on the OpenEDS dataset, including model architectures, loss functions, and MLflow integration.
 
 ## Requirements
 
