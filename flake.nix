@@ -160,7 +160,7 @@
           pkgs.cudaPackages.cudatoolkit
           pkgs.cudaPackages.cudnn
           pkgs.stdenv.cc.cc.lib
-        ];
+        ] + ":/run/opengl-driver/lib";
 
         shellHook =
           preCommitCheck.shellHook
