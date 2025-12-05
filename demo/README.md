@@ -8,15 +8,15 @@ This directory contains two demo applications, each supporting different model a
 
 | Script | Model | Description |
 |--------|-------|-------------|
-| `demo.py` | ShallowNet | Original demo using ShallowNet model |
-| `demo_pytorch.py` | TinyEfficientViT | PyTorch demo using TinyEfficientViT model |
+| `demo_shallownet.py` | ShallowNet | Demo using ShallowNet CNN model |
+| `demo_efficientvit.py` | TinyEfficientViT | Demo using TinyEfficientViT transformer model |
 
 ### Which Demo Should I Use?
 
-- **`demo.py`** - Use this with ShallowNet `.pt` checkpoint files
-- **`demo_pytorch.py`** - Use this with TinyEfficientViT `.pt` checkpoint files (from `training/train_efficientvit.py`)
+- **`demo_shallownet.py`** - Use this with ShallowNet `.pt` checkpoint files
+- **`demo_efficientvit.py`** - Use this with TinyEfficientViT `.pt` checkpoint files (from `training/train_efficientvit.py`)
 
-Both demos support the same device backends (CUDA, MPS, CPU) and have identical command-line interfaces.
+Both demos use PyTorch for inference and support the same device backends (CUDA, MPS, CPU) with identical command-line interfaces.
 
 ## Overview
 
@@ -97,12 +97,14 @@ uv sync
 ### 4. Verify Installation
 
 ```bash
-uv run python demo.py --help
+uv run python demo_shallownet.py --help
+# or
+uv run python demo_efficientvit.py --help
 ```
 
-Expected output:
+Expected output (both demos have identical interfaces):
 ```
-usage: demo.py [-h] --model MODEL [--camera CAMERA] [--device DEVICE] [--verbose]
+usage: demo_shallownet.py [-h] --model MODEL [--camera CAMERA] [--device DEVICE] [--verbose]
 
 VisionAssist Live Demo - ShallowNet Semantic Segmentation
 
@@ -116,40 +118,40 @@ optional arguments:
 
 ## Usage
 
-### ShallowNet Demo (demo.py)
+### ShallowNet Demo (demo_shallownet.py)
 
-Use `demo.py` for ShallowNet model checkpoints:
+Use `demo_shallownet.py` for ShallowNet model checkpoints:
 
 ```bash
 # Basic usage
-uv run python demo.py --model path/to/shallownet_model.pt
+uv run python demo_shallownet.py --model path/to/shallownet_model.pt
 
 # With camera selection
-uv run python demo.py --model path/to/shallownet_model.pt --camera 1
+uv run python demo_shallownet.py --model path/to/shallownet_model.pt --camera 1
 
 # With verbose logging
-uv run python demo.py --model path/to/shallownet_model.pt --verbose
+uv run python demo_shallownet.py --model path/to/shallownet_model.pt --verbose
 
 # Force MPS on Apple Silicon
-uv run python demo.py --model path/to/shallownet_model.pt --device mps
+uv run python demo_shallownet.py --model path/to/shallownet_model.pt --device mps
 ```
 
-### TinyEfficientViT Demo (demo_pytorch.py)
+### TinyEfficientViT Demo (demo_efficientvit.py)
 
-Use `demo_pytorch.py` for TinyEfficientViT model checkpoints (from `training/train_efficientvit.py`):
+Use `demo_efficientvit.py` for TinyEfficientViT model checkpoints (from `training/train_efficientvit.py`):
 
 ```bash
 # Basic usage
-uv run python demo_pytorch.py --model path/to/efficientvit_model.pt
+uv run python demo_efficientvit.py --model path/to/efficientvit_model.pt
 
 # With camera selection
-uv run python demo_pytorch.py --model path/to/efficientvit_model.pt --camera 1
+uv run python demo_efficientvit.py --model path/to/efficientvit_model.pt --camera 1
 
 # With verbose logging
-uv run python demo_pytorch.py --model path/to/efficientvit_model.pt --verbose
+uv run python demo_efficientvit.py --model path/to/efficientvit_model.pt --verbose
 
 # Force MPS on Apple Silicon
-uv run python demo_pytorch.py --model path/to/efficientvit_model.pt --device mps
+uv run python demo_efficientvit.py --model path/to/efficientvit_model.pt --device mps
 ```
 
 **Note**: The TinyEfficientViT model has different architecture parameters than ShallowNet:
@@ -172,10 +174,10 @@ Verbose mode prints:
 
 ```bash
 # ShallowNet with external webcam and verbose logging
-uv run python demo.py --model ../training/models/shallownet_epoch50.pt --camera 1 --verbose
+uv run python demo_shallownet.py --model ../training/models/shallownet_epoch50.pt --camera 1 --verbose
 
 # TinyEfficientViT with external webcam and verbose logging
-uv run python demo_pytorch.py --model ../training/best_efficientvit_model.pt --camera 1 --verbose
+uv run python demo_efficientvit.py --model ../training/best_efficientvit_model.pt --camera 1 --verbose
 ```
 
 ## Command-Line Arguments
@@ -270,8 +272,8 @@ For best results, ensure the following environmental conditions:
 
 2. **Force GPU if available**:
    ```bash
-   uv run python demo.py --model model.pt --device cuda  # NVIDIA
-   uv run python demo.py --model model.pt --device mps   # Apple Silicon
+   uv run python demo_shallownet.py --model model.pt --device cuda  # NVIDIA
+   uv run python demo_shallownet.py --model model.pt --device mps   # Apple Silicon
    ```
 
 3. **Reduce resolution**: Use a lower resolution webcam (720p) to reduce preprocessing overhead
@@ -290,7 +292,7 @@ For best results, ensure the following environmental conditions:
 
 **Solutions**:
 1. Ensure you synced dependencies: `uv sync`
-2. Run commands with `uv run` prefix: `uv run python demo.py ...`
+2. Run commands with `uv run` prefix: `uv run python demo_shallownet.py ...`
 3. Check Python version: `uv run python --version` (must be 3.10-3.12)
 4. Re-sync dependencies: `rm -rf .venv && uv sync`
 
@@ -315,9 +317,9 @@ uv run python -c "import torch; print('CUDA:', torch.cuda.is_available()); print
 
 **Force a Specific Device**:
 ```bash
-uv run python demo.py --model model.pt --device mps  # Force MPS
-uv run python demo.py --model model.pt --device cuda  # Force CUDA
-uv run python demo.py --model model.pt --device cpu   # Force CPU
+uv run python demo_shallownet.py --model model.pt --device mps  # Force MPS
+uv run python demo_shallownet.py --model model.pt --device cuda  # Force CUDA
+uv run python demo_shallownet.py --model model.pt --device cpu   # Force CPU
 ```
 
 ### Model Loading Errors
@@ -412,8 +414,11 @@ Typical breakdown on GPU:
 ### Academic Presentation Demo
 
 ```bash
-# High-quality demo for presentation with verbose logging
-uv run python demo.py --model ../models/shallownet_final.pt --verbose
+# High-quality ShallowNet demo for presentation with verbose logging
+uv run python demo_shallownet.py --model ../models/shallownet_final.pt --verbose
+
+# High-quality EfficientViT demo for presentation with verbose logging
+uv run python demo_efficientvit.py --model ../models/efficientvit_final.pt --verbose
 ```
 
 Expected output with `--verbose`:
@@ -455,7 +460,7 @@ Frame 0: capture 1.23ms
 
 ```bash
 # Run for 30 seconds and check FPS
-uv run python demo.py --model model.pt
+uv run python demo_shallownet.py --model model.pt
 # Press ESC after 30 seconds, observe FPS counter
 ```
 
@@ -463,7 +468,7 @@ uv run python demo.py --model model.pt
 
 ```bash
 # Enable verbose mode to inspect preprocessing values
-uv run python demo.py --model model.pt --verbose > debug.log 2>&1
+uv run python demo_shallownet.py --model model.pt --verbose > debug.log 2>&1
 # Review debug.log for anomalies in preprocessing ranges
 ```
 
@@ -471,9 +476,9 @@ uv run python demo.py --model model.pt --verbose > debug.log 2>&1
 
 ```bash
 # Test each camera index to find the correct 1080p webcam
-uv run python demo.py --model model.pt --camera 0  # Built-in
-uv run python demo.py --model model.pt --camera 1  # External USB
-uv run python demo.py --model model.pt --camera 2  # Secondary external
+uv run python demo_shallownet.py --model model.pt --camera 0  # Built-in
+uv run python demo_shallownet.py --model model.pt --camera 1  # External USB
+uv run python demo_shallownet.py --model model.pt --camera 2  # Secondary external
 ```
 
 ## Project Context
