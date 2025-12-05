@@ -77,26 +77,44 @@ class VisionAssistDemo:
 
         # Pre-allocated buffers for preprocessing (avoid per-frame allocations)
         # Eye crop resized to model size (BGR for initial resize)
-        self._eye_crop_resized = np.empty((self.MODEL_HEIGHT, self.MODEL_WIDTH, 3), dtype=np.uint8)
+        self._eye_crop_resized = np.empty(
+            (self.MODEL_HEIGHT, self.MODEL_WIDTH, 3), dtype=np.uint8
+        )
         # Grayscale conversion buffer
-        self._gray_buffer = np.empty((self.MODEL_HEIGHT, self.MODEL_WIDTH), dtype=np.uint8)
+        self._gray_buffer = np.empty(
+            (self.MODEL_HEIGHT, self.MODEL_WIDTH), dtype=np.uint8
+        )
         # Gamma correction buffer
-        self._gamma_buffer = np.empty((self.MODEL_HEIGHT, self.MODEL_WIDTH), dtype=np.uint8)
+        self._gamma_buffer = np.empty(
+            (self.MODEL_HEIGHT, self.MODEL_WIDTH), dtype=np.uint8
+        )
         # CLAHE buffer (reusing _resized_buffer name for backward compat in normalize step)
-        self._resized_buffer = np.empty((self.MODEL_HEIGHT, self.MODEL_WIDTH), dtype=np.uint8)
-        self._normalized_buffer = np.empty((self.MODEL_HEIGHT, self.MODEL_WIDTH), dtype=np.float32)
-        self._input_tensor = np.empty((1, 1, self.MODEL_WIDTH, self.MODEL_HEIGHT), dtype=np.float32)
+        self._resized_buffer = np.empty(
+            (self.MODEL_HEIGHT, self.MODEL_WIDTH), dtype=np.uint8
+        )
+        self._normalized_buffer = np.empty(
+            (self.MODEL_HEIGHT, self.MODEL_WIDTH), dtype=np.float32
+        )
+        self._input_tensor = np.empty(
+            (1, 1, self.MODEL_WIDTH, self.MODEL_HEIGHT), dtype=np.float32
+        )
 
         # Pre-allocated buffer for inference output
-        self._mask_buffer = np.empty((self.MODEL_HEIGHT, self.MODEL_WIDTH), dtype=np.uint8)
+        self._mask_buffer = np.empty(
+            (self.MODEL_HEIGHT, self.MODEL_WIDTH), dtype=np.uint8
+        )
         # Pre-allocated buffer for argmax output (before transpose) - int64 for np.argmax out=
-        self._argmax_buffer = np.empty((self.MODEL_WIDTH, self.MODEL_HEIGHT), dtype=np.int64)
+        self._argmax_buffer = np.empty(
+            (self.MODEL_WIDTH, self.MODEL_HEIGHT), dtype=np.int64
+        )
         # IO binding members (set up in _init_model if CUDA available)
         self._io_binding = None
         self._output_tensor = None
 
         # Pre-allocated buffer for eye extraction (12 landmark points)
-        self._eye_points_buffer = np.empty((len(self.LEFT_EYE_INDICES), 2), dtype=np.int32)
+        self._eye_points_buffer = np.empty(
+            (len(self.LEFT_EYE_INDICES), 2), dtype=np.int32
+        )
 
         # Pre-allocated buffers for visualization (sized lazily on first frame)
         self._frame_rgb = None
@@ -104,7 +122,9 @@ class VisionAssistDemo:
         self._green_overlay_cache = None
         self._green_overlay_size = (0, 0)
         # Pre-allocated buffer for visualization mask resize (max camera resolution)
-        self._mask_viz_buffer = np.empty((self.CAMERA_HEIGHT, self.CAMERA_WIDTH), dtype=np.uint8)
+        self._mask_viz_buffer = np.empty(
+            (self.CAMERA_HEIGHT, self.CAMERA_WIDTH), dtype=np.uint8
+        )
 
     def _init_camera(self):
         """Initialize webcam capture."""
@@ -195,8 +215,7 @@ class VisionAssistDemo:
 
             # Pre-allocate output tensor (shape: 1, 2, 640, 400)
             self._output_tensor = np.empty(
-                (1, 2, self.MODEL_WIDTH, self.MODEL_HEIGHT),
-                dtype=np.float32
+                (1, 2, self.MODEL_WIDTH, self.MODEL_HEIGHT), dtype=np.float32
             )
 
             # Create IO binding
@@ -397,8 +416,12 @@ class VisionAssistDemo:
         # Step 5: Normalize (mean=0.5, std=0.5) -> range [-1, 1]
         # Use in-place operations with pre-allocated buffer
         np.multiply(self._resized_buffer, 1.0 / 255.0, out=self._normalized_buffer)
-        np.subtract(self._normalized_buffer, self.NORMALIZE_MEAN, out=self._normalized_buffer)
-        np.divide(self._normalized_buffer, self.NORMALIZE_STD, out=self._normalized_buffer)
+        np.subtract(
+            self._normalized_buffer, self.NORMALIZE_MEAN, out=self._normalized_buffer
+        )
+        np.divide(
+            self._normalized_buffer, self.NORMALIZE_STD, out=self._normalized_buffer
+        )
         if self.verbose:
             t_normalize = time.time()
             print(
@@ -490,7 +513,9 @@ class VisionAssistDemo:
 
         # Semi-transparent black background - draw directly on banner region only
         # Create a view of just the banner region for blending
-        banner_region = annotated[banner_y : banner_y + banner_height, banner_x : banner_x + banner_w]
+        banner_region = annotated[
+            banner_y : banner_y + banner_height, banner_x : banner_x + banner_w
+        ]
         # Darken the banner region in-place (multiply by 0.5)
         np.multiply(banner_region, 0.5, out=banner_region, casting="unsafe")
 
@@ -538,7 +563,12 @@ class VisionAssistDemo:
             # Blend with original eye region
             eye_region = annotated[y : y + h, x : x + w]
             cv2.addWeighted(
-                eye_region, 1 - self.OVERLAY_ALPHA, self._green_overlay_cache, self.OVERLAY_ALPHA, 0, eye_region
+                eye_region,
+                1 - self.OVERLAY_ALPHA,
+                self._green_overlay_cache,
+                self.OVERLAY_ALPHA,
+                0,
+                eye_region,
             )
 
             # Draw bounding box
@@ -569,9 +599,7 @@ class VisionAssistDemo:
             )
 
         # Draw execution provider (below inference time)
-        provider_short = (
-            "GPU" if "CUDA" in self.execution_provider else "CPU"
-        )
+        provider_short = "GPU" if "CUDA" in self.execution_provider else "CPU"
         cv2.putText(
             annotated,
             f"Device: {provider_short}",
