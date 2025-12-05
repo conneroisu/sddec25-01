@@ -145,6 +145,16 @@ Our project demonstrates technical complexity in components and requirements:
 Maintaining accuracy while implementing efficient pipelined execution
 with resource scheduling represents complexity beyond standard solutions.
 
+Through development this semester, we discovered significant constraints
+that prevented traditional physical pipelining of the solution. The DPU
+computational resource is fundamentally single-threaded and can only load
+one compiled xmodel at a time, making simultaneous parallel execution of
+multiple model segments impossible. This architectural limitation required
+us to pivot from physical pipelining to a parallelization approach,
+focusing on optimizing the sequential execution order and overlapping
+CPU pre/post-processing with DPU inference rather than true concurrent
+model execution.
+
 \section{Design Exploration}\label{sec:design-exploration}
 
 \subsection{Design Decisions}\label{subsec:design-decisions}
