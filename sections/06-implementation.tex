@@ -445,6 +445,14 @@ Training uses OpenEDS~\cite{openeds2019} with automated acquisition:
 	\item \textbf{Automated Download}: Training pipeline automatically
 	      downloads OpenEDS dataset from Kaggle using authenticated API
 	      access, eliminating manual dataset preparation
+	\item \textbf{Precomputed Dataset}: The training pipeline uses a
+	      precomputed version of OpenEDS hosted on HuggingFace Hub
+	      (\texttt{Conner/openeds-precomputed}\footnote{\url{https://huggingface.co/datasets/Conner/openeds-precomputed}})
+	      that includes preprocessed binary labels, spatial weight maps for
+	      boundary-aware loss, and distance transform maps for surface loss.
+	      These artifacts are generated via the \texttt{training/precompute.py}
+	      script, eliminating runtime preprocessing overhead and ensuring
+	      reproducible training
 	\item \textbf{Dataset Organization}: OpenEDS structured with
 	      train/validation/test splits, each containing aligned images/ and
 	      labels/ directories with per-pixel semantic annotations
