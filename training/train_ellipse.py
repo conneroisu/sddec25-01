@@ -28,8 +28,6 @@ train_image = (
         "datasets>=4.4.1",
         "huggingface_hub>=0.16.0",
         "pyarrow>=14.0.0",
-        "onnx>=1.15.0",
-        "onnxruntime>=1.17.0",
         "pyyaml>=6.0.0",
     )
 )
@@ -949,6 +947,10 @@ def train():
     if torch.cuda.is_available():
         print(f"GPU: {torch.cuda.get_device_name(0)}")
         torch.cuda.manual_seed(12)
+        # Performance optimizations
+        torch.backends.cudnn.benchmark = True
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
     else:
         _ = torch.manual_seed(12)
 
@@ -1014,10 +1016,32 @@ def train():
         model = model.to(memory_format=torch.channels_last)
         print("Model converted to channels_last memory format")
 
-    if hasattr(torch, "compile"):
-        print("Compiling model with torch.compile()...")
-        model = torch.compile(model, mode="reduce-overhead")
+    if hasattr(torch, "compile") and torch.cuda.is_available():
+        print("Compiling model with torch.compile(mode='max-autotune')...")
+        model = torch.compile(model, mode="max-autotune")
         print("Model compiled successfully")
+
+    # Mixed precision setup (before verification to avoid double-compile)
+    scaler = torch.amp.GradScaler("cuda") if torch.cuda.is_available() else None
+    use_amp = torch.cuda.is_available()
+    if use_amp:
+        print("Mixed precision training (AMP) enabled")
+
+    # Verification forward pass with actual batch size and AMP to trigger autotuning once
+    print(f"\nVerifying forward pass with batch_size={BATCH_SIZE} (AMP={use_amp})...")
+    with torch.no_grad():
+        test_input = torch.randn(BATCH_SIZE, 1, IMAGE_HEIGHT, IMAGE_WIDTH).to(device)
+        if USE_CHANNELS_LAST:
+            test_input = test_input.to(memory_format=torch.channels_last)
+        # Run with autocast to trigger float16 autotuning (matches training)
+        with torch.amp.autocast("cuda", enabled=use_amp):
+            test_output = model(test_input)
+        print(f"Input shape: {test_input.shape}")
+        print(f"Output shape: {test_output.shape}")
+        assert test_output.shape == (BATCH_SIZE, 4), (
+            f"Output shape mismatch: expected ({BATCH_SIZE}, 4), got {test_output.shape}"
+        )
+        print("Forward pass verification: PASSED")
 
     # Optimizer and scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
@@ -1031,12 +1055,6 @@ def train():
         radius_weight=1.0,
         iou_weight=0.5,
     )
-
-    # Mixed precision
-    scaler = torch.amp.GradScaler("cuda") if torch.cuda.is_available() else None
-    use_amp = torch.cuda.is_available()
-    if use_amp:
-        print("Mixed precision training (AMP) enabled")
 
     # Data transforms
     transform = transforms.Compose(
@@ -1077,9 +1095,9 @@ def train():
         batch_size=BATCH_SIZE,
         shuffle=True,
         num_workers=NUM_WORKERS,
-        pin_memory=False,
+        pin_memory=torch.cuda.is_available(),
         persistent_workers=NUM_WORKERS > 0,
-        prefetch_factor=2,
+        prefetch_factor=4,
         drop_last=True,
     )
 
@@ -1088,9 +1106,9 @@ def train():
         batch_size=BATCH_SIZE,
         shuffle=False,
         num_workers=NUM_WORKERS,
-        pin_memory=False,
+        pin_memory=torch.cuda.is_available(),
         persistent_workers=NUM_WORKERS > 0,
-        prefetch_factor=2,
+        prefetch_factor=4,
     )
 
     # System info for logging
