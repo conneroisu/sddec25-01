@@ -1122,23 +1122,25 @@ def train():
         print("Compiling model with torch.compile(mode='max-autotune')...")
         model = torch.compile(model, mode="max-autotune")
 
-    print("\nVerifying forward pass...")
-    with torch.no_grad():
-        test_input = torch.randn(1, 1, IMAGE_HEIGHT, IMAGE_WIDTH).to(
-            device, memory_format=torch.channels_last
-        )
-        test_output = model(test_input)
-        print(f"Input shape: {test_input.shape}")
-        print(f"Output shape: {test_output.shape}")
-        assert test_output.shape == (1, 2, IMAGE_HEIGHT, IMAGE_WIDTH), (
-            f"Output shape mismatch: expected (1, 2, {IMAGE_HEIGHT}, "
-            f"{IMAGE_WIDTH}), got {test_output.shape}"
-        )
-        print("Forward pass verification: PASSED")
-
     use_amp = torch.cuda.is_available()
     if use_amp:
         print("Mixed precision training (AMP) enabled")
+
+    print(f"\nVerifying forward pass with batch_size={BATCH_SIZE} (AMP={use_amp})...")
+    with torch.no_grad():
+        test_input = torch.randn(BATCH_SIZE, 1, IMAGE_HEIGHT, IMAGE_WIDTH).to(
+            device, memory_format=torch.channels_last
+        )
+        # Run with autocast to trigger float16 autotuning (matches training)
+        with torch.amp.autocast("cuda", enabled=use_amp):
+            test_output = model(test_input)
+        print(f"Input shape: {test_input.shape}")
+        print(f"Output shape: {test_output.shape}")
+        assert test_output.shape == (BATCH_SIZE, 2, IMAGE_HEIGHT, IMAGE_WIDTH), (
+            f"Output shape mismatch: expected ({BATCH_SIZE}, 2, {IMAGE_HEIGHT}, "
+            f"{IMAGE_WIDTH}), got {test_output.shape}"
+        )
+        print("Forward pass verification: PASSED")
 
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
