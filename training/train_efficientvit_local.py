@@ -4,7 +4,7 @@ Local training script for TinyEfficientViT semantic segmentation.
 
 This script provides the same functionality as train_efficientvit.py but runs
 locally without Modal cloud infrastructure. It supports:
-- Local filesystem caching (default: ~/.cache/openeds)
+- HuggingFace dataset caching (uses HF_DATASETS_CACHE env var or ~/.cache/huggingface)
 - Environment variable configuration for MLflow
 - Device detection (CUDA/MPS/CPU) with user override
 - Configurable hyperparameters via command-line arguments
@@ -20,7 +20,6 @@ import os
 import math
 import random
 import platform
-from pathlib import Path
 
 import numpy as np
 import torch
@@ -35,21 +34,17 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from datasets import load_dataset, load_from_disk
+from datasets import load_dataset
 
 # MLflow is optional - gracefully handle if not configured
 try:
     import mlflow
 
     MLFLOW_AVAILABLE = True
+    print("MLflow is available")
 except ImportError:
     MLFLOW_AVAILABLE = False
-
-
-# =========================================================================
-# TinyEfficientViT Model Components
-# =========================================================================
-
+    print("MLflow not installed, skipping experiment tracking")
 
 class TinyConvNorm(nn.Module):
     """Convolution + BatchNorm layer (parameter-efficient)."""
@@ -922,15 +917,15 @@ class Gaussian_blur(object):
 
 class Line_augment(object):
     def __call__(self, base):
-        yc, xc = (0.3 + 0.4 * np.random.rand(1)) * np.array(base.shape)
+        yc, xc = (0.3 + 0.4 * np.random.rand()) * np.array(base.shape)
         aug_base = np.copy(base)
         num_lines = np.random.randint(1, 10)
         for _ in np.arange(0, num_lines):
-            theta = np.pi * np.random.rand(1)
-            x1 = xc - 50 * np.random.rand(1) * (1 if np.random.rand(1) < 0.5 else -1)
+            theta = np.pi * np.random.rand()
+            x1 = xc - 50 * np.random.rand() * (1 if np.random.rand() < 0.5 else -1)
             y1 = (x1 - xc) * np.tan(theta) + yc
-            x2 = xc - (150 * np.random.rand(1) + 50) * (
-                1 if np.random.rand(1) < 0.5 else -1
+            x2 = xc - (150 * np.random.rand() + 50) * (
+                1 if np.random.rand() < 0.5 else -1
             )
             y2 = (x2 - xc) * np.tan(theta) + yc
             aug_base = cv2.line(
@@ -1010,11 +1005,6 @@ class IrisDataset(Dataset):
         return img, label_tensor, filename, spatial_weights, dist_map
 
 
-# =========================================================================
-# Device Detection
-# =========================================================================
-
-
 def get_device(device_override: str | None = None) -> torch.device:
     """
     Detect the best available device or use user override.
@@ -1051,47 +1041,20 @@ def get_device(device_override: str | None = None) -> torch.device:
 # =========================================================================
 
 
-def load_dataset_with_cache(cache_dir: str):
+def load_dataset_with_cache():
     """
-    Load the OpenEDS dataset with local filesystem caching.
+    Load the OpenEDS dataset using HuggingFace's built-in caching.
 
-    Args:
-        cache_dir: Directory to cache the dataset (default: ~/.cache/openeds)
+    HuggingFace caches datasets automatically at ~/.cache/huggingface/datasets/.
+    Override with the HF_DATASETS_CACHE environment variable if needed.
 
     Returns:
         HuggingFace DatasetDict with train and validation splits
     """
-    cache_path = Path(cache_dir)
-    dataset_cache_path = cache_path / "dataset"
-    cache_marker_file = cache_path / ".cache_complete"
+    print(f"Loading dataset from HuggingFace: {HF_DATASET_REPO}")
+    print("(First run downloads data; subsequent runs use cache)")
 
-    cache_exists = cache_marker_file.exists()
-
-    if cache_exists:
-        print(f"Found cached dataset at: {dataset_cache_path}")
-        print("Loading from local cache (fast)...")
-        try:
-            hf_dataset = load_from_disk(str(dataset_cache_path))
-            print("Loaded from cache!")
-            return hf_dataset
-        except Exception as e:
-            print(f"Cache corrupted, re-downloading: {e}")
-            import shutil
-
-            shutil.rmtree(str(dataset_cache_path), ignore_errors=True)
-            if cache_marker_file.exists():
-                cache_marker_file.unlink()
-            cache_exists = False
-
-    if not cache_exists:
-        print(f"Downloading from HuggingFace: {HF_DATASET_REPO}")
-        print("First run takes ~20 min, subsequent runs will be fast.")
-        hf_dataset = load_dataset(HF_DATASET_REPO)
-        cache_path.mkdir(parents=True, exist_ok=True)
-        hf_dataset.save_to_disk(str(dataset_cache_path))
-        with open(cache_marker_file, "w") as f:
-            f.write(f"Cached from {HF_DATASET_REPO}\n")
-        print("Dataset cached to local filesystem!")
+    hf_dataset = load_dataset(HF_DATASET_REPO)
 
     return hf_dataset
 
@@ -1146,13 +1109,13 @@ def parse_args():
     parser.add_argument(
         "--epochs",
         type=int,
-        default=1,
+        default=25,
         help="Number of training epochs",
     )
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=128,
+        default=32,
         help="Batch size for training and validation",
     )
     parser.add_argument(
@@ -1166,17 +1129,11 @@ def parse_args():
     parser.add_argument(
         "--num-workers",
         type=int,
-        default=8,
+        default=4,
         help="Number of data loading workers",
     )
 
     # Paths
-    parser.add_argument(
-        "--data-dir",
-        type=str,
-        default=os.path.expanduser("~/.cache/openeds"),
-        help="Directory for dataset cache",
-    )
     parser.add_argument(
         "--output-dir",
         type=str,
@@ -1237,7 +1194,7 @@ def train(args):
         _ = torch.manual_seed(42)
 
     # Load dataset
-    hf_dataset = load_dataset_with_cache(args.data_dir)
+    hf_dataset = load_dataset_with_cache()
     print(f"Train samples: {len(hf_dataset['train'])}")
     print(f"Validation samples: {len(hf_dataset['validation'])}")
 
@@ -1279,7 +1236,12 @@ def train(args):
         print("Converting model to channels_last memory format...")
         model = model.to(memory_format=torch.channels_last)
         print("Compiling model with torch.compile(mode='max-autotune')...")
-        model = torch.compile(model, mode="max-autotune")
+        try:
+            model = torch.compile(model, mode="max-autotune")
+        except Exception as e:
+            print(f"WARNING: torch.compile() failed: {e}")
+            print("Falling back to eager mode (no compilation)")
+            use_compile = False
 
     use_amp = device.type == "cuda" and not args.no_amp
     if use_amp:
@@ -1294,8 +1256,31 @@ def train(args):
             device, memory_format=memory_format
         )
         # Run with autocast to trigger float16 autotuning (matches training)
-        with torch.amp.autocast(device.type, enabled=use_amp):
-            test_output = model(test_input)
+        try:
+            with torch.amp.autocast(device.type, enabled=use_amp):
+                test_output = model(test_input)
+        except Exception as e:
+            if use_compile:
+                print(f"WARNING: Compiled model forward pass failed: {e}")
+                print("Falling back to eager mode (no compilation)")
+                # Reset model without compilation
+                model = TinyEfficientViTSeg(
+                    in_channels=1,
+                    num_classes=2,
+                    embed_dims=(16, 32, 64),
+                    depths=(1, 1, 1),
+                    num_heads=(1, 1, 2),
+                    key_dims=(4, 4, 4),
+                    attn_ratios=(2, 2, 2),
+                    window_sizes=(7, 7, 7),
+                    mlp_ratios=(2, 2, 2),
+                    decoder_dim=32,
+                ).to(device)
+                use_compile = False
+                with torch.amp.autocast(device.type, enabled=use_amp):
+                    test_output = model(test_input)
+            else:
+                raise
         print(f"Input shape: {test_input.shape}")
         print(f"Output shape: {test_output.shape}")
         assert test_output.shape == (BATCH_SIZE, 2, IMAGE_HEIGHT, IMAGE_WIDTH), (
@@ -1523,25 +1508,7 @@ def train(args):
                 dist_map_gpu = maxDist.to(device, non_blocking=True)
 
                 optimizer.zero_grad(set_to_none=True)
-                if use_amp:
-                    with torch.amp.autocast(device.type):
-                        output = model(data)
-                        (
-                            total_loss,
-                            ce_loss,
-                            dice_loss,
-                            surface_loss,
-                        ) = criterion(
-                            output,
-                            target,
-                            spatial_weights_gpu,
-                            dist_map_gpu,
-                            alpha[epoch],
-                        )
-                    scaler.scale(total_loss).backward()
-                    scaler.step(optimizer)
-                    scaler.update()
-                else:
+                with torch.amp.autocast(device.type):
                     output = model(data)
                     (
                         total_loss,
@@ -1555,8 +1522,9 @@ def train(args):
                         dist_map_gpu,
                         alpha[epoch],
                     )
-                    total_loss.backward()
-                    optimizer.step()
+                scaler.scale(total_loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
 
                 train_loss_sum += total_loss.detach()
                 train_ce_sum += ce_loss.detach()
@@ -1609,7 +1577,9 @@ def train(args):
                         else torch.contiguous_format
                     )
                     data = img.to(
-                        device, non_blocking=True, memory_format=memory_format
+                        device,
+                        non_blocking=True,
+                        memory_format=memory_format,
                     )
                     target = labels.to(device, non_blocking=True).long()
                     spatial_weights_gpu = spatialWeights.to(
@@ -1617,22 +1587,7 @@ def train(args):
                     ).float()
                     dist_map_gpu = maxDist.to(device, non_blocking=True)
 
-                    if use_amp:
-                        with torch.amp.autocast(device.type):
-                            output = model(data)
-                            (
-                                total_loss,
-                                ce_loss,
-                                dice_loss,
-                                surface_loss,
-                            ) = criterion(
-                                output,
-                                target,
-                                spatial_weights_gpu,
-                                dist_map_gpu,
-                                alpha[epoch],
-                            )
-                    else:
+                    with torch.amp.autocast(device.type):
                         output = model(data)
                         (
                             total_loss,
@@ -1791,10 +1746,6 @@ def train(args):
         print(f"Plots saved to: {args.plots_dir}")
         print("=" * 80)
 
-
-# =========================================================================
-# Entry Point
-# =========================================================================
 
 if __name__ == "__main__":
     args = parse_args()
