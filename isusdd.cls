@@ -123,6 +123,18 @@
 \let\@version\@empty
 \newcommand{\version}[1]{\def\@version{#1}}
 
+\newcommand{\@client}{}
+\newcommand{\client}[1]{\renewcommand{\@client}{#1}}
+
+\newcommand{\@advisor}{}
+\newcommand{\advisor}[1]{\renewcommand{\@advisor}{#1}}
+
+\newcommand{\@teamemail}{}
+\newcommand{\teamemail}[1]{\renewcommand{\@teamemail}{#1}}
+
+\newcommand{\@teamwebsite}{}
+\newcommand{\teamwebsite}[1]{\renewcommand{\@teamwebsite}{#1}}
+
 % Custom title page
 \renewcommand{\maketitle}{
   \begin{titlepage}
@@ -144,7 +156,40 @@
     {\Large\@teamname\\}
     \vspace{0.5cm}
     {\large\@teammembers\\}
-    \vspace{2cm}
+
+    \ifx\@client\@empty
+      \ifx\@advisor\@empty
+        \vspace{2cm}
+      \else
+        \vspace{1cm}
+      \fi
+    \else
+      \vspace{1cm}
+      {\large\textbf{Client:} \@client\\}
+      \ifx\@advisor\@empty\else
+        \vspace{0.3cm}
+      \fi
+    \fi
+    \ifx\@advisor\@empty\else
+      {\large\textbf{Faculty Advisor:} \@advisor\\}
+    \fi
+    \ifx\@teamemail\@empty
+      \ifx\@teamwebsite\@empty
+        \vspace{1cm}
+      \else
+        \vspace{0.5cm}
+      \fi
+    \else
+      \vspace{0.5cm}
+      {\large\textbf{Team Email:} \@teamemail\\}
+      \ifx\@teamwebsite\@empty\else
+        \vspace{0.3cm}
+      \fi
+    \fi
+    \ifx\@teamwebsite\@empty\else
+      {\large\textbf{Team Website:} \@teamwebsite\\}
+      \vspace{0.5cm}
+    \fi
 
     \vfill
 
