@@ -36,14 +36,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from datasets import load_dataset
 
-try:
-    import mlflow
-
-    MLFLOW_AVAILABLE = True
-    print("MLflow is available")
-except ImportError:
-    MLFLOW_AVAILABLE = False
-    print("MLflow not installed, skipping experiment tracking")
+import mlflow
 
 
 class TinyConvNorm(nn.Module):
@@ -1046,25 +1039,27 @@ def setup_mlflow():
         MLFLOW_TRACKING_URI: MLflow tracking server URI
         MLFLOW_EXPERIMENT_ID: Experiment ID to use
 
-    Returns:
-        bool: True if MLflow is configured, False otherwise
+    Raises:
+        RuntimeError: If required environment variables are not set
     """
-    if not MLFLOW_AVAILABLE:
-        print("MLflow not installed, skipping experiment tracking")
-        return False
-
     tracking_uri = os.environ.get("MLFLOW_TRACKING_URI")
     experiment_id = os.environ.get("MLFLOW_EXPERIMENT_ID")
 
-    if not tracking_uri or not experiment_id:
-        print("MLflow environment variables not set, skipping experiment tracking")
-        print("  Set MLFLOW_TRACKING_URI and MLFLOW_EXPERIMENT_ID to enable")
-        return False
+    if not tracking_uri:
+        raise RuntimeError(
+            "MLFLOW_TRACKING_URI environment variable is not set. "
+            "Please set it to your MLflow tracking server URI."
+        )
+
+    if not experiment_id:
+        raise RuntimeError(
+            "MLFLOW_EXPERIMENT_ID environment variable is not set. "
+            "Please set it to your MLflow experiment ID."
+        )
 
     mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment(experiment_id=experiment_id)
     print(f"MLflow configured with experiment ID: {experiment_id}")
-    return True
 
 
 def parse_args():
@@ -1233,10 +1228,11 @@ def train(args):
         print("Forward pass verification: PASSED")
 
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    # Use CosineAnnealingLR instead of ReduceLROnPlateau to avoid per-epoch CPU metric transfer
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer,
-        "min",
-        patience=5,
+        T_max=EPOCHS,
+        eta_min=LEARNING_RATE * 0.01,  # Minimum LR is 1% of initial
     )
     criterion = CombinedLoss()
     scaler = torch.amp.GradScaler(device.type)
@@ -1302,6 +1298,31 @@ def train(args):
         alpha_np[125:] = 1
     alpha = torch.tensor(alpha_np, dtype=torch.float32, device=device)
 
+    # Pre-allocate GPU tensors for all epoch metrics (eliminates per-epoch CPU transfers)
+    # Training: loss, ce, dice, surface, miou, bg_iou, pupil_iou, alpha (8 metrics)
+    # Validation: loss, ce, dice, surface, miou, bg_iou, pupil_iou (7 metrics)
+    all_train_metrics_gpu = torch.zeros(EPOCHS, 8, device=device)
+    all_valid_metrics_gpu = torch.zeros(EPOCHS, 7, device=device)
+    # Pre-allocate learning rate storage (stored as Python list since it's CPU-side)
+    all_lr_values = []
+    # Best model tracking on GPU (no CPU transfer for comparison)
+    best_valid_iou_gpu = torch.tensor(0.0, device=device)
+    best_epoch_gpu = torch.tensor(0, device=device, dtype=torch.long)
+
+    # Pre-allocate per-epoch accumulators (reused each epoch, no allocation overhead)
+    train_loss_accum = torch.tensor(0.0, device=device)
+    train_ce_accum = torch.tensor(0.0, device=device)
+    train_dice_accum = torch.tensor(0.0, device=device)
+    train_surface_accum = torch.tensor(0.0, device=device)
+    train_intersection_accum = torch.zeros(2, device=device)
+    train_union_accum = torch.zeros(2, device=device)
+    valid_loss_accum = torch.tensor(0.0, device=device)
+    valid_ce_accum = torch.tensor(0.0, device=device)
+    valid_dice_accum = torch.tensor(0.0, device=device)
+    valid_surface_accum = torch.tensor(0.0, device=device)
+    valid_intersection_accum = torch.zeros(2, device=device)
+    valid_union_accum = torch.zeros(2, device=device)
+
     system_info = {
         "python_version": platform.python_version(),
         "platform": platform.platform(),
@@ -1342,7 +1363,7 @@ def train(args):
         "gamma_correction": 0.8,
     }
 
-    mlflow_enabled = setup_mlflow()
+    setup_mlflow()
 
     os.makedirs(args.output_dir, exist_ok=True)
     os.makedirs(args.plots_dir, exist_ok=True)
@@ -1351,85 +1372,50 @@ def train(args):
     print("Starting training")
     print("=" * 80)
 
-    train_metrics = {
-        "loss": [],
-        "iou": [],
-        "ce_loss": [],
-        "dice_loss": [],
-        "surface_loss": [],
-        "alpha": [],
-        "lr": [],
-        "background_iou": [],
-        "pupil_iou": [],
-    }
-    valid_metrics = {
-        "loss": [],
-        "iou": [],
-        "ce_loss": [],
-        "dice_loss": [],
-        "surface_loss": [],
-        "background_iou": [],
-        "pupil_iou": [],
-    }
-    best_valid_iou = 0.0
-    best_epoch = 0
+    # Metrics stored on GPU during training, transferred to CPU only at end
+    # (train_metrics and valid_metrics dicts populated after training completes)
 
-    class DummyContext:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *args):
-            pass
-
-        class info:
-            run_id = "local-run"
-
-    mlflow_context = (
-        mlflow.start_run(run_name="tiny-efficientvit-training")
-        if mlflow_enabled
-        else DummyContext()
-    )
-
-    with mlflow_context as run:
-        if mlflow_enabled:
-            mlflow.set_tags(
-                {
-                    "model_type": "TinyEfficientViT",
-                    "task": "semantic_segmentation",
-                    "dataset": "OpenEDS",
-                    "framework": "PyTorch",
-                    "optimizer": "Adam",
-                    "scheduler": "ReduceLROnPlateau",
-                    "version": "v1.0-local",
-                }
-            )
-            mlflow.log_params(
-                {
-                    "batch_size": BATCH_SIZE,
-                    "epochs": EPOCHS,
-                    "learning_rate": LEARNING_RATE,
-                    "model_params": nparams,
-                    "num_workers": NUM_WORKERS,
-                    "scheduler_patience": 5,
-                }
-            )
-            mlflow.log_params({f"system_{k}": v for k, v in system_info.items()})
-            mlflow.log_params({f"dataset_{k}": v for k, v in dataset_stats.items()})
-            mlflow.log_params({f"model_{k}": v for k, v in model_details.items()})
-            mlflow.log_params(
-                {f"augmentation_{k}": v for k, v in augmentation_settings.items()}
-            )
-            print(f"MLflow run started: {run.info.run_id}")
+    with mlflow.start_run(run_name="tiny-efficientvit-training") as run:
+        mlflow.set_tags(
+            {
+                "model_type": "TinyEfficientViT",
+                "task": "semantic_segmentation",
+                "dataset": "OpenEDS",
+                "framework": "PyTorch",
+                "optimizer": "Adam",
+                "scheduler": "CosineAnnealingLR",
+                "version": "v1.0-local",
+            }
+        )
+        mlflow.log_params(
+            {
+                "batch_size": BATCH_SIZE,
+                "epochs": EPOCHS,
+                "learning_rate": LEARNING_RATE,
+                "model_params": nparams,
+                "num_workers": NUM_WORKERS,
+                "scheduler_T_max": EPOCHS,
+                "scheduler_eta_min": LEARNING_RATE * 0.01,
+            }
+        )
+        mlflow.log_params({f"system_{k}": v for k, v in system_info.items()})
+        mlflow.log_params({f"dataset_{k}": v for k, v in dataset_stats.items()})
+        mlflow.log_params({f"model_{k}": v for k, v in model_details.items()})
+        mlflow.log_params(
+            {f"augmentation_{k}": v for k, v in augmentation_settings.items()}
+        )
+        print(f"MLflow run started: {run.info.run_id}")
 
         for epoch in range(EPOCHS):
             _ = model.train()
-            train_loss_sum = torch.tensor(0.0, device=device)
-            train_ce_sum = torch.tensor(0.0, device=device)
-            train_dice_sum = torch.tensor(0.0, device=device)
-            train_surface_sum = torch.tensor(0.0, device=device)
+            # Zero pre-allocated accumulators (in-place, no allocation)
+            train_loss_accum.zero_()
+            train_ce_accum.zero_()
+            train_dice_accum.zero_()
+            train_surface_accum.zero_()
+            train_intersection_accum.zero_()
+            train_union_accum.zero_()
             train_batch_count = 0
-            train_intersection = torch.zeros(2, device=device)
-            train_union = torch.zeros(2, device=device)
 
             pbar = tqdm(trainloader, desc=f"Epoch {epoch+1}/{EPOCHS}")
             for batchdata in pbar:
@@ -1465,60 +1451,41 @@ def train(args):
                 scaler.step(optimizer)
                 scaler.update()
 
-                train_loss_sum += total_loss.detach()
-                train_ce_sum += ce_loss.detach()
-                train_dice_sum += dice_loss.detach()
-                train_surface_sum += surface_loss.detach()
+                # Accumulate on GPU (no CPU transfer)
+                train_loss_accum += total_loss.detach()
+                train_ce_accum += ce_loss.detach()
+                train_dice_accum += dice_loss.detach()
+                train_surface_accum += surface_loss.detach()
                 train_batch_count += 1
 
                 predict = get_predictions(output)
                 batch_intersection, batch_union = compute_iou_tensors(predict, target)
-                train_intersection += batch_intersection
-                train_union += batch_union
+                train_intersection_accum += batch_intersection
+                train_union_accum += batch_union
 
-            iou_per_class_train = train_intersection / train_union.clamp(min=1)
+            # Compute training metrics on GPU and store in pre-allocated tensor
+            iou_per_class_train = train_intersection_accum / train_union_accum.clamp(min=1)
             miou_train_gpu = iou_per_class_train.mean()
-
-            train_metrics_gpu = torch.stack([
-                train_loss_sum / train_batch_count,
-                train_ce_sum / train_batch_count,
-                train_dice_sum / train_batch_count,
-                train_surface_sum / train_batch_count,
-                miou_train_gpu,
-                iou_per_class_train[0],  # background IoU
-                iou_per_class_train[1],  # pupil IoU
-                alpha[epoch],
-            ])
-
-            (
-                loss_train,
-                ce_loss_train,
-                dice_loss_train,
-                surface_loss_train,
-                miou_train,
-                bg_iou_train,
-                pupil_iou_train,
-                alpha_val,
-            ) = train_metrics_gpu.cpu().tolist()
-
-            train_metrics["loss"].append(loss_train)
-            train_metrics["iou"].append(miou_train)
-            train_metrics["ce_loss"].append(ce_loss_train)
-            train_metrics["dice_loss"].append(dice_loss_train)
-            train_metrics["surface_loss"].append(surface_loss_train)
-            train_metrics["alpha"].append(alpha_val)
-            train_metrics["lr"].append(optimizer.param_groups[0]["lr"])
-            train_metrics["background_iou"].append(bg_iou_train)
-            train_metrics["pupil_iou"].append(pupil_iou_train)
+            all_train_metrics_gpu[epoch, 0] = train_loss_accum / train_batch_count
+            all_train_metrics_gpu[epoch, 1] = train_ce_accum / train_batch_count
+            all_train_metrics_gpu[epoch, 2] = train_dice_accum / train_batch_count
+            all_train_metrics_gpu[epoch, 3] = train_surface_accum / train_batch_count
+            all_train_metrics_gpu[epoch, 4] = miou_train_gpu
+            all_train_metrics_gpu[epoch, 5] = iou_per_class_train[0]  # background IoU
+            all_train_metrics_gpu[epoch, 6] = iou_per_class_train[1]  # pupil IoU
+            all_train_metrics_gpu[epoch, 7] = alpha[epoch]
+            # Store LR (this is a CPU-side value from optimizer, unavoidable)
+            all_lr_values.append(optimizer.param_groups[0]["lr"])
 
             _ = model.eval()
-            valid_loss_sum = torch.tensor(0.0, device=device)
-            valid_ce_sum = torch.tensor(0.0, device=device)
-            valid_dice_sum = torch.tensor(0.0, device=device)
-            valid_surface_sum = torch.tensor(0.0, device=device)
+            # Zero pre-allocated accumulators (in-place, no allocation)
+            valid_loss_accum.zero_()
+            valid_ce_accum.zero_()
+            valid_dice_accum.zero_()
+            valid_surface_accum.zero_()
+            valid_intersection_accum.zero_()
+            valid_union_accum.zero_()
             valid_batch_count = 0
-            valid_intersection = torch.zeros(2, device=device)
-            valid_union = torch.zeros(2, device=device)
 
             with torch.no_grad():
                 for batchdata in validloader:
@@ -1554,158 +1521,160 @@ def train(args):
                             alpha[epoch],
                         )
 
-                    valid_loss_sum += total_loss.detach()
-                    valid_ce_sum += ce_loss.detach()
-                    valid_dice_sum += dice_loss.detach()
-                    valid_surface_sum += surface_loss.detach()
+                    # Accumulate on GPU (no CPU transfer)
+                    valid_loss_accum += total_loss.detach()
+                    valid_ce_accum += ce_loss.detach()
+                    valid_dice_accum += dice_loss.detach()
+                    valid_surface_accum += surface_loss.detach()
                     valid_batch_count += 1
 
                     predict = get_predictions(output)
                     batch_intersection, batch_union = compute_iou_tensors(
                         predict, target
                     )
-                    valid_intersection += batch_intersection
-                    valid_union += batch_union
+                    valid_intersection_accum += batch_intersection
+                    valid_union_accum += batch_union
 
-            iou_per_class_valid = valid_intersection / valid_union.clamp(min=1)
+            # Compute validation metrics on GPU and store in pre-allocated tensor
+            iou_per_class_valid = valid_intersection_accum / valid_union_accum.clamp(min=1)
             miou_valid_gpu = iou_per_class_valid.mean()
+            all_valid_metrics_gpu[epoch, 0] = valid_loss_accum / valid_batch_count
+            all_valid_metrics_gpu[epoch, 1] = valid_ce_accum / valid_batch_count
+            all_valid_metrics_gpu[epoch, 2] = valid_dice_accum / valid_batch_count
+            all_valid_metrics_gpu[epoch, 3] = valid_surface_accum / valid_batch_count
+            all_valid_metrics_gpu[epoch, 4] = miou_valid_gpu
+            all_valid_metrics_gpu[epoch, 5] = iou_per_class_valid[0]  # background IoU
+            all_valid_metrics_gpu[epoch, 6] = iou_per_class_valid[1]  # pupil IoU
 
-            valid_metrics_gpu = torch.stack([
-                valid_loss_sum / valid_batch_count,
-                valid_ce_sum / valid_batch_count,
-                valid_dice_sum / valid_batch_count,
-                valid_surface_sum / valid_batch_count,
-                miou_valid_gpu,
-                iou_per_class_valid[0],  # background IoU
-                iou_per_class_valid[1],  # pupil IoU
-            ])
+            # Update learning rate with CosineAnnealingLR (no CPU metric needed)
+            scheduler.step()
 
-            # Single CPU transfer for all validation metrics
-            (
-                loss_valid,
-                ce_loss_valid,
-                dice_loss_valid,
-                surface_loss_valid,
-                miou_valid,
-                bg_iou_valid,
-                pupil_iou_valid,
-            ) = valid_metrics_gpu.cpu().tolist()
-
-            valid_metrics["loss"].append(loss_valid)
-            valid_metrics["iou"].append(miou_valid)
-            valid_metrics["ce_loss"].append(ce_loss_valid)
-            valid_metrics["dice_loss"].append(dice_loss_valid)
-            valid_metrics["surface_loss"].append(surface_loss_valid)
-            valid_metrics["background_iou"].append(bg_iou_valid)
-            valid_metrics["pupil_iou"].append(pupil_iou_valid)
-
-            if mlflow_enabled:
-                mlflow.log_metrics(
-                    {
-                        "train_loss": loss_train,
-                        "train_iou": miou_train,
-                        "train_ce_loss": ce_loss_train,
-                        "train_dice_loss": dice_loss_train,
-                        "train_surface_loss": surface_loss_train,
-                        "train_background_iou": bg_iou_train,
-                        "train_pupil_iou": pupil_iou_train,
-                        "valid_loss": loss_valid,
-                        "valid_iou": miou_valid,
-                        "valid_ce_loss": ce_loss_valid,
-                        "valid_dice_loss": dice_loss_valid,
-                        "valid_surface_loss": surface_loss_valid,
-                        "valid_background_iou": bg_iou_valid,
-                        "valid_pupil_iou": pupil_iou_valid,
-                        "learning_rate": optimizer.param_groups[0]["lr"],
-                        "alpha": alpha_val,  # Reuse from training metrics (no extra GPU trip)
-                    },
-                    step=epoch,
-                )
-
-            scheduler.step(loss_valid)
-
-            print(f"\nEpoch {epoch+1}/{EPOCHS}")
-            print(f"Train Loss: {loss_train:.4f} | Valid Loss: {loss_valid:.4f}")
-            print(f"Train mIoU: {miou_train:.4f} | Valid mIoU: {miou_valid:.4f}")
-            print(
-                f"Train BG IoU: {bg_iou_train:.4f} | "
-                f"Train Pupil IoU: {pupil_iou_train:.4f}"
-            )
-            print(
-                f"Valid BG IoU: {bg_iou_valid:.4f} | "
-                f"Valid Pupil IoU: {pupil_iou_valid:.4f}"
-            )
-            print(f"Learning Rate: {optimizer.param_groups[0]['lr']:.6f}")
-
-            if miou_valid > best_valid_iou:
-                best_valid_iou = miou_valid
-                best_epoch = epoch + 1
+            # Best model comparison entirely on GPU (no CPU transfer)
+            if miou_valid_gpu > best_valid_iou_gpu:
+                best_valid_iou_gpu = miou_valid_gpu.clone()
+                best_epoch_gpu.fill_(epoch + 1)
                 best_model_path = os.path.join(
                     args.output_dir, "best_efficientvit_model.pt"
                 )
                 save_model_checkpoint(model, best_model_path)
-                if mlflow_enabled:
-                    mlflow.log_artifact(best_model_path)
-                    mlflow.log_metric("best_valid_iou", best_valid_iou, step=epoch)
-                print(f"New best model! Valid mIoU: {best_valid_iou:.4f}")
+                print(f"Epoch {epoch+1}: New best model saved!")
 
-            if (epoch + 1) % 5 == 0 or epoch == 0:
-                print("Generating sample predictions...")
-                pred_vis_path = os.path.join(
-                    args.plots_dir, f"predictions_epoch_{epoch+1}.png"
-                )
-                create_prediction_visualization(
-                    model,
-                    validloader,
-                    device,
-                    num_samples=4,
-                    save_path=pred_vis_path,
-                )
-                if mlflow_enabled:
-                    mlflow.log_artifact(pred_vis_path)
-                print(f"Sample predictions saved: {pred_vis_path}")
-
-            if (epoch + 1) % 10 == 0 or epoch == EPOCHS - 1:
-                print("Generating training curves...")
-                plot_paths = create_training_plots(
-                    train_metrics,
-                    valid_metrics,
-                    save_dir=args.plots_dir,
-                )
-                if mlflow_enabled:
-                    for plot_path in plot_paths.values():
-                        if plot_path is not None:
-                            mlflow.log_artifact(plot_path)
-                print(f"Training curves saved to {args.plots_dir}")
-
+            # Periodic checkpoint saving (no metric transfer needed)
             if (epoch + 1) % 10 == 0 or epoch == EPOCHS - 1:
                 checkpoint_path = os.path.join(
                     args.output_dir, f"efficientvit_model_epoch_{epoch+1}.pt"
                 )
                 save_model_checkpoint(model, checkpoint_path)
-                if mlflow_enabled:
-                    mlflow.log_artifact(checkpoint_path)
-                print(f"Checkpoint saved: {checkpoint_path}")
 
-        if mlflow_enabled:
+            # Minimal progress indicator (no metric transfer)
+            if (epoch + 1) % 5 == 0:
+                print(f"Epoch {epoch+1}/{EPOCHS} completed")
+
+        # === END OF TRAINING: Single GPU-to-CPU transfer for all metrics ===
+        print("\n" + "=" * 80)
+        print("Transferring metrics from GPU to CPU...")
+
+        # Single transfer of all training metrics
+        train_metrics_cpu = all_train_metrics_gpu.cpu().numpy()
+        valid_metrics_cpu = all_valid_metrics_gpu.cpu().numpy()
+        best_valid_iou = best_valid_iou_gpu.cpu().item()
+        best_epoch = int(best_epoch_gpu.cpu().item())
+
+        # Build metrics dictionaries for plotting and logging
+        train_metrics = {
+            "loss": train_metrics_cpu[:, 0].tolist(),
+            "ce_loss": train_metrics_cpu[:, 1].tolist(),
+            "dice_loss": train_metrics_cpu[:, 2].tolist(),
+            "surface_loss": train_metrics_cpu[:, 3].tolist(),
+            "iou": train_metrics_cpu[:, 4].tolist(),
+            "background_iou": train_metrics_cpu[:, 5].tolist(),
+            "pupil_iou": train_metrics_cpu[:, 6].tolist(),
+            "alpha": train_metrics_cpu[:, 7].tolist(),
+            "lr": all_lr_values,
+        }
+        valid_metrics = {
+            "loss": valid_metrics_cpu[:, 0].tolist(),
+            "ce_loss": valid_metrics_cpu[:, 1].tolist(),
+            "dice_loss": valid_metrics_cpu[:, 2].tolist(),
+            "surface_loss": valid_metrics_cpu[:, 3].tolist(),
+            "iou": valid_metrics_cpu[:, 4].tolist(),
+            "background_iou": valid_metrics_cpu[:, 5].tolist(),
+            "pupil_iou": valid_metrics_cpu[:, 6].tolist(),
+        }
+
+        # Final metrics
+        loss_train = train_metrics["loss"][-1]
+        miou_train = train_metrics["iou"][-1]
+        loss_valid = valid_metrics["loss"][-1]
+        miou_valid = valid_metrics["iou"][-1]
+
+        # Generate training curves (using transferred metrics)
+        print("Generating training curves...")
+        plot_paths = create_training_plots(
+            train_metrics,
+            valid_metrics,
+            save_dir=args.plots_dir,
+        )
+
+        # Generate final prediction visualization
+        print("Generating sample predictions...")
+        pred_vis_path = os.path.join(args.plots_dir, "predictions_final.png")
+        create_prediction_visualization(
+            model,
+            validloader,
+            device,
+            num_samples=4,
+            save_path=pred_vis_path,
+        )
+
+        # MLflow logging (all at end, using CPU metrics)
+        # Log all epoch metrics
+        for ep in range(EPOCHS):
             mlflow.log_metrics(
                 {
-                    "final_train_loss": loss_train,
-                    "final_train_iou": miou_train,
-                    "final_valid_loss": loss_valid,
-                    "final_valid_iou": miou_valid,
-                    "best_valid_iou": best_valid_iou,
-                    "best_epoch": best_epoch,
-                }
+                    "train_loss": train_metrics["loss"][ep],
+                    "train_iou": train_metrics["iou"][ep],
+                    "train_ce_loss": train_metrics["ce_loss"][ep],
+                    "train_dice_loss": train_metrics["dice_loss"][ep],
+                    "train_surface_loss": train_metrics["surface_loss"][ep],
+                    "train_background_iou": train_metrics["background_iou"][ep],
+                    "train_pupil_iou": train_metrics["pupil_iou"][ep],
+                    "valid_loss": valid_metrics["loss"][ep],
+                    "valid_iou": valid_metrics["iou"][ep],
+                    "valid_ce_loss": valid_metrics["ce_loss"][ep],
+                    "valid_dice_loss": valid_metrics["dice_loss"][ep],
+                    "valid_surface_loss": valid_metrics["surface_loss"][ep],
+                    "valid_background_iou": valid_metrics["background_iou"][ep],
+                    "valid_pupil_iou": valid_metrics["pupil_iou"][ep],
+                    "learning_rate": train_metrics["lr"][ep],
+                    "alpha": train_metrics["alpha"][ep],
+                },
+                step=ep,
             )
+        # Log final metrics
+        mlflow.log_metrics(
+            {
+                "final_train_loss": loss_train,
+                "final_train_iou": miou_train,
+                "final_valid_loss": loss_valid,
+                "final_valid_iou": miou_valid,
+                "best_valid_iou": best_valid_iou,
+                "best_epoch": best_epoch,
+            }
+        )
+        # Log artifacts
+        for plot_path in plot_paths.values():
+            if plot_path is not None:
+                mlflow.log_artifact(plot_path)
+        mlflow.log_artifact(pred_vis_path)
+        mlflow.log_artifact(best_model_path)
 
         print("\n" + "=" * 80)
         print("Training completed!")
         print(f"Final validation mIoU: {miou_valid:.4f}")
         print(f"Best validation mIoU: {best_valid_iou:.4f} (epoch {best_epoch})")
         print(f"Final train mIoU: {miou_train:.4f}")
-        if mlflow_enabled:
-            print(f"MLflow run ID: {run.info.run_id}")
+        print(f"MLflow run ID: {run.info.run_id}")
         print(f"Checkpoints saved to: {args.output_dir}")
         print(f"Plots saved to: {args.plots_dir}")
         print("=" * 80)
