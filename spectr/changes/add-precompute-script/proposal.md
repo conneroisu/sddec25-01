@@ -2,27 +2,29 @@
 
 ## Why
 
-Training runs are slowed by CPU-bound preprocessing performed per-sample during data loading. The current `IrisDataset.__getitem__` performs gamma correction (LUT), CLAHE, line augmentation, and Gaussian blur on every sample access. Moving static preprocessing (gamma + CLAHE) to a one-time precompute step will:
+Training runs are slowed by CPU-bound preprocessing performed per-sample during data loading. The current `IrisDataset.__getitem__` performs gamma correction (LUT), CLAHE, and ellipse parameter extraction on every sample access. Moving ALL deterministic preprocessing to a one-time precompute step will:
 
-1. **Eliminate redundant computation**: CLAHE and gamma are applied identically every epoch
+1. **Eliminate redundant computation**: Gamma, CLAHE, and ellipse fitting are applied identically every epoch
 2. **Speed up training iteration**: Remove CPU bottleneck from dataloader
 3. **Simplify training code**: Dataset class only needs to load precomputed tensors
 4. **Enable GPU-native augmentation**: Keep only stochastic augmentations (flip, line, blur) in training loop
 
-Currently the `Conner/openeds-precomputed` HuggingFace dataset contains raw images with precomputed `spatial_weights` and `dist_map`. This change adds a script to also precompute the deterministic image preprocessing.
+This change adds a script that downloads the raw OpenEDS dataset from Kaggle (`soumicksarker/openeds-dataset`), applies all deterministic preprocessing, and uploads to HuggingFace repository `Conner/sddec25-01`.
 
 ## What Changes
 
-- **ADDED** `training/precompute.py` - Downloads raw OpenEDS from Kaggle, combines train/validation splits, applies gamma correction and CLAHE, computes spatial weights and distance maps, and pushes to HuggingFace
-- **MODIFIED** Training scripts - Update `IrisDataset` to skip gamma/CLAHE when loading from precomputed dataset
-- **MODIFIED** HuggingFace dataset - New version with preprocessed images
+- **ADDED** `training/precompute.py` - Downloads raw OpenEDS from Kaggle, applies gamma correction and CLAHE (CPU/OpenCV), computes ellipse parameters, spatial weights, distance maps, and pushes to HuggingFace
+- **MODIFIED** Training scripts - Update `IrisDataset` to detect `preprocessed` flag and skip runtime gamma/CLAHE/ellipse extraction
+- **ADDED** HuggingFace dataset `Conner/sddec25-01` - New preprocessed dataset matching OpenEDS structure
 
 ## Impact
 
 - Affected specs: `training`
 - Affected code:
   - `training/precompute.py` (new)
+  - `training/train_efficientvit.py`
   - `training/train_efficientvit_local.py`
   - `training/train_efficientvit_tiny_local.py`
+  - `training/train_ellipse.py`
   - `training/train_ellipse_local.py`
-- External: HuggingFace dataset `Conner/openeds-precomputed` will be updated with v2
+- External: New HuggingFace dataset `Conner/sddec25-01` with fully preprocessed images and ellipse parameters

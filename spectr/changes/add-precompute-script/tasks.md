@@ -1,34 +1,33 @@
-## 1. Create Precompute Script
+## 1. Implementation
 
-- [ ] 1.1 Create `training/precompute.py` with argparse CLI
-- [ ] 1.2 Add Kaggle API integration to download OpenEDS datasets
-- [ ] 1.3 Implement dataset combination (train + validation splits)
-- [ ] 1.4 Add gamma correction preprocessing (gamma=0.8 LUT)
-- [ ] 1.5 Add CLAHE preprocessing (clipLimit=1.5, tileGridSize=8x8)
-- [ ] 1.6 Compute spatial_weights from segmentation labels
-- [ ] 1.7 Compute dist_map (signed distance transform per class)
-- [ ] 1.8 Add `preprocessed` column to indicate preprocessing status
-- [ ] 1.9 Implement HuggingFace dataset push with resume capability
-- [ ] 1.10 Add `--hf-repo`, `--output-dir`, `--no-push`, `--validate` CLI options
+- [ ] 1.1 Create `training/precompute.py` with CLI argument parsing (--hf-repo, --output-dir, --no-push, --validate, --skip-download)
+- [ ] 1.2 Implement Kaggle OpenEDS download using kagglehub (dataset: soumicksarker/openeds-dataset)
+- [ ] 1.3 Implement gamma correction preprocessing (gamma=0.8 LUT)
+- [ ] 1.4 Implement CPU CLAHE preprocessing (cv2.createCLAHE, clipLimit=1.5, tileGridSize=8x8)
+- [ ] 1.5 Implement ellipse parameter extraction (cv2.findContours + cv2.fitEllipse with moments fallback)
+- [ ] 1.6 Implement spatial weights computation from segmentation labels
+- [ ] 1.7 Implement signed distance map computation per class
+- [ ] 1.8 Implement HuggingFace dataset push with chunked parquet upload to Conner/sddec25-01
+- [ ] 1.9 Add validation mode to compare preprocessed vs runtime results
 
-## 2. Update Training Scripts for Preprocessed Data
+## 2. Training Script Updates
 
-- [ ] 2.1 Add preprocessed dataset detection in `train_efficientvit_local.py` IrisDataset
-- [ ] 2.2 Skip gamma/CLAHE when `preprocessed` column is True
-- [ ] 2.3 Apply same changes to `train_efficientvit_tiny_local.py`
-- [ ] 2.4 Apply same changes to `train_ellipse_local.py`
-- [ ] 2.5 Apply same changes to Modal scripts (`train_efficientvit.py`, `train_ellipse.py`)
-- [ ] 2.6 Apply same changes to Colab notebooks (`train_efficientvit.ipynb`, `train_ellipse.ipynb`)
+- [ ] 2.1 Update `train_efficientvit.py` to detect `preprocessed` flag and skip gamma/CLAHE
+- [ ] 2.2 Update `train_efficientvit_local.py` to detect `preprocessed` flag and skip gamma/CLAHE
+- [ ] 2.3 Update `train_efficientvit_tiny_local.py` to detect `preprocessed` flag and skip gamma/CLAHE (also skip GPU CLAHE)
+- [ ] 2.4 Update `train_ellipse.py` to use precomputed cx, cy, rx, ry instead of runtime extraction
+- [ ] 2.5 Update `train_ellipse_local.py` to use precomputed cx, cy, rx, ry instead of runtime extraction
 
-## 3. Testing & Validation
+## 3. Documentation
 
-- [ ] 3.1 Run precompute.py on small subset to verify preprocessing equivalence
-- [ ] 3.2 Compare sample outputs: precomputed vs runtime preprocessing
-- [ ] 3.3 Run training with preprocessed dataset and verify mIoU matches
-- [ ] 3.4 Benchmark training speed improvement (epochs/second)
+- [ ] 3.1 Update `training/README.md` with precompute script usage and new HF repo reference
+- [ ] 3.2 Document Kaggle API credential setup (kaggle.json)
+- [ ] 3.3 Document HuggingFace dataset schema including ellipse parameters
 
-## 4. Documentation
+## 4. Validation
 
-- [ ] 4.1 Add usage instructions to `training/README.md`
-- [ ] 4.2 Document Kaggle API credential setup
-- [ ] 4.3 Update HuggingFace dataset card with preprocessing details
+- [ ] 4.1 Run precompute script on full OpenEDS dataset
+- [ ] 4.2 Verify train/validation split sizes match original (~27,400 train, ~2,775 validation)
+- [ ] 4.3 Validate preprocessed images match runtime preprocessing (pixel-level comparison)
+- [ ] 4.4 Validate ellipse parameters match runtime extraction
+- [ ] 4.5 Test training scripts with new preprocessed dataset (Conner/sddec25-01)

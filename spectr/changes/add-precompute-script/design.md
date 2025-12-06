@@ -1,107 +1,177 @@
-# Design: Dataset Precompute Script
-
 ## Context
 
-The VisionAssist training pipeline uses the OpenEDS dataset from Kaggle. Currently, preprocessing happens at two stages:
+The VisionAssist training pipeline uses the OpenEDS dataset from Kaggle (`soumicksarker/openeds-dataset`) for eye pupil segmentation. Currently, deterministic preprocessing (gamma correction, CLAHE, ellipse parameter extraction) is applied at runtime during training, creating a CPU bottleneck.
 
-1. **One-time precompute** (already done): `spatial_weights` and `dist_map` are computed from segmentation labels and stored in HuggingFace
-2. **Per-sample runtime** (current bottleneck): gamma correction and CLAHE are applied every time a sample is loaded
-
-This wastes GPU cycles waiting for CPU preprocessing. The bottleneck is especially pronounced with:
-- Large batch sizes (64+)
-- Multi-epoch training (25+ epochs)
-- Fast GPUs (A100, H100) that can outpace CPU preprocessing
+**Constraints:**
+- Must match OpenEDS Kaggle dataset structure (train/validation splits)
+- Image dimensions: 640x400 grayscale
+- Preprocessing must be identical to current training pipeline for consistency
+- Training scripts must detect preprocessed data and skip redundant operations
+- Use CPU CLAHE (OpenCV) as source of truth for consistency across all scripts
+- Models use 2-class segmentation (num_classes=2)
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Create `precompute.py` that downloads raw Kaggle data, applies all deterministic preprocessing, and pushes to HuggingFace
-- Maintain exact preprocessing semantics (gamma=0.8, CLAHE clipLimit=1.5, tileGridSize=8x8)
-- Store preprocessed images in uint8 format to minimize dataset size
-- Support incremental updates (add new splits without reprocessing existing)
+- Precompute ALL deterministic image preprocessing (gamma=0.8, CLAHE clipLimit=1.5)
+- Binarize labels: pupil (class 3) -> 1, everything else (0,1,2) -> 0
+- Precompute ellipse parameters (cx, cy, rx, ry) from binarized masks
+- Precompute spatial weights and distance maps (2 channels for 2 classes)
+- Upload to new HuggingFace repo `Conner/sddec25-01` with clear `preprocessed` flag
+- Skip samples with empty pupil masks (no valid ellipse)
+- Maintain backward compatibility with raw dataset loading
 
 **Non-Goals:**
-- Runtime augmentations (Line_augment, Gaussian_blur, RandomHorizontalFlip) remain in training loop since they're stochastic
-- Changing the actual preprocessing parameters (same gamma, CLAHE settings)
-- GPU-accelerated precomputation (Python script is run once, speed not critical)
+- Precomputing stochastic augmentations (RandomHorizontalFlip, Line_augment, Gaussian_blur)
+- Modifying image dimensions or format
+- Changing the underlying model architecture
+- Using GPU CLAHE (Kornia) for precompute - CPU OpenCV is the source of truth
 
 ## Decisions
 
-### Decision: Store preprocessed images as uint8
+### Decision: Label Binarization
+Convert OpenEDS 4-class labels to binary:
+- Input: 0=background, 1=sclera, 2=iris, 3=pupil
+- Output: 0=everything else, 1=pupil only
 
-**Rationale**: CLAHE output is 8-bit grayscale. Storing as float32 would 4x dataset size with no accuracy benefit. ToTensor() normalization happens after loading.
-
-### Decision: Keep stochastic augmentations in training loop
-
-**Rationale**: Line_augment, Gaussian_blur, and RandomHorizontalFlip must vary per epoch. Moving them to precompute would reduce augmentation diversity.
-
-**Alternatives considered**:
-1. Pre-generate N augmented versions per sample - Increases storage by Nx, reduces diversity
-2. GPU-based runtime augmentation with Kornia - Already implemented in `train_efficientvit_tiny_local.py`, orthogonal to this change
-
-### Decision: Use Kaggle API for raw data download
-
-**Rationale**: OpenEDS is hosted on Kaggle. The Kaggle Python API provides authenticated download with progress tracking.
-
-### Decision: Add `--preprocessed` flag to training scripts
-
-**Rationale**: Backward compatibility. Training scripts can detect dataset version and skip CLAHE/gamma if already preprocessed. Default behavior checks for `image_preprocessed` column.
-
-## Data Pipeline
-
-```
-Kaggle OpenEDS (raw)
-    │
-    ▼
-precompute.py
-    ├── Download train/validation splits
-    ├── Gamma correction (LUT, gamma=0.8)
-    ├── CLAHE (clipLimit=1.5, tileGridSize=8x8)
-    ├── Compute spatial_weights (edge distance)
-    ├── Compute dist_map (signed distance transform)
-    └── Push to HuggingFace
-    │
-    ▼
-Conner/openeds-precomputed v2
-    │
-    ▼
-IrisDataset.__getitem__
-    ├── Load preprocessed image (uint8)
-    ├── Apply stochastic augmentations (train only)
-    ├── ToTensor + Normalize
-    └── Return batch
+```python
+binary_label = (raw_label == 3).astype(np.uint8)
 ```
 
-## HuggingFace Dataset Schema
+**Rationale:** Models use `num_classes=2` and `F.one_hot(target, num_classes=2)`. Only pupil segmentation is needed.
 
-Current schema:
-- `image`: uint8[400, 640] - raw grayscale
-- `label`: uint8[400, 640] - segmentation mask
-- `spatial_weights`: float32[400, 640] - edge weights
-- `dist_map`: float32[2, 400, 640] - signed distance per class
-- `filename`: string
+### Decision: Preprocessing Pipeline Order
+Apply preprocessing in this order:
+1. Gamma correction (gamma=0.8 via LUT): `255.0 * (np.linspace(0, 1, 256) ** 0.8)`
+2. CLAHE (clipLimit=1.5, tileGridSize=8x8): `cv2.createCLAHE(clipLimit=1.5, tileGridSize=(8, 8))`
 
-New schema (v2):
-- `image`: uint8[400, 640] - **preprocessed** (gamma + CLAHE applied)
-- `label`: uint8[400, 640] - segmentation mask (unchanged)
-- `spatial_weights`: float32[400, 640] - edge weights (unchanged)
-- `dist_map`: float32[2, 400, 640] - signed distance per class (unchanged)
-- `filename`: string (unchanged)
-- `preprocessed`: bool - True for v2 samples (enables backward compat detection)
+**Rationale:** Matches existing training script order in `IrisDataset.__getitem__`. Uses CPU CLAHE for determinism and portability.
+
+### Decision: Spatial Weights Computation (Industry Standard)
+Compute boundary weights using morphological gradient:
+
+```python
+from scipy import ndimage
+
+def compute_spatial_weights(label, sigma=5):
+    # Morphological gradient to find boundaries
+    dilated = ndimage.binary_dilation(label, iterations=1)
+    eroded = ndimage.binary_erosion(label, iterations=1)
+    boundary = dilated.astype(float) - eroded.astype(float)
+
+    # Gaussian blur for smooth weight decay from boundary
+    weights = ndimage.gaussian_filter(boundary, sigma=sigma)
+    return weights.astype(np.float32)
+```
+
+**Rationale:** Industry standard approach - weights class boundaries higher in loss function to improve edge accuracy.
+
+### Decision: Distance Map Computation (Industry Standard)
+Compute signed distance transform per class using scipy EDT:
+
+```python
+from scipy.ndimage import distance_transform_edt
+
+def compute_dist_map(label, num_classes=2):
+    dist_map = np.zeros((num_classes, *label.shape), dtype=np.float32)
+    for c in range(num_classes):
+        class_mask = (label == c)
+        if class_mask.any():
+            # Distance inside class (negative)
+            dist_inside = distance_transform_edt(class_mask)
+            # Distance outside class (positive)
+            dist_outside = distance_transform_edt(~class_mask)
+            # Signed distance: negative inside, positive outside
+            dist_map[c] = dist_outside - dist_inside
+        else:
+            # If class not present, all pixels are "far" from it
+            dist_map[c] = distance_transform_edt(np.ones_like(label))
+
+    # Normalize by max distance for stability
+    max_dist = np.sqrt(label.shape[0]**2 + label.shape[1]**2)
+    dist_map = dist_map / max_dist
+    return dist_map
+```
+
+**Rationale:** Standard signed distance transform. Used in surface loss to penalize predictions far from true boundaries. Normalized for numerical stability.
+
+### Decision: Ellipse Parameter Extraction
+Precompute ellipse parameters using existing algorithm:
+1. `cv2.findContours` on binary mask
+2. Find largest contour
+3. `cv2.fitEllipse` if contour has 5+ points
+4. Fallback to moments-based circle if ellipse fit fails
+5. Store normalized (cx, cy, rx, ry) values
+
+Normalization constants:
+- `IMAGE_WIDTH = 640`
+- `IMAGE_HEIGHT = 400`
+- `MAX_RADIUS = sqrt(640^2 + 400^2) / 2 = 377.36`
+
+```python
+cx_norm = cx / IMAGE_WIDTH      # 0-1 range
+cy_norm = cy / IMAGE_HEIGHT     # 0-1 range
+rx_norm = rx / MAX_RADIUS       # 0-1 range (typically)
+ry_norm = ry / MAX_RADIUS       # 0-1 range (typically)
+```
+
+**Rationale:** Ellipse extraction is deterministic and CPU-intensive. Precomputing eliminates ~50ms per sample during training.
+
+### Decision: Empty Mask Handling
+Skip samples where the binarized pupil mask is empty (no pupil visible).
+
+**Rationale:** User preference. These samples cannot provide valid ellipse parameters and would cause issues during ellipse training. Segmentation training also benefits from excluding these ambiguous samples.
+
+### Decision: Dataset Schema
+Store the following columns in the HuggingFace dataset:
+- `image`: uint8[400, 640] - preprocessed grayscale image (gamma + CLAHE applied)
+- `label`: uint8[400, 640] - binarized segmentation mask (0=background, 1=pupil)
+- `spatial_weights`: float32[400, 640] - boundary weights for loss
+- `dist_map`: float32[2, 400, 640] - signed distance per class (normalized)
+- `cx`: float32 - normalized ellipse center x (0-1)
+- `cy`: float32 - normalized ellipse center y (0-1)
+- `rx`: float32 - normalized ellipse radius x
+- `ry`: float32 - normalized ellipse radius y
+- `filename`: string - original filename for traceability
+- `preprocessed`: bool - always True for this dataset
+
+**Rationale:** Extends existing schema with ellipse parameters for faster ellipse training.
+
+### Decision: Kaggle Download
+Use `kagglehub` with dataset ID `soumicksarker/openeds-dataset`.
+
+**Rationale:** Official Kaggle source, programmatic download with caching.
+
+### Decision: HuggingFace Repository
+Push to new repository `Conner/sddec25-01`.
+
+**Rationale:** Preserves existing `Conner/openeds-precomputed` for backward compatibility.
+
+### Decision: Train/Validation Split
+Use the same split as the original OpenEDS dataset:
+- Training: subjects used for training in original dataset
+- Validation: subjects used for validation in original dataset
+
+The split is determined by the Kaggle dataset folder structure.
 
 ## Risks / Trade-offs
 
 | Risk | Mitigation |
 |------|------------|
-| HuggingFace dataset push fails mid-upload | Use chunked upload, add resume capability |
-| Preprocessing differs from training code | Extract shared preprocessing module, test equivalence |
-| Kaggle rate limits | Add retry with exponential backoff |
-| Dataset size increases | Store as uint8, use parquet compression |
+| Large dataset size (~40GB) | Use chunked parquet upload to HuggingFace |
+| Preprocessing mismatch | Validate by comparing runtime vs precomputed images |
+| Kaggle auth issues | Document API credential setup clearly |
+| Ellipse fit failures | Use moments-based fallback, log statistics |
+| Empty mask samples | Skip and log count of excluded samples |
+| Signed distance overflow | Normalize by image diagonal |
+
+## Stochastic Augmentations (Runtime Only)
+
+These remain at training time:
+- `RandomHorizontalFlip` (50% probability)
+- `Line_augment` (20% probability) - random line overlay
+- `Gaussian_blur` (20% probability) - cv2.GaussianBlur with random sigma
 
 ## Open Questions
 
-1. Should we version the HuggingFace dataset (v1, v2) or overwrite?
-   - **Proposal**: Add `preprocessed` column, overwrite repo. Old code can check column and apply preprocessing if missing.
-
-2. Should precompute.py be Modal-based for parallelism?
-   - **Proposal**: No, keep simple Python script. Precompute runs once, parallelism not needed.
+None - all implementation details clarified.
