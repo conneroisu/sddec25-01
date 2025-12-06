@@ -454,7 +454,7 @@ algorithms, the client specified maintaining single B4096 configuration,
 necessitating software-level optimization and efficient resource scheduling
 rather than hardware parallelism.
 
-\subsection{U-Net Semantic Segmentation Algorithm}
+\subsection{U-Net Semantic Segmentation Algorithm}\label{subsec:unet-algorithm}
 The U-Net architecture~\cite{ronneberger2015} is particularly
 well-suited for our eye tracking application:
 
@@ -477,6 +477,53 @@ well-suited for our eye tracking application:
   \item \textbf{Modular Design:} Amenable to division across multiple
     processing cores
 \end{itemize}
+
+\subsubsection{Architectural Trade-offs for Constrained Output Space}
+
+While U-Net provides excellent performance for general semantic segmentation,
+our specific task has a highly constrained output space: pupil detection
+produces exactly one connected blob-like region in the eye image. U-Net's
+general-purpose architecture computes per-pixel probabilities without
+explicit knowledge of this single-component constraint.
+
+This generality has computational implications:
+
+\begin{itemize}
+  \item \textbf{Overengineered Flexibility:} U-Net can produce arbitrary
+    segmentations (multiple blobs, disconnected regions, complex shapes)
+    that never occur in pupil detection
+  \item \textbf{Computational Overhead:} Processing capabilities for
+    complex segmentation patterns that are unnecessary for our
+    single-blob output space
+  \item \textbf{No Shape Priors:} The architecture lacks explicit
+    knowledge that the output should be approximately circular and
+    spatially localized
+\end{itemize}
+
+\textbf{Alternative Architecture Consideration:}
+
+For future optimization, a more task-specific approach could exploit
+the constrained output space:
+
+\begin{itemize}
+  \item \textbf{Heatmap + Regression Model:} Replace pixel-level
+    segmentation with a lightweight CNN that outputs:
+    \begin{itemize}
+      \item Center point heatmap (pupil location)
+      \item Radius or ellipse parameters (pupil size and orientation)
+    \end{itemize}
+  \item \textbf{Circle/Ellipse Rendering:} Generate the final segmentation
+    mask from predicted geometric parameters
+  \item \textbf{Benefits:} Significantly reduced computational requirements
+    by fully exploiting the ``one blob, roughly round'' constraint
+  \item \textbf{Trade-off:} Less flexibility for handling edge cases with
+    irregular pupil shapes or partial occlusions
+\end{itemize}
+
+For this project, we maintain the U-Net architecture to preserve
+the proven 99.8\% IoU accuracy baseline established by previous work.
+However, the shape-aware alternative presents a promising direction
+for further efficiency improvements in future iterations.
 
 \subsection{Vitis-AI and Vitis-Runtime}
 Xilinx Vitis-AI~\cite{amd2023vitis} and ONNX Runtime~\cite{onnxruntime}
@@ -516,7 +563,11 @@ Alternative approaches evaluated:
   \item \textbf{Model Simplification:} Would compromise accuracy
     below medical requirements
   \item \textbf{Alternative Neural Networks:} U-Net provides optimal
-    balance of accuracy and performance
+    balance of accuracy and performance for this project. While more
+    task-specific architectures (e.g., heatmap-based regression) could
+    reduce computational overhead by exploiting the constrained output
+    space, we maintain U-Net to preserve proven accuracy. See detailed
+    discussion of architectural trade-offs in Section~\ref{subsec:unet-algorithm}.
 \end{itemize}
 
 \section{Design Analysis}\label{sec:design-analysis}
