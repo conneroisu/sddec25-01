@@ -36,7 +36,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from datasets import load_dataset
 
-# MLflow is optional - gracefully handle if not configured
 try:
     import mlflow
 
@@ -571,11 +570,6 @@ class TinyEfficientViTSeg(nn.Module):
         return out
 
 
-# =========================================================================
-# Loss Functions and Metrics
-# =========================================================================
-
-
 class CombinedLoss(nn.Module):
     def __init__(self, epsilon=1e-5):
         super(CombinedLoss, self).__init__()
@@ -652,11 +646,6 @@ def total_metric(nparams, miou):
     S = nparams * 4.0 / (1024 * 1024)
     total = min(1, 1.0 / S) + miou
     return total * 0.5
-
-
-# =========================================================================
-# Visualization Utilities
-# =========================================================================
 
 
 def create_training_plots(train_metrics, valid_metrics, save_dir="plots"):
@@ -888,7 +877,6 @@ def save_model_checkpoint(model, output_path):
     if hasattr(model, "_orig_mod"):
         save_model = model._orig_mod
 
-    # Convert to contiguous format for portable checkpoint
     save_model = save_model.to(memory_format=torch.contiguous_format)
     save_model.eval()
 
@@ -900,11 +888,6 @@ def save_model_checkpoint(model, output_path):
         f"Model saved: {output_path} "
         f"({os.path.getsize(output_path) / 1024 / 1024:.2f} MB)"
     )
-
-
-# =========================================================================
-# Data Augmentation Classes
-# =========================================================================
 
 
 class RandomHorizontalFlip(object):
@@ -950,10 +933,6 @@ class MaskToTensor(object):
     def __call__(self, img):
         return torch.from_numpy(np.array(img, dtype=np.int64)).long()
 
-
-# =========================================================================
-# Dataset
-# =========================================================================
 
 HF_DATASET_REPO = "Conner/openeds-precomputed"
 IMAGE_HEIGHT = 400
@@ -1034,18 +1013,12 @@ def get_device(device_override: str | None = None) -> torch.device:
             return torch.device("cpu")
         return torch.device(device_str)
 
-    # Auto-detect
     if torch.cuda.is_available():
         return torch.device("cuda")
     elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         return torch.device("mps")
     else:
         return torch.device("cpu")
-
-
-# =========================================================================
-# Dataset Loading with Local Cache
-# =========================================================================
 
 
 def load_dataset_with_cache():
@@ -1064,11 +1037,6 @@ def load_dataset_with_cache():
     hf_dataset = load_dataset(HF_DATASET_REPO)
 
     return hf_dataset
-
-
-# =========================================================================
-# MLflow Setup
-# =========================================================================
 
 
 def setup_mlflow():
@@ -1100,11 +1068,6 @@ def setup_mlflow():
     return True
 
 
-# =========================================================================
-# Argument Parser
-# =========================================================================
-
-
 def parse_args():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
@@ -1112,7 +1075,6 @@ def parse_args():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
-    # Training hyperparameters
     parser.add_argument(
         "--epochs",
         type=int,
@@ -1140,7 +1102,6 @@ def parse_args():
         help="Number of data loading workers",
     )
 
-    # Paths
     parser.add_argument(
         "--output-dir",
         type=str,
@@ -1154,7 +1115,6 @@ def parse_args():
         help="Directory for saving training plots",
     )
 
-    # Device
     parser.add_argument(
         "--device",
         type=str,
@@ -1163,44 +1123,28 @@ def parse_args():
         help="Device to use for training (auto-detect if not specified)",
     )
 
-    # Model compilation
     parser.add_argument(
         "--no-compile",
         action="store_true",
         help="Disable torch.compile() for debugging",
     )
 
-    # Mixed precision
-    parser.add_argument(
-        "--no-amp",
-        action="store_true",
-        help="Disable automatic mixed precision (AMP)",
-    )
-
     return parser.parse_args()
-
-
-# =========================================================================
-# Main Training Function
-# =========================================================================
 
 
 def train(args):
     """Main training function."""
-    # Setup device
     device = get_device(args.device)
     print(f"Using device: {device}")
     if device.type == "cuda":
         print(f"GPU: {torch.cuda.get_device_name(0)}")
         torch.cuda.manual_seed(42)
-        # Performance optimizations
         torch.backends.cudnn.benchmark = True
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
     else:
         _ = torch.manual_seed(42)
 
-    # Load dataset
     hf_dataset = load_dataset_with_cache()
     print(f"Train samples: {len(hf_dataset['train'])}")
     print(f"Validation samples: {len(hf_dataset['validation'])}")
@@ -1237,7 +1181,6 @@ def train(args):
     else:
         print(f"Model is within 60k parameter budget: {nparams} < 60000")
 
-    # Compile model for faster training (PyTorch 2.x)
     use_compile = device.type == "cuda" and not args.no_compile
     if use_compile:
         print("Converting model to channels_last memory format...")
@@ -1250,11 +1193,7 @@ def train(args):
             print("Falling back to eager mode (no compilation)")
             use_compile = False
 
-    use_amp = device.type == "cuda" and not args.no_amp
-    if use_amp:
-        print("Mixed precision training (AMP) enabled")
-
-    print(f"\nVerifying forward pass with batch_size={BATCH_SIZE} (AMP={use_amp})...")
+    print(f"\nVerifying forward pass with batch_size={BATCH_SIZE}...")
     with torch.no_grad():
         memory_format = (
             torch.channels_last if device.type == "cuda" else torch.contiguous_format
@@ -1262,15 +1201,13 @@ def train(args):
         test_input = torch.randn(BATCH_SIZE, 1, IMAGE_HEIGHT, IMAGE_WIDTH).to(
             device, memory_format=memory_format
         )
-        # Run with autocast to trigger float16 autotuning (matches training)
         try:
-            with torch.amp.autocast(device.type, enabled=use_amp):
+            with torch.amp.autocast(device.type):
                 test_output = model(test_input)
         except Exception as e:
             if use_compile:
                 print(f"WARNING: Compiled model forward pass failed: {e}")
                 print("Falling back to eager mode (no compilation)")
-                # Reset model without compilation
                 model = TinyEfficientViTSeg(
                     in_channels=1,
                     num_classes=2,
@@ -1284,7 +1221,7 @@ def train(args):
                     decoder_dim=32,
                 ).to(device)
                 use_compile = False
-                with torch.amp.autocast(device.type, enabled=use_amp):
+                with torch.amp.autocast(device.type):
                     test_output = model(test_input)
             else:
                 raise
@@ -1303,7 +1240,7 @@ def train(args):
         patience=5,
     )
     criterion = CombinedLoss()
-    scaler = torch.amp.GradScaler(device.type) if use_amp else None
+    scaler = torch.amp.GradScaler(device.type)
 
     transform = transforms.Compose(
         [
@@ -1335,7 +1272,6 @@ def train(args):
     print(f"  Epochs: {EPOCHS}")
     print(f"  Learning Rate: {LEARNING_RATE}")
     print(f"  Num Workers: {NUM_WORKERS}")
-    print(f"  Mixed Precision (AMP): {use_amp}")
     print(f"  Output Directory: {args.output_dir}")
     print(f"{'='*80}")
 
@@ -1359,12 +1295,13 @@ def train(args):
         prefetch_factor=4 if NUM_WORKERS > 0 else None,
     )
 
-    alpha = np.zeros(EPOCHS)
-    alpha[0 : min(125, EPOCHS)] = 1 - np.arange(1, min(125, EPOCHS) + 1) / min(
+    alpha_np = np.zeros(EPOCHS)
+    alpha_np[0 : min(125, EPOCHS)] = 1 - np.arange(1, min(125, EPOCHS) + 1) / min(
         125, EPOCHS
     )
     if EPOCHS > 125:
-        alpha[125:] = 1
+        alpha_np[125:] = 1
+    alpha = torch.tensor(alpha_np, dtype=torch.float32, device=device)
 
     system_info = {
         "python_version": platform.python_version(),
@@ -1406,10 +1343,8 @@ def train(args):
         "gamma_correction": 0.8,
     }
 
-    # Setup MLflow if configured
     mlflow_enabled = setup_mlflow()
 
-    # Create output directory
     os.makedirs(args.output_dir, exist_ok=True)
     os.makedirs(args.plots_dir, exist_ok=True)
 
@@ -1440,7 +1375,6 @@ def train(args):
     best_valid_iou = 0.0
     best_epoch = 0
 
-    # Context manager for MLflow run (or dummy context if disabled)
     class DummyContext:
         def __enter__(self):
             return self
@@ -1478,7 +1412,6 @@ def train(args):
                     "model_params": nparams,
                     "num_workers": NUM_WORKERS,
                     "scheduler_patience": 5,
-                    "use_amp": use_amp,
                 }
             )
             mlflow.log_params({f"system_{k}": v for k, v in system_info.items()})
@@ -1561,7 +1494,7 @@ def train(args):
             train_metrics["ce_loss"].append(ce_loss_train)
             train_metrics["dice_loss"].append(dice_loss_train)
             train_metrics["surface_loss"].append(surface_loss_train)
-            train_metrics["alpha"].append(alpha[epoch])
+            train_metrics["alpha"].append(alpha[epoch].item())
             train_metrics["lr"].append(optimizer.param_groups[0]["lr"])
             train_metrics["background_iou"].append(bg_iou_train)
             train_metrics["pupil_iou"].append(pupil_iou_train)
@@ -1660,7 +1593,7 @@ def train(args):
                         "valid_background_iou": bg_iou_valid,
                         "valid_pupil_iou": pupil_iou_valid,
                         "learning_rate": optimizer.param_groups[0]["lr"],
-                        "alpha": alpha[epoch],
+                        "alpha": alpha[epoch].item(),
                     },
                     step=epoch,
                 )
