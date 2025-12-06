@@ -118,15 +118,21 @@ class TinyCascadedGroupAttention(nn.Module):
         k_total = self.num_heads * self.key_dim
         v_total = self.num_heads * self.d
 
-        q = qkv[:, :, :q_total].reshape(
-            B, N, self.num_heads, self.key_dim
-        ).permute(0, 2, 1, 3)
-        k = qkv[:, :, q_total : q_total + k_total].reshape(
-            B, N, self.num_heads, self.key_dim
-        ).permute(0, 2, 1, 3)
-        v = qkv[:, :, q_total + k_total :].reshape(
-            B, N, self.num_heads, self.d
-        ).permute(0, 2, 1, 3)
+        q = (
+            qkv[:, :, :q_total]
+            .reshape(B, N, self.num_heads, self.key_dim)
+            .permute(0, 2, 1, 3)
+        )
+        k = (
+            qkv[:, :, q_total : q_total + k_total]
+            .reshape(B, N, self.num_heads, self.key_dim)
+            .permute(0, 2, 1, 3)
+        )
+        v = (
+            qkv[:, :, q_total + k_total :]
+            .reshape(B, N, self.num_heads, self.d)
+            .permute(0, 2, 1, 3)
+        )
 
         attn = (q @ k.transpose(-2, -1)) * self.scale
         attn = attn.softmax(dim=-1)
@@ -290,17 +296,19 @@ class TinyEfficientVitStage(nn.Module):
                 nn.GELU(),
             )
 
-        self.blocks = nn.ModuleList([
-            TinyEfficientVitBlock(
-                dim=out_dim,
-                num_heads=num_heads,
-                key_dim=key_dim,
-                attn_ratio=attn_ratio,
-                window_size=window_size,
-                mlp_ratio=mlp_ratio,
-            )
-            for _ in range(depth)
-        ])
+        self.blocks = nn.ModuleList(
+            [
+                TinyEfficientVitBlock(
+                    dim=out_dim,
+                    num_heads=num_heads,
+                    key_dim=key_dim,
+                    attn_ratio=attn_ratio,
+                    window_size=window_size,
+                    mlp_ratio=mlp_ratio,
+                )
+                for _ in range(depth)
+            ]
+        )
 
     def forward(self, x):
         if self.downsample is not None:

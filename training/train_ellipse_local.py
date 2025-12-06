@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Local Ellipse Regression Training Script
 
@@ -12,8 +11,8 @@ Usage:
     # Custom training configuration
     python train_ellipse_local.py --epochs 20 --batch-size 16 --lr 0.0005
 
-    # Specify data and output directories
-    python train_ellipse_local.py --data-dir ./data/openeds --output-dir ./checkpoints
+    # Specify output directory
+    python train_ellipse_local.py --output-dir ./checkpoints
 
     # Force CPU training
     python train_ellipse_local.py --device cpu
@@ -42,7 +41,7 @@ import matplotlib
 import numpy as np
 import torch
 import torch.nn as nn
-from datasets import load_dataset, load_from_disk
+from datasets import load_dataset
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
@@ -51,32 +50,17 @@ from tqdm import tqdm
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# =========================================================================
-# Constants
-# =========================================================================
+
 HF_DATASET_REPO = "Conner/openeds-precomputed"
 IMAGE_HEIGHT = 400
 IMAGE_WIDTH = 640
 
-# Normalization factors for ellipse parameters
-# Center is normalized by image dimensions
-# Radii are normalized by max possible radius (half of image diagonal)
+
 MAX_RADIUS = math.sqrt(IMAGE_WIDTH**2 + IMAGE_HEIGHT**2) / 2
 
 
-# =========================================================================
-# Ellipse Parameter Extraction
-# =========================================================================
 def extract_ellipse_params(mask):
-    """
-    Extract ellipse parameters from a binary mask.
-    Returns: (cx, cy, rx, ry, angle) where:
-        - cx, cy: center coordinates (pixels)
-        - rx, ry: semi-axes lengths (pixels)
-        - angle: rotation angle in degrees
-    If no valid contour found, returns zeros.
-    """
-    # Find contours
+
     contours, _ = cv2.findContours(
         mask.astype(np.uint8),
         cv2.RETR_EXTERNAL,
@@ -86,12 +70,10 @@ def extract_ellipse_params(mask):
     if len(contours) == 0:
         return 0.0, 0.0, 0.0, 0.0, 0.0
 
-    # Get the largest contour (in case of multiple)
     largest_contour = max(contours, key=cv2.contourArea)
 
-    # Need at least 5 points to fit an ellipse
     if len(largest_contour) < 5:
-        # Fall back to moments-based center and approximate radius
+
         M = cv2.moments(largest_contour)
         if M["m00"] > 0:
             cx = M["m10"] / M["m00"]
@@ -104,12 +86,12 @@ def extract_ellipse_params(mask):
     try:
         ellipse = cv2.fitEllipse(largest_contour)
         (cx, cy), (width, height), angle = ellipse
-        # width and height are full axes lengths, we want semi-axes
+
         rx = width / 2.0
         ry = height / 2.0
         return cx, cy, rx, ry, angle
     except cv2.error:
-        # Fallback if fitEllipse fails
+
         M = cv2.moments(largest_contour)
         if M["m00"] > 0:
             cx = M["m10"] / M["m00"]
@@ -121,7 +103,7 @@ def extract_ellipse_params(mask):
 
 
 def normalize_ellipse_params(cx, cy, rx, ry):
-    """Normalize ellipse parameters to [0, 1] range."""
+
     cx_norm = cx / IMAGE_WIDTH
     cy_norm = cy / IMAGE_HEIGHT
     rx_norm = rx / MAX_RADIUS
@@ -130,7 +112,7 @@ def normalize_ellipse_params(cx, cy, rx, ry):
 
 
 def denormalize_ellipse_params(cx_norm, cy_norm, rx_norm, ry_norm):
-    """Denormalize ellipse parameters back to pixel values."""
+
     cx = cx_norm * IMAGE_WIDTH
     cy = cy_norm * IMAGE_HEIGHT
     rx = rx_norm * MAX_RADIUS
@@ -139,7 +121,7 @@ def denormalize_ellipse_params(cx_norm, cy_norm, rx_norm, ry_norm):
 
 
 def render_ellipse_mask(cx, cy, rx, ry, height=IMAGE_HEIGHT, width=IMAGE_WIDTH):
-    """Render an ellipse mask from parameters."""
+
     mask = np.zeros((height, width), dtype=np.uint8)
     if rx > 0 and ry > 0:
         cv2.ellipse(
@@ -155,16 +137,7 @@ def render_ellipse_mask(cx, cy, rx, ry, height=IMAGE_HEIGHT, width=IMAGE_WIDTH):
     return mask
 
 
-# =========================================================================
-# Loss Functions
-# =========================================================================
 class EllipseRegressionLoss(nn.Module):
-    """
-    Combined loss for ellipse regression:
-    - Smooth L1 for center prediction
-    - Smooth L1 for radii prediction
-    - Optional IoU loss computed by rendering ellipses
-    """
 
     def __init__(self, center_weight=1.0, radius_weight=1.0, iou_weight=0.5):
         super(EllipseRegressionLoss, self).__init__()
@@ -174,27 +147,15 @@ class EllipseRegressionLoss(nn.Module):
         self.smooth_l1 = nn.SmoothL1Loss(reduction="mean")
 
     def forward(self, pred, target, compute_iou=True):
-        """
-        pred: (B, 4) - cx, cy, rx, ry (normalized)
-        target: (B, 4) - cx, cy, rx, ry (normalized)
-        """
-        # Center loss
+
         center_loss = self.smooth_l1(pred[:, :2], target[:, :2])
 
-        # Radius loss
         radius_loss = self.smooth_l1(pred[:, 2:], target[:, 2:])
 
-        # Total regression loss
-        total_loss = (
-            self.center_weight * center_loss + self.radius_weight * radius_loss
-        )
+        total_loss = self.center_weight * center_loss + self.radius_weight * radius_loss
 
-        # Optional: Differentiable IoU approximation
-        # For actual IoU, we'd need to render masks which isn't differentiable
-        # Instead, we use a soft IoU approximation based on ellipse overlap
         if self.iou_weight > 0 and compute_iou:
-            # Approximate IoU using distance between parameters
-            # This encourages predictions to match targets more closely
+
             param_dist = torch.mean((pred - target) ** 2, dim=1)
             iou_proxy_loss = torch.mean(param_dist)
             total_loss = total_loss + self.iou_weight * iou_proxy_loss
@@ -202,24 +163,19 @@ class EllipseRegressionLoss(nn.Module):
         return total_loss, center_loss, radius_loss
 
 
-# =========================================================================
-# Metrics
-# =========================================================================
 def compute_center_error(pred, target):
-    """Compute mean center error in pixels."""
-    # Denormalize
+
     pred_cx = pred[:, 0] * IMAGE_WIDTH
     pred_cy = pred[:, 1] * IMAGE_HEIGHT
     target_cx = target[:, 0] * IMAGE_WIDTH
     target_cy = target[:, 1] * IMAGE_HEIGHT
 
-    # Euclidean distance
     dist = torch.sqrt((pred_cx - target_cx) ** 2 + (pred_cy - target_cy) ** 2)
     return dist.mean().item()
 
 
 def compute_radius_error(pred, target):
-    """Compute mean radius error in pixels."""
+
     pred_rx = pred[:, 2] * MAX_RADIUS
     pred_ry = pred[:, 3] * MAX_RADIUS
     target_rx = target[:, 2] * MAX_RADIUS
@@ -231,10 +187,7 @@ def compute_radius_error(pred, target):
 
 
 def compute_iou_from_ellipses(pred, target, device):
-    """
-    Compute IoU by rendering predicted and target ellipses.
-    This is computed on CPU for efficiency.
-    """
+
     pred_np = pred.detach().cpu().numpy()
     target_np = target.detach().cpu().numpy()
 
@@ -242,7 +195,7 @@ def compute_iou_from_ellipses(pred, target, device):
     ious = []
 
     for i in range(batch_size):
-        # Denormalize
+
         pred_cx, pred_cy, pred_rx, pred_ry = denormalize_ellipse_params(
             pred_np[i, 0], pred_np[i, 1], pred_np[i, 2], pred_np[i, 3]
         )
@@ -250,13 +203,9 @@ def compute_iou_from_ellipses(pred, target, device):
             target_np[i, 0], target_np[i, 1], target_np[i, 2], target_np[i, 3]
         )
 
-        # Render masks
         pred_mask = render_ellipse_mask(pred_cx, pred_cy, pred_rx, pred_ry)
-        target_mask = render_ellipse_mask(
-            target_cx, target_cy, target_rx, target_ry
-        )
+        target_mask = render_ellipse_mask(target_cx, target_cy, target_rx, target_ry)
 
-        # Compute IoU
         intersection = np.logical_and(pred_mask, target_mask).sum()
         union = np.logical_or(pred_mask, target_mask).sum()
 
@@ -271,10 +220,7 @@ def compute_iou_from_ellipses(pred, target, device):
 
 
 def compute_iou_with_gt_mask(pred, gt_masks, device):
-    """
-    Compute IoU between predicted ellipses and ground truth masks.
-    gt_masks: (B, H, W) ground truth binary masks
-    """
+
     pred_np = pred.detach().cpu().numpy()
     gt_masks_np = gt_masks.cpu().numpy()
 
@@ -283,16 +229,14 @@ def compute_iou_with_gt_mask(pred, gt_masks, device):
     ious_pupil = []
 
     for i in range(batch_size):
-        # Denormalize prediction
+
         pred_cx, pred_cy, pred_rx, pred_ry = denormalize_ellipse_params(
             pred_np[i, 0], pred_np[i, 1], pred_np[i, 2], pred_np[i, 3]
         )
 
-        # Render predicted mask
         pred_mask = render_ellipse_mask(pred_cx, pred_cy, pred_rx, pred_ry)
         target_mask = gt_masks_np[i]
 
-        # Pupil IoU (class 1)
         pred_pupil = pred_mask == 1
         target_pupil = target_mask == 1
         intersection_pupil = np.logical_and(pred_pupil, target_pupil).sum()
@@ -300,7 +244,6 @@ def compute_iou_with_gt_mask(pred, gt_masks, device):
         iou_pupil = intersection_pupil / max(union_pupil, 1)
         ious_pupil.append(iou_pupil)
 
-        # Background IoU (class 0)
         pred_bg = pred_mask == 0
         target_bg = target_mask == 0
         intersection_bg = np.logical_and(pred_bg, target_bg).sum()
@@ -315,11 +258,7 @@ def compute_iou_with_gt_mask(pred, gt_masks, device):
     return mean_iou, mean_bg_iou, mean_pupil_iou
 
 
-# =========================================================================
-# Model Architecture
-# =========================================================================
 class DownBlock(nn.Module):
-    """Encoder block with depthwise separable convolutions."""
 
     def __init__(
         self,
@@ -392,9 +331,7 @@ class DownBlock(nn.Module):
             x = self.max_pool(x)
 
         if self.dropout:
-            x1 = self.relu(
-                self.dropout1(self.pointwise_conv1(self.depthwise_conv1(x)))
-            )
+            x1 = self.relu(self.dropout1(self.pointwise_conv1(self.depthwise_conv1(x))))
             x21 = torch.cat((x, x1), dim=1)
             x22 = self.relu(
                 self.dropout2(
@@ -422,18 +359,6 @@ class DownBlock(nn.Module):
 
 
 class EllipseRegressionNet(nn.Module):
-    """
-    Lightweight CNN for ellipse parameter regression.
-    Predicts: (cx, cy, rx, ry) - center and semi-axes of pupil ellipse.
-
-    Architecture:
-    - 4 encoder blocks with progressive downsampling
-    - Global average pooling
-    - FC layers for regression
-
-    This is significantly lighter than a full U-Net since we don't need
-    a decoder - we just need to predict 4 scalar values.
-    """
 
     def __init__(
         self,
@@ -444,8 +369,6 @@ class EllipseRegressionNet(nn.Module):
     ):
         super(EllipseRegressionNet, self).__init__()
 
-        # Encoder blocks
-        # 640x400 -> 640x400
         self.down_block1 = DownBlock(
             input_channels=in_channels,
             output_channels=channel_size,
@@ -453,7 +376,7 @@ class EllipseRegressionNet(nn.Module):
             dropout=dropout,
             prob=prob,
         )
-        # 640x400 -> 320x200
+
         self.down_block2 = DownBlock(
             input_channels=channel_size,
             output_channels=channel_size,
@@ -461,7 +384,7 @@ class EllipseRegressionNet(nn.Module):
             dropout=dropout,
             prob=prob,
         )
-        # 320x200 -> 160x100
+
         self.down_block3 = DownBlock(
             input_channels=channel_size,
             output_channels=channel_size * 2,
@@ -469,7 +392,7 @@ class EllipseRegressionNet(nn.Module):
             dropout=dropout,
             prob=prob,
         )
-        # 160x100 -> 80x50
+
         self.down_block4 = DownBlock(
             input_channels=channel_size * 2,
             output_channels=channel_size * 2,
@@ -478,10 +401,8 @@ class EllipseRegressionNet(nn.Module):
             prob=prob,
         )
 
-        # Global average pooling
         self.global_pool = nn.AdaptiveAvgPool2d(1)
 
-        # Regression head
         fc_input_size = channel_size * 2
         self.fc = nn.Sequential(
             nn.Linear(fc_input_size, 128),
@@ -490,8 +411,8 @@ class EllipseRegressionNet(nn.Module):
             nn.Linear(128, 64),
             nn.LeakyReLU(),
             nn.Dropout(p=prob) if dropout else nn.Identity(),
-            nn.Linear(64, 4),  # cx, cy, rx, ry
-            nn.Sigmoid(),  # Output in [0, 1] range
+            nn.Linear(64, 4),
+            nn.Sigmoid(),
         )
 
         self._initialize_weights()
@@ -520,25 +441,20 @@ class EllipseRegressionNet(nn.Module):
                     m.bias.data.zero_()
 
     def forward(self, x):
-        # Encoder
+
         x = self.down_block1(x)
         x = self.down_block2(x)
         x = self.down_block3(x)
         x = self.down_block4(x)
 
-        # Global pooling
         x = self.global_pool(x)
         x = x.view(x.size(0), -1)
 
-        # Regression
         params = self.fc(x)
 
         return params
 
 
-# =========================================================================
-# Utility Functions
-# =========================================================================
 def get_nparams(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
@@ -549,13 +465,9 @@ def total_metric(nparams, miou):
     return total * 0.5
 
 
-# =========================================================================
-# Visualization Functions
-# =========================================================================
 def create_training_plots(train_metrics, valid_metrics, save_dir="plots"):
     os.makedirs(save_dir, exist_ok=True)
 
-    # Loss curves
     fig, ax = plt.subplots(figsize=(10, 6))
     epochs = range(1, len(train_metrics["loss"]) + 1)
     ax.plot(epochs, train_metrics["loss"], "b-", label="Train Loss", linewidth=2)
@@ -569,7 +481,6 @@ def create_training_plots(train_metrics, valid_metrics, save_dir="plots"):
     plt.savefig(loss_plot_path, dpi=150, bbox_inches="tight")
     plt.close()
 
-    # IoU curves
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.plot(epochs, train_metrics["iou"], "b-", label="Train mIoU", linewidth=2)
     ax.plot(epochs, valid_metrics["iou"], "r-", label="Valid mIoU", linewidth=2)
@@ -582,7 +493,6 @@ def create_training_plots(train_metrics, valid_metrics, save_dir="plots"):
     plt.savefig(iou_plot_path, dpi=150, bbox_inches="tight")
     plt.close()
 
-    # Learning rate
     if "lr" in train_metrics and len(train_metrics["lr"]) > 0:
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.plot(epochs, train_metrics["lr"], "g-", linewidth=2)
@@ -597,7 +507,6 @@ def create_training_plots(train_metrics, valid_metrics, save_dir="plots"):
     else:
         lr_plot_path = None
 
-    # Error metrics
     if "center_error" in train_metrics:
         fig, axes = plt.subplots(2, 2, figsize=(14, 10))
 
@@ -728,13 +637,11 @@ def create_prediction_visualization(
 
             output = model(single_img)
 
-            # Denormalize predictions
             pred_params = output[0].cpu().numpy()
             pred_cx, pred_cy, pred_rx, pred_ry = denormalize_ellipse_params(
                 pred_params[0], pred_params[1], pred_params[2], pred_params[3]
             )
 
-            # Render predicted mask
             pred_mask = render_ellipse_mask(pred_cx, pred_cy, pred_rx, pred_ry)
 
             images_to_plot.append(img[0].cpu().squeeze().numpy())
@@ -777,30 +684,24 @@ def create_prediction_visualization(
 
 
 def save_model_checkpoint(model, output_path):
-    """Save model checkpoint as PyTorch .pt file."""
+
     save_model = model
     if hasattr(model, "_orig_mod"):
         save_model = model._orig_mod
 
-    # Convert to contiguous format for portable checkpoint
     save_model = save_model.to(memory_format=torch.contiguous_format)
     save_model.eval()
 
     torch.save(save_model.state_dict(), output_path)
 
     if not os.path.exists(output_path):
-        raise RuntimeError(
-            f"Model save failed - file not created at {output_path}"
-        )
+        raise RuntimeError(f"Model save failed - file not created at {output_path}")
     print(
         f"Model saved: {output_path} "
         f"({os.path.getsize(output_path) / 1024 / 1024:.2f} MB)"
     )
 
 
-# =========================================================================
-# Data Augmentation
-# =========================================================================
 class RandomHorizontalFlip(object):
     def __call__(self, img, label):
         if random.random() < 0.5:
@@ -813,24 +714,20 @@ class RandomHorizontalFlip(object):
 class Gaussian_blur(object):
     def __call__(self, img):
         sigma_value = np.random.randint(2, 7)
-        return Image.fromarray(
-            cv2.GaussianBlur(np.array(img), (7, 7), sigma_value)
-        )
+        return Image.fromarray(cv2.GaussianBlur(np.array(img), (7, 7), sigma_value))
 
 
 class Line_augment(object):
     def __call__(self, base):
-        yc, xc = (0.3 + 0.4 * np.random.rand(1)) * np.array(base.shape)
+        yc, xc = (0.3 + 0.4 * np.random.rand()) * np.array(base.shape)
         aug_base = np.copy(base)
         num_lines = np.random.randint(1, 10)
         for _ in np.arange(0, num_lines):
-            theta = np.pi * np.random.rand(1)
-            x1 = xc - 50 * np.random.rand(1) * (
-                1 if np.random.rand(1) < 0.5 else -1
-            )
+            theta = np.pi * np.random.rand()
+            x1 = xc - 50 * np.random.rand() * (1 if np.random.rand() < 0.5 else -1)
             y1 = (x1 - xc) * np.tan(theta) + yc
-            x2 = xc - (150 * np.random.rand(1) + 50) * (
-                1 if np.random.rand(1) < 0.5 else -1
+            x2 = xc - (150 * np.random.rand() + 50) * (
+                1 if np.random.rand() < 0.5 else -1
             )
             y2 = (x2 - xc) * np.tan(theta) + yc
             aug_base = cv2.line(
@@ -849,9 +746,6 @@ class MaskToTensor(object):
         return torch.from_numpy(np.array(img, dtype=np.int64)).long()
 
 
-# =========================================================================
-# Dataset
-# =========================================================================
 class IrisDataset(Dataset):
     def __init__(self, hf_dataset, split="train", transform=None):
         self.transform = transform
@@ -880,16 +774,12 @@ class IrisDataset(Dataset):
         )
         filename = sample["filename"]
 
-        # Extract ellipse parameters from mask
         cx, cy, rx, ry, _ = extract_ellipse_params(label)
-        cx_norm, cy_norm, rx_norm, ry_norm = normalize_ellipse_params(
-            cx, cy, rx, ry
-        )
+        cx_norm, cy_norm, rx_norm, ry_norm = normalize_ellipse_params(cx, cy, rx, ry)
         ellipse_params = torch.tensor(
             [cx_norm, cy_norm, rx_norm, ry_norm], dtype=torch.float32
         )
 
-        # Image preprocessing
         pilimg = cv2.LUT(image, self.gamma_table)
 
         if self.transform is not None and self.split == "train":
@@ -906,12 +796,12 @@ class IrisDataset(Dataset):
         if self.transform is not None:
             if self.split == "train":
                 img, label_pil = RandomHorizontalFlip()(img, label_pil)
-                # Check if flipped
+
                 if np.array(label_pil)[0, 0] != label[0, 0]:
                     flipped = True
                     spatial_weights = np.fliplr(spatial_weights).copy()
                     dist_map = np.flip(dist_map, axis=2).copy()
-                    # Flip ellipse center x coordinate
+
                     cx_norm = 1.0 - cx_norm
                     ellipse_params = torch.tensor(
                         [cx_norm, cy_norm, rx_norm, ry_norm], dtype=torch.float32
@@ -931,16 +821,12 @@ class IrisDataset(Dataset):
         )
 
 
-# =========================================================================
-# Argument Parser
-# =========================================================================
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Train ellipse regression model for pupil detection (local version)",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
-    # Training hyperparameters
     parser.add_argument(
         "--epochs",
         type=int,
@@ -950,7 +836,7 @@ def parse_args():
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=32,
+        default=4,
         help="Batch size for training",
     )
     parser.add_argument(
@@ -962,13 +848,6 @@ def parse_args():
         help="Learning rate",
     )
 
-    # Data and output directories
-    parser.add_argument(
-        "--data-dir",
-        type=str,
-        default="./data/openeds",
-        help="Directory for dataset cache",
-    )
     parser.add_argument(
         "--output-dir",
         type=str,
@@ -976,7 +855,6 @@ def parse_args():
         help="Directory for model checkpoints and plots",
     )
 
-    # Device configuration
     parser.add_argument(
         "--device",
         type=str,
@@ -985,22 +863,19 @@ def parse_args():
         help="Device to use for training (auto will detect CUDA availability)",
     )
 
-    # DataLoader settings
     parser.add_argument(
         "--num-workers",
         type=int,
-        default=8,
+        default=4,
         help="Number of data loader workers",
     )
 
-    # MLflow settings
     parser.add_argument(
         "--no-mlflow",
         action="store_true",
         help="Disable MLflow logging",
     )
 
-    # Model architecture
     parser.add_argument(
         "--channel-size",
         type=int,
@@ -1017,15 +892,9 @@ def parse_args():
     return parser.parse_args()
 
 
-# =========================================================================
-# Main Training Logic
-# =========================================================================
 def main():
     args = parse_args()
 
-    # =========================================================================
-    # Device Setup
-    # =========================================================================
     if args.device == "auto":
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
@@ -1039,16 +908,13 @@ def main():
     if device.type == "cuda":
         print(f"GPU: {torch.cuda.get_device_name(0)}")
         torch.cuda.manual_seed(12)
-        # Performance optimizations
+
         torch.backends.cudnn.benchmark = True
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
     else:
         _ = torch.manual_seed(12)
 
-    # =========================================================================
-    # MLflow Setup
-    # =========================================================================
     use_mlflow = not args.no_mlflow
     mlflow_tracking_uri = os.environ.get("MLFLOW_TRACKING_URI")
     mlflow_experiment_id = os.environ.get("MLFLOW_EXPERIMENT_ID")
@@ -1057,6 +923,7 @@ def main():
         if mlflow_tracking_uri and mlflow_experiment_id:
             try:
                 import mlflow
+
                 mlflow.set_tracking_uri(mlflow_tracking_uri)
                 mlflow.set_experiment(experiment_id=mlflow_experiment_id)
                 print(f"MLflow configured with experiment ID: {mlflow_experiment_id}")
@@ -1068,61 +935,23 @@ def main():
             print("         MLflow logging is disabled.")
             use_mlflow = False
 
-    # =========================================================================
-    # Create Output Directories
-    # =========================================================================
     os.makedirs(args.output_dir, exist_ok=True)
     plots_dir = os.path.join(args.output_dir, "plots")
     os.makedirs(plots_dir, exist_ok=True)
     print(f"Output directory: {args.output_dir}")
     print(f"Plots directory: {plots_dir}")
 
-    # =========================================================================
-    # Load Dataset
-    # =========================================================================
-    data_dir = args.data_dir
-    dataset_cache_path = os.path.join(data_dir, "dataset")
-    cache_marker_file = os.path.join(data_dir, ".cache_complete")
-
-    os.makedirs(data_dir, exist_ok=True)
-
-    cache_exists = os.path.exists(cache_marker_file)
-
-    if cache_exists:
-        print(f"Found cached dataset at: {dataset_cache_path}")
-        print("Loading from local cache (fast)...")
-        try:
-            hf_dataset = load_from_disk(dataset_cache_path)
-            print("Loaded from cache!")
-        except Exception as e:
-            print(f"Cache corrupted, re-downloading: {e}")
-            import shutil
-            shutil.rmtree(dataset_cache_path, ignore_errors=True)
-            if os.path.exists(cache_marker_file):
-                os.remove(cache_marker_file)
-            cache_exists = False
-
-    if not cache_exists:
-        print(f"Downloading from HuggingFace: {HF_DATASET_REPO}")
-        print("First run takes ~20 min, subsequent runs will be fast.")
-        hf_dataset = load_dataset(HF_DATASET_REPO)
-        os.makedirs(data_dir, exist_ok=True)
-        hf_dataset.save_to_disk(dataset_cache_path)
-        with open(cache_marker_file, "w") as f:
-            f.write(f"Cached from {HF_DATASET_REPO}\n")
-        print("Dataset cached to local disk!")
+    print(f"Loading dataset from HuggingFace: {HF_DATASET_REPO}")
+    print("First run downloads data, subsequent runs use HuggingFace cache.")
+    hf_dataset = load_dataset(HF_DATASET_REPO)
 
     print(f"Train samples: {len(hf_dataset['train'])}")
     print(f"Validation samples: {len(hf_dataset['validation'])}")
 
-    # =========================================================================
-    # Initialize Model and Training Setup
-    # =========================================================================
     print("\n" + "=" * 80)
     print("Initializing model and training setup")
     print("=" * 80)
 
-    # Hyperparameters
     BATCH_SIZE = args.batch_size
     EPOCHS = args.epochs
     LEARNING_RATE = args.learning_rate
@@ -1130,7 +959,6 @@ def main():
     GRADIENT_ACCUMULATION_STEPS = 1
     EFFECTIVE_BATCH_SIZE = BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS
 
-    # Model
     model = EllipseRegressionNet(
         in_channels=1,
         channel_size=args.channel_size,
@@ -1146,18 +974,14 @@ def main():
         model = model.to(memory_format=torch.channels_last)
         print("Model converted to channels_last memory format")
 
-    if hasattr(torch, "compile") and device.type == "cuda":
-        print("Compiling model with torch.compile(mode='max-autotune')...")
-        model = torch.compile(model, mode="max-autotune")
-        print("Model compiled successfully")
+    # torch.compile disabled - requires Triton which needs /sbin/ldconfig
+    use_torch_compile = False
 
-    # Mixed precision setup
     scaler = torch.amp.GradScaler("cuda") if device.type == "cuda" else None
     use_amp = device.type == "cuda"
     if use_amp:
         print("Mixed precision training (AMP) enabled")
 
-    # Verification forward pass
     print(f"\nVerifying forward pass with batch_size={BATCH_SIZE} (AMP={use_amp})...")
     with torch.no_grad():
         test_input = torch.randn(BATCH_SIZE, 1, IMAGE_HEIGHT, IMAGE_WIDTH).to(device)
@@ -1167,25 +991,21 @@ def main():
             test_output = model(test_input)
         print(f"Input shape: {test_input.shape}")
         print(f"Output shape: {test_output.shape}")
-        assert test_output.shape == (BATCH_SIZE, 4), (
-            f"Output shape mismatch: expected ({BATCH_SIZE}, 4), got {test_output.shape}"
-        )
+        assert test_output.shape == (
+            BATCH_SIZE,
+            4,
+        ), f"Output shape mismatch: expected ({BATCH_SIZE}, 4), got {test_output.shape}"
         print("Forward pass verification: PASSED")
 
-    # Optimizer and scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, "min", patience=5
-    )
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, "min", patience=5)
 
-    # Loss function
     criterion = EllipseRegressionLoss(
         center_weight=1.0,
         radius_weight=1.0,
         iou_weight=0.5,
     )
 
-    # Data transforms
     transform = transforms.Compose(
         [
             transforms.ToTensor(),
@@ -1215,7 +1035,7 @@ def main():
     print(f"  Effective Batch Size: {EFFECTIVE_BATCH_SIZE}")
     print(f"  Num Workers: {NUM_WORKERS}")
     print(f"  Mixed Precision (AMP): {use_amp}")
-    print(f"  torch.compile(): {hasattr(torch, 'compile') and device.type == 'cuda'}")
+    print(f"  torch.compile(): {use_torch_compile}")
     print(f"  Channels Last Format: {USE_CHANNELS_LAST}")
     print(f"{'='*80}")
 
@@ -1240,7 +1060,6 @@ def main():
         prefetch_factor=4 if NUM_WORKERS > 0 else None,
     )
 
-    # System info for logging
     system_info = {
         "python_version": platform.python_version(),
         "platform": platform.platform(),
@@ -1281,14 +1100,10 @@ def main():
         "gamma_correction": 0.8,
     }
 
-    # =========================================================================
-    # Training Loop
-    # =========================================================================
     print("\n" + "=" * 80)
     print("Starting training")
     print("=" * 80)
 
-    # Metrics storage
     train_metrics = {
         "loss": [],
         "iou": [],
@@ -1315,12 +1130,13 @@ def main():
     best_valid_iou = 0.0
     best_epoch = 0
 
-    # MLflow context manager (or no-op)
     if use_mlflow:
         import mlflow
+
         mlflow_context = mlflow.start_run(run_name="ellipse-regression-training-local")
     else:
         from contextlib import nullcontext
+
         mlflow_context = nullcontext()
 
     with mlflow_context as run:
@@ -1349,7 +1165,7 @@ def main():
                     "scheduler_patience": 5,
                     "use_amp": use_amp,
                     "use_channels_last": USE_CHANNELS_LAST,
-                    "torch_compile": hasattr(torch, "compile") and device.type == "cuda",
+                    "torch_compile": use_torch_compile,
                     "center_weight": 1.0,
                     "radius_weight": 1.0,
                     "iou_weight": 0.5,
@@ -1366,7 +1182,7 @@ def main():
             print(f"MLflow run started: {run.info.run_id}")
 
         for epoch in range(EPOCHS):
-            # Training
+
             _ = model.train()
 
             train_loss_sum = torch.tensor(0.0, device=device)
@@ -1401,33 +1217,22 @@ def main():
 
                 optimizer.zero_grad(set_to_none=True)
 
-                if use_amp:
-                    with torch.amp.autocast("cuda"):
-                        output = model(data)
-                        total_loss, center_loss, radius_loss = criterion(
-                            output, target_params
-                        )
-                    scaler.scale(total_loss).backward()
-                    scaler.step(optimizer)
-                    scaler.update()
-                else:
+                with torch.amp.autocast("cuda"):
                     output = model(data)
                     total_loss, center_loss, radius_loss = criterion(
                         output, target_params
                     )
-                    total_loss.backward()
-                    optimizer.step()
-
+                scaler.scale(total_loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
                 train_loss_sum += total_loss.detach()
                 train_center_loss_sum += center_loss.detach()
                 train_radius_loss_sum += radius_loss.detach()
                 train_batch_count += 1
 
-                # Compute metrics
                 train_center_errors.append(compute_center_error(output, target_params))
                 train_radius_errors.append(compute_radius_error(output, target_params))
 
-                # Compute IoU with ground truth masks
                 miou, bg_iou, pupil_iou = compute_iou_with_gt_mask(
                     output, target_labels, device
                 )
@@ -1435,7 +1240,6 @@ def main():
                 train_bg_ious.append(bg_iou)
                 train_pupil_ious.append(pupil_iou)
 
-            # Aggregate training metrics
             loss_train = (train_loss_sum / train_batch_count).item()
             center_loss_train = (train_center_loss_sum / train_batch_count).item()
             radius_loss_train = (train_radius_loss_sum / train_batch_count).item()
@@ -1455,7 +1259,6 @@ def main():
             train_metrics["background_iou"].append(bg_iou_train)
             train_metrics["pupil_iou"].append(pupil_iou_train)
 
-            # Validation
             _ = model.eval()
 
             valid_loss_sum = torch.tensor(0.0, device=device)
@@ -1487,13 +1290,7 @@ def main():
                     target_params = ellipse_params.to(device, non_blocking=True)
                     target_labels = labels.to(device, non_blocking=True)
 
-                    if use_amp:
-                        with torch.amp.autocast("cuda"):
-                            output = model(data)
-                            total_loss, center_loss, radius_loss = criterion(
-                                output, target_params, compute_iou=False
-                            )
-                    else:
+                    with torch.amp.autocast("cuda"):
                         output = model(data)
                         total_loss, center_loss, radius_loss = criterion(
                             output, target_params, compute_iou=False
@@ -1504,7 +1301,6 @@ def main():
                     valid_radius_loss_sum += radius_loss.detach()
                     valid_batch_count += 1
 
-                    # Compute metrics
                     valid_center_errors.append(
                         compute_center_error(output, target_params)
                     )
@@ -1512,7 +1308,6 @@ def main():
                         compute_radius_error(output, target_params)
                     )
 
-                    # Compute IoU with ground truth masks
                     miou, bg_iou, pupil_iou = compute_iou_with_gt_mask(
                         output, target_labels, device
                     )
@@ -1520,7 +1315,6 @@ def main():
                     valid_bg_ious.append(bg_iou)
                     valid_pupil_ious.append(pupil_iou)
 
-            # Aggregate validation metrics
             loss_valid = (valid_loss_sum / valid_batch_count).item()
             center_loss_valid = (valid_center_loss_sum / valid_batch_count).item()
             radius_loss_valid = (valid_radius_loss_sum / valid_batch_count).item()
@@ -1539,7 +1333,6 @@ def main():
             valid_metrics["background_iou"].append(bg_iou_valid)
             valid_metrics["pupil_iou"].append(pupil_iou_valid)
 
-            # Log to MLflow
             if use_mlflow:
                 mlflow.log_metrics(
                     {
@@ -1585,7 +1378,6 @@ def main():
             )
             print(f"Learning Rate: {optimizer.param_groups[0]['lr']:.6f}")
 
-            # Save best model
             if miou_valid > best_valid_iou:
                 best_valid_iou = miou_valid
                 best_epoch = epoch + 1
@@ -1596,7 +1388,6 @@ def main():
                     mlflow.log_metric("best_valid_iou", best_valid_iou, step=epoch)
                 print(f"New best model! Valid mIoU: {best_valid_iou:.4f}")
 
-            # Visualizations
             if (epoch + 1) % 5 == 0 or epoch == 0:
                 print("Generating sample predictions...")
                 pred_vis_path = os.path.join(
@@ -1636,7 +1427,6 @@ def main():
                     mlflow.log_artifact(checkpoint_path)
                 print(f"Checkpoint saved: {checkpoint_path}")
 
-        # Final metrics
         if use_mlflow:
             mlflow.log_metrics(
                 {

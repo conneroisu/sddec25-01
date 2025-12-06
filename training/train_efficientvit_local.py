@@ -46,6 +46,7 @@ except ImportError:
     MLFLOW_AVAILABLE = False
     print("MLflow not installed, skipping experiment tracking")
 
+
 class TinyConvNorm(nn.Module):
     """Convolution + BatchNorm layer (parameter-efficient)."""
 
@@ -139,14 +140,20 @@ class TinyCascadedGroupAttention(nn.Module):
         k_total = self.num_heads * self.key_dim
         v_total = self.num_heads * self.d
 
-        q = qkv[:, :, :q_total].reshape(B, N, self.num_heads, self.key_dim).permute(
-            0, 2, 1, 3
+        q = (
+            qkv[:, :, :q_total]
+            .reshape(B, N, self.num_heads, self.key_dim)
+            .permute(0, 2, 1, 3)
         )
-        k = qkv[:, :, q_total : q_total + k_total].reshape(
-            B, N, self.num_heads, self.key_dim
-        ).permute(0, 2, 1, 3)
-        v = qkv[:, :, q_total + k_total :].reshape(B, N, self.num_heads, self.d).permute(
-            0, 2, 1, 3
+        k = (
+            qkv[:, :, q_total : q_total + k_total]
+            .reshape(B, N, self.num_heads, self.key_dim)
+            .permute(0, 2, 1, 3)
+        )
+        v = (
+            qkv[:, :, q_total + k_total :]
+            .reshape(B, N, self.num_heads, self.d)
+            .permute(0, 2, 1, 3)
         )
 
         attn = (q @ k.transpose(-2, -1)) * self.scale

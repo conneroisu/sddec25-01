@@ -173,15 +173,21 @@ def train():
             k_total = self.num_heads * self.key_dim
             v_total = self.num_heads * self.d
 
-            q = qkv[:, :, :q_total].reshape(
-                B, N, self.num_heads, self.key_dim
-            ).permute(0, 2, 1, 3)
-            k = qkv[:, :, q_total : q_total + k_total].reshape(
-                B, N, self.num_heads, self.key_dim
-            ).permute(0, 2, 1, 3)
-            v = qkv[:, :, q_total + k_total :].reshape(
-                B, N, self.num_heads, self.d
-            ).permute(0, 2, 1, 3)
+            q = (
+                qkv[:, :, :q_total]
+                .reshape(B, N, self.num_heads, self.key_dim)
+                .permute(0, 2, 1, 3)
+            )
+            k = (
+                qkv[:, :, q_total : q_total + k_total]
+                .reshape(B, N, self.num_heads, self.key_dim)
+                .permute(0, 2, 1, 3)
+            )
+            v = (
+                qkv[:, :, q_total + k_total :]
+                .reshape(B, N, self.num_heads, self.d)
+                .permute(0, 2, 1, 3)
+            )
 
             attn = (q @ k.transpose(-2, -1)) * self.scale
             attn = attn.softmax(dim=-1)
@@ -341,17 +347,19 @@ def train():
                     nn.GELU(),
                 )
 
-            self.blocks = nn.ModuleList([
-                TinyEfficientVitBlock(
-                    dim=out_dim,
-                    num_heads=num_heads,
-                    key_dim=key_dim,
-                    attn_ratio=attn_ratio,
-                    window_size=window_size,
-                    mlp_ratio=mlp_ratio,
-                )
-                for _ in range(depth)
-            ])
+            self.blocks = nn.ModuleList(
+                [
+                    TinyEfficientVitBlock(
+                        dim=out_dim,
+                        num_heads=num_heads,
+                        key_dim=key_dim,
+                        attn_ratio=attn_ratio,
+                        window_size=window_size,
+                        mlp_ratio=mlp_ratio,
+                    )
+                    for _ in range(depth)
+                ]
+            )
 
         def forward(self, x):
             if self.downsample is not None:
@@ -610,18 +618,12 @@ def train():
             log_probs = F.log_softmax(logits, dim=1)
             ce_loss = self.nll(log_probs, target)
             weighted_ce = (ce_loss * (1.0 + spatial_weights)).mean()
-            target_onehot = (
-                F.one_hot(target, num_classes=2)
-                .permute(0, 3, 1, 2)
-                .float()
-            )
+            target_onehot = F.one_hot(target, num_classes=2).permute(0, 3, 1, 2).float()
             probs_flat = probs.flatten(start_dim=2)
             target_flat = target_onehot.flatten(start_dim=2)
             intersection = (probs_flat * target_flat).sum(dim=2)
             cardinality = (probs_flat + target_flat).sum(dim=2)
-            class_weights = 1.0 / (target_flat.sum(dim=2) ** 2).clamp(
-                min=self.epsilon
-            )
+            class_weights = 1.0 / (target_flat.sum(dim=2) ** 2).clamp(min=self.epsilon)
             dice = (
                 2.0
                 * (class_weights * intersection).sum(dim=1)
@@ -634,9 +636,7 @@ def train():
                 .mean(dim=1)
                 .mean()
             )
-            total_loss = (
-                weighted_ce + alpha * dice_loss + (1.0 - alpha) * surface_loss
-            )
+            total_loss = weighted_ce + alpha * dice_loss + (1.0 - alpha) * surface_loss
             return (
                 total_loss,
                 weighted_ce,
@@ -650,18 +650,12 @@ def train():
         for c in range(num_classes):
             pred_c = predictions == c
             target_c = targets == c
-            intersection[c] = (
-                torch.logical_and(pred_c, target_c).sum().float()
-            )
-            union[c] = (
-                torch.logical_or(pred_c, target_c).sum().float()
-            )
+            intersection[c] = torch.logical_and(pred_c, target_c).sum().float()
+            union[c] = torch.logical_or(pred_c, target_c).sum().float()
         return intersection, union
 
     def finalize_iou(total_intersection, total_union):
-        iou_per_class = (
-            (total_intersection / total_union.clamp(min=1)).cpu().numpy()
-        )
+        iou_per_class = (total_intersection / total_union.clamp(min=1)).cpu().numpy()
         return float(np.mean(iou_per_class)), iou_per_class.tolist()
 
     def get_predictions(output):
@@ -759,10 +753,7 @@ def train():
             plt.close()
 
         components_plot_path = None
-        if all(
-            k in train_metrics
-            for k in ["ce_loss", "dice_loss", "surface_loss"]
-        ):
+        if all(k in train_metrics for k in ["ce_loss", "dice_loss", "surface_loss"]):
             fig, axes = plt.subplots(2, 2, figsize=(14, 10))
             axes[0, 0].plot(
                 epochs,
@@ -919,9 +910,7 @@ def train():
         torch.save(save_model.state_dict(), output_path)
 
         if not os.path.exists(output_path):
-            raise RuntimeError(
-                f"Model save failed - file not created at {output_path}"
-            )
+            raise RuntimeError(f"Model save failed - file not created at {output_path}")
         print(
             f"Model saved: {output_path} "
             f"({os.path.getsize(output_path) / 1024 / 1024:.2f} MB)"
@@ -942,9 +931,7 @@ def train():
     class Gaussian_blur(object):
         def __call__(self, img):
             sigma_value = np.random.randint(2, 7)
-            return Image.fromarray(
-                cv2.GaussianBlur(img, (7, 7), sigma_value)
-            )
+            return Image.fromarray(cv2.GaussianBlur(img, (7, 7), sigma_value))
 
     class Line_augment(object):
         def __call__(self, base):
@@ -1008,9 +995,9 @@ def train():
             spatial_weights = np.array(
                 sample["spatial_weights"], dtype=np.float32
             ).reshape(IMAGE_HEIGHT, IMAGE_WIDTH)
-            dist_map = np.array(
-                sample["dist_map"], dtype=np.float32
-            ).reshape(2, IMAGE_HEIGHT, IMAGE_WIDTH)
+            dist_map = np.array(sample["dist_map"], dtype=np.float32).reshape(
+                2, IMAGE_HEIGHT, IMAGE_WIDTH
+            )
             filename = sample["filename"]
 
             pilimg = cv2.LUT(image, self.gamma_table)
@@ -1026,9 +1013,7 @@ def train():
             if self.transform is not None:
                 if self.split == "train":
                     img, label_pil = RandomHorizontalFlip()(img, label_pil)
-                    if (
-                        np.array(label_pil)[0, 0] != label[0, 0]
-                    ):
+                    if np.array(label_pil)[0, 0] != label[0, 0]:
                         spatial_weights = np.fliplr(spatial_weights).copy()
                         dist_map = np.flip(dist_map, axis=2).copy()
                 img = self.transform(img)
@@ -1064,6 +1049,7 @@ def train():
         except Exception as e:
             print(f"Cache corrupted, re-downloading: {e}")
             import shutil
+
             shutil.rmtree(DATASET_CACHE_PATH, ignore_errors=True)
             if os.path.exists(CACHE_MARKER_FILE):
                 os.remove(CACHE_MARKER_FILE)
@@ -1151,10 +1137,12 @@ def train():
     criterion = CombinedLoss()
     scaler = torch.amp.GradScaler("cuda") if torch.cuda.is_available() else None
 
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize([0.5], [0.5]),
-    ])
+    transform = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            transforms.Normalize([0.5], [0.5]),
+        ]
+    )
 
     train_dataset = IrisDataset(
         hf_dataset["train"],
@@ -1203,13 +1191,14 @@ def train():
     )
 
     alpha = np.zeros(EPOCHS)
-    alpha[0 : min(125, EPOCHS)] = 1 - np.arange(
-        1, min(125, EPOCHS) + 1
-    ) / min(125, EPOCHS)
+    alpha[0 : min(125, EPOCHS)] = 1 - np.arange(1, min(125, EPOCHS) + 1) / min(
+        125, EPOCHS
+    )
     if EPOCHS > 125:
         alpha[125:] = 1
 
     import platform
+
     system_info = {
         "python_version": platform.python_version(),
         "platform": platform.platform(),
@@ -1285,24 +1274,28 @@ def train():
     best_epoch = 0
 
     with mlflow.start_run(run_name="tiny-efficientvit-training") as run:
-        mlflow.set_tags({
-            "model_type": "TinyEfficientViT",
-            "task": "semantic_segmentation",
-            "dataset": "OpenEDS",
-            "framework": "PyTorch",
-            "optimizer": "Adam",
-            "scheduler": "ReduceLROnPlateau",
-            "version": "v1.0",
-        })
-        mlflow.log_params({
-            "batch_size": BATCH_SIZE,
-            "epochs": EPOCHS,
-            "learning_rate": LEARNING_RATE,
-            "model_params": nparams,
-            "num_workers": NUM_WORKERS,
-            "scheduler_patience": 5,
-            "use_amp": use_amp,
-        })
+        mlflow.set_tags(
+            {
+                "model_type": "TinyEfficientViT",
+                "task": "semantic_segmentation",
+                "dataset": "OpenEDS",
+                "framework": "PyTorch",
+                "optimizer": "Adam",
+                "scheduler": "ReduceLROnPlateau",
+                "version": "v1.0",
+            }
+        )
+        mlflow.log_params(
+            {
+                "batch_size": BATCH_SIZE,
+                "epochs": EPOCHS,
+                "learning_rate": LEARNING_RATE,
+                "model_params": nparams,
+                "num_workers": NUM_WORKERS,
+                "scheduler_patience": 5,
+                "use_amp": use_amp,
+            }
+        )
         mlflow.log_params({f"system_{k}": v for k, v in system_info.items()})
         mlflow.log_params({f"dataset_{k}": v for k, v in dataset_stats.items()})
         mlflow.log_params({f"model_{k}": v for k, v in model_details.items()})
@@ -1324,7 +1317,9 @@ def train():
             pbar = tqdm(trainloader, desc=f"Epoch {epoch+1}/{EPOCHS}")
             for batchdata in pbar:
                 img, labels, _, spatialWeights, maxDist = batchdata
-                data = img.to(device, non_blocking=True, memory_format=torch.channels_last)
+                data = img.to(
+                    device, non_blocking=True, memory_format=torch.channels_last
+                )
                 target = labels.to(device, non_blocking=True).long()
                 spatial_weights_gpu = spatialWeights.to(
                     device, non_blocking=True
@@ -1374,9 +1369,7 @@ def train():
                 train_batch_count += 1
 
                 predict = get_predictions(output)
-                batch_intersection, batch_union = compute_iou_tensors(
-                    predict, target
-                )
+                batch_intersection, batch_union = compute_iou_tensors(predict, target)
                 train_intersection += batch_intersection
                 train_union += batch_union
 
@@ -1390,9 +1383,7 @@ def train():
             loss_train: float = (train_loss_sum / train_batch_count).item()
             ce_loss_train: float = (train_ce_sum / train_batch_count).item()
             dice_loss_train: float = (train_dice_sum / train_batch_count).item()
-            surface_loss_train: float = (
-                train_surface_sum / train_batch_count
-            ).item()
+            surface_loss_train: float = (train_surface_sum / train_batch_count).item()
 
             train_metrics["loss"].append(loss_train)
             train_metrics["iou"].append(miou_train)
@@ -1416,7 +1407,9 @@ def train():
             with torch.no_grad():
                 for batchdata in validloader:
                     img, labels, _, spatialWeights, maxDist = batchdata
-                    data = img.to(device, non_blocking=True, memory_format=torch.channels_last)
+                    data = img.to(
+                        device, non_blocking=True, memory_format=torch.channels_last
+                    )
                     target = labels.to(device, non_blocking=True).long()
                     spatial_weights_gpu = spatialWeights.to(
                         device, non_blocking=True
@@ -1476,9 +1469,7 @@ def train():
             loss_valid: float = (valid_loss_sum / valid_batch_count).item()
             ce_loss_valid: float = (valid_ce_sum / valid_batch_count).item()
             dice_loss_valid: float = (valid_dice_sum / valid_batch_count).item()
-            surface_loss_valid: float = (
-                valid_surface_sum / valid_batch_count
-            ).item()
+            surface_loss_valid: float = (valid_surface_sum / valid_batch_count).item()
 
             valid_metrics["loss"].append(loss_valid)
             valid_metrics["iou"].append(miou_valid)
@@ -1513,12 +1504,8 @@ def train():
             scheduler.step(loss_valid)
 
             print(f"\nEpoch {epoch+1}/{EPOCHS}")
-            print(
-                f"Train Loss: {loss_train:.4f} | Valid Loss: {loss_valid:.4f}"
-            )
-            print(
-                f"Train mIoU: {miou_train:.4f} | Valid mIoU: {miou_valid:.4f}"
-            )
+            print(f"Train Loss: {loss_train:.4f} | Valid Loss: {loss_valid:.4f}")
+            print(f"Train mIoU: {miou_train:.4f} | Valid mIoU: {miou_valid:.4f}")
             print(
                 f"Train BG IoU: {bg_iou_train:.4f} | "
                 f"Train Pupil IoU: {pupil_iou_train:.4f}"
@@ -1569,14 +1556,16 @@ def train():
                 mlflow.log_artifact(checkpoint_path)
                 print(f"Checkpoint saved: {checkpoint_path}")
 
-        mlflow.log_metrics({
-            "final_train_loss": loss_train,
-            "final_train_iou": miou_train,
-            "final_valid_loss": loss_valid,
-            "final_valid_iou": miou_valid,
-            "best_valid_iou": best_valid_iou,
-            "best_epoch": best_epoch,
-        })
+        mlflow.log_metrics(
+            {
+                "final_train_loss": loss_train,
+                "final_train_iou": miou_train,
+                "final_valid_loss": loss_valid,
+                "final_valid_iou": miou_valid,
+                "best_valid_iou": best_valid_iou,
+                "best_epoch": best_epoch,
+            }
+        )
 
         print("\n" + "=" * 80)
         print("Training completed!")

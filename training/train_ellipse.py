@@ -444,12 +444,12 @@ def train():
         """
         Lightweight CNN for ellipse parameter regression.
         Predicts: (cx, cy, rx, ry) - center and semi-axes of pupil ellipse.
-        
+
         Architecture:
         - 4 encoder blocks with progressive downsampling
         - Global average pooling
         - FC layers for regression
-        
+
         This is significantly lighter than a full U-Net since we don't need
         a decoder - we just need to predict 4 scalar values.
         """
@@ -802,9 +802,7 @@ def train():
         torch.save(save_model.state_dict(), output_path)
 
         if not os.path.exists(output_path):
-            raise RuntimeError(
-                f"Model save failed - file not created at {output_path}"
-            )
+            raise RuntimeError(f"Model save failed - file not created at {output_path}")
         print(
             f"Model saved: {output_path} "
             f"({os.path.getsize(output_path) / 1024 / 1024:.2f} MB)"
@@ -824,9 +822,7 @@ def train():
     class Gaussian_blur(object):
         def __call__(self, img):
             sigma_value = np.random.randint(2, 7)
-            return Image.fromarray(
-                cv2.GaussianBlur(np.array(img), (7, 7), sigma_value)
-            )
+            return Image.fromarray(cv2.GaussianBlur(np.array(img), (7, 7), sigma_value))
 
     class Line_augment(object):
         def __call__(self, base):
@@ -880,9 +876,9 @@ def train():
             label = np.array(sample["label"], dtype=np.uint8).reshape(
                 IMAGE_HEIGHT, IMAGE_WIDTH
             )
-            spatial_weights = np.array(sample["spatial_weights"], dtype=np.float32).reshape(
-                IMAGE_HEIGHT, IMAGE_WIDTH
-            )
+            spatial_weights = np.array(
+                sample["spatial_weights"], dtype=np.float32
+            ).reshape(IMAGE_HEIGHT, IMAGE_WIDTH)
             dist_map = np.array(sample["dist_map"], dtype=np.float32).reshape(
                 2, IMAGE_HEIGHT, IMAGE_WIDTH
             )
@@ -1038,16 +1034,15 @@ def train():
             test_output = model(test_input)
         print(f"Input shape: {test_input.shape}")
         print(f"Output shape: {test_output.shape}")
-        assert test_output.shape == (BATCH_SIZE, 4), (
-            f"Output shape mismatch: expected ({BATCH_SIZE}, 4), got {test_output.shape}"
-        )
+        assert test_output.shape == (
+            BATCH_SIZE,
+            4,
+        ), f"Output shape mismatch: expected ({BATCH_SIZE}, 4), got {test_output.shape}"
         print("Forward pass verification: PASSED")
 
     # Optimizer and scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, "min", patience=5
-    )
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, "min", patience=5)
 
     # Loss function
     criterion = EllipseRegressionLoss(

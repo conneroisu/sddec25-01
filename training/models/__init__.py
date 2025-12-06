@@ -7,4 +7,4 @@ Exports:
 
 from .efficientvit import TinyEfficientViTSeg
 
-__all__ = ['TinyEfficientViTSeg']
+__all__ = ["TinyEfficientViTSeg"]
