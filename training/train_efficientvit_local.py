@@ -12,6 +12,8 @@ locally without Modal cloud infrastructure. It supports:
 Usage:
     python train_efficientvit_local.py --epochs 10 --batch-size 32
     python train_efficientvit_local.py --device cuda --output-dir ./checkpoints
+    python train_efficientvit_local.py --resume                 # Auto-detect best model
+    python train_efficientvit_local.py --resume path/to/model.pt  # Specific checkpoint
     python train_efficientvit_local.py --help
 """
 
@@ -882,6 +884,60 @@ def save_model_checkpoint(model, output_path):
     )
 
 
+def load_model_checkpoint(model, checkpoint_path, device):
+    """Load model checkpoint from PyTorch .pt file.
+
+    Args:
+        model: The model to load weights into
+        checkpoint_path: Path to the checkpoint file
+        device: Device to load the model onto
+
+    Returns:
+        The model with loaded weights
+    """
+    if not os.path.exists(checkpoint_path):
+        raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
+
+    print(f"Loading checkpoint from: {checkpoint_path}")
+    state_dict = torch.load(checkpoint_path, map_location=device, weights_only=True)
+    model.load_state_dict(state_dict)
+    print(
+        f"Checkpoint loaded successfully "
+        f"({os.path.getsize(checkpoint_path) / 1024 / 1024:.2f} MB)"
+    )
+    return model
+
+
+def resolve_resume_path(resume_arg, output_dir):
+    """Resolve the checkpoint path for resuming training.
+
+    Args:
+        resume_arg: The --resume argument value ("auto", a path, or None)
+        output_dir: The output directory for checkpoints
+
+    Returns:
+        Path to checkpoint file, or None if no checkpoint should be loaded
+    """
+    if resume_arg is None:
+        return None
+
+    if resume_arg == "auto":
+        # Auto-detect best model in output directory
+        default_path = os.path.join(output_dir, "best_efficientvit_model.pt")
+        if os.path.exists(default_path):
+            print(f"Auto-detected checkpoint: {default_path}")
+            return default_path
+        else:
+            print(f"No checkpoint found at {default_path}, starting fresh")
+            return None
+    else:
+        # User provided explicit path
+        if os.path.exists(resume_arg):
+            return resume_arg
+        else:
+            raise FileNotFoundError(f"Specified checkpoint not found: {resume_arg}")
+
+
 class RandomHorizontalFlip(object):
     def __call__(self, img, label):
         if random.random() < 0.5:
@@ -1068,7 +1124,6 @@ def parse_args():
         description="Train TinyEfficientViT for semantic segmentation (local version)",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-
     parser.add_argument(
         "--epochs",
         type=int,
@@ -1078,14 +1133,14 @@ def parse_args():
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=32,
+        default=64,
         help="Batch size for training and validation",
     )
     parser.add_argument(
         "--lr",
         "--learning-rate",
         type=float,
-        default=1e-2,
+        default=1e-3,
         dest="learning_rate",
         help="Initial learning rate",
     )
@@ -1095,7 +1150,6 @@ def parse_args():
         default=4,
         help="Number of data loading workers",
     )
-
     parser.add_argument(
         "--output-dir",
         type=str,
@@ -1108,7 +1162,6 @@ def parse_args():
         default="./plots",
         help="Directory for saving training plots",
     )
-
     parser.add_argument(
         "--device",
         type=str,
@@ -1116,11 +1169,18 @@ def parse_args():
         choices=["cuda", "mps", "cpu"],
         help="Device to use for training (auto-detect if not specified)",
     )
-
     parser.add_argument(
         "--no-compile",
         action="store_true",
         help="Disable torch.compile() for debugging",
+    )
+    parser.add_argument(
+        "--resume",
+        type=str,
+        nargs="?",
+        const="auto",
+        default=None,
+        help="Resume from checkpoint. Use without value to auto-detect best model, or provide path",
     )
 
     return parser.parse_args()
@@ -1164,6 +1224,11 @@ def train(args):
         mlp_ratios=(2, 2, 2),
         decoder_dim=32,
     ).to(device)
+
+    # Load checkpoint if resuming
+    resume_path = resolve_resume_path(args.resume, args.output_dir)
+    if resume_path:
+        model = load_model_checkpoint(model, resume_path, device)
 
     nparams = get_nparams(model)
     print(f"N parameters: {nparams:,}")
@@ -1214,6 +1279,9 @@ def train(args):
                     mlp_ratios=(2, 2, 2),
                     decoder_dim=32,
                 ).to(device)
+                # Reload checkpoint for fallback model
+                if resume_path:
+                    model = load_model_checkpoint(model, resume_path, device)
                 use_compile = False
                 with torch.amp.autocast(device.type):
                     test_output = model(test_input)
@@ -1268,6 +1336,7 @@ def train(args):
     print(f"  Learning Rate: {LEARNING_RATE}")
     print(f"  Num Workers: {NUM_WORKERS}")
     print(f"  Output Directory: {args.output_dir}")
+    print(f"  Resume From: {resume_path if resume_path else 'None (training from scratch)'}")
     print(f"{'='*80}")
 
     trainloader = DataLoader(

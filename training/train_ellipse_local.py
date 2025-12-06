@@ -164,18 +164,18 @@ class EllipseRegressionLoss(nn.Module):
 
 
 def compute_center_error(pred, target):
-
+    """Compute center error in pixels. Returns GPU tensor for accumulation."""
     pred_cx = pred[:, 0] * IMAGE_WIDTH
     pred_cy = pred[:, 1] * IMAGE_HEIGHT
     target_cx = target[:, 0] * IMAGE_WIDTH
     target_cy = target[:, 1] * IMAGE_HEIGHT
 
     dist = torch.sqrt((pred_cx - target_cx) ** 2 + (pred_cy - target_cy) ** 2)
-    return dist.mean().item()
+    return dist.mean()
 
 
 def compute_radius_error(pred, target):
-
+    """Compute radius error in pixels. Returns GPU tensor for accumulation."""
     pred_rx = pred[:, 2] * MAX_RADIUS
     pred_ry = pred[:, 3] * MAX_RADIUS
     target_rx = target[:, 2] * MAX_RADIUS
@@ -183,7 +183,7 @@ def compute_radius_error(pred, target):
 
     rx_error = torch.abs(pred_rx - target_rx)
     ry_error = torch.abs(pred_ry - target_ry)
-    return ((rx_error + ry_error) / 2).mean().item()
+    return ((rx_error + ry_error) / 2).mean()
 
 
 def compute_iou_from_ellipses(pred, target, device):
@@ -219,43 +219,91 @@ def compute_iou_from_ellipses(pred, target, device):
     return np.mean(ious)
 
 
-def compute_iou_with_gt_mask(pred, gt_masks, device):
+def render_ellipse_mask_gpu(pred_params, height=IMAGE_HEIGHT, width=IMAGE_WIDTH):
+    """Render ellipse masks entirely on GPU using vectorized operations.
 
-    pred_np = pred.detach().cpu().numpy()
-    gt_masks_np = gt_masks.cpu().numpy()
+    Args:
+        pred_params: Tensor of shape (batch, 4) with normalized (cx, cy, rx, ry)
+        height: Image height
+        width: Image width
 
-    batch_size = pred_np.shape[0]
-    ious_bg = []
-    ious_pupil = []
+    Returns:
+        Tensor of shape (batch, height, width) with ellipse masks (1 inside, 0 outside)
+    """
+    batch_size = pred_params.shape[0]
+    device = pred_params.device
 
-    for i in range(batch_size):
+    # Denormalize parameters
+    cx = pred_params[:, 0] * width  # (batch,)
+    cy = pred_params[:, 1] * height  # (batch,)
+    rx = pred_params[:, 2] * MAX_RADIUS  # (batch,)
+    ry = pred_params[:, 3] * MAX_RADIUS  # (batch,)
 
-        pred_cx, pred_cy, pred_rx, pred_ry = denormalize_ellipse_params(
-            pred_np[i, 0], pred_np[i, 1], pred_np[i, 2], pred_np[i, 3]
-        )
+    # Create coordinate grids
+    y_coords = torch.arange(height, device=device, dtype=pred_params.dtype)
+    x_coords = torch.arange(width, device=device, dtype=pred_params.dtype)
+    yy, xx = torch.meshgrid(y_coords, x_coords, indexing="ij")  # (H, W)
 
-        pred_mask = render_ellipse_mask(pred_cx, pred_cy, pred_rx, pred_ry)
-        target_mask = gt_masks_np[i]
+    # Expand for batch: (batch, H, W)
+    xx = xx.unsqueeze(0).expand(batch_size, -1, -1)
+    yy = yy.unsqueeze(0).expand(batch_size, -1, -1)
 
-        pred_pupil = pred_mask == 1
-        target_pupil = target_mask == 1
-        intersection_pupil = np.logical_and(pred_pupil, target_pupil).sum()
-        union_pupil = np.logical_or(pred_pupil, target_pupil).sum()
-        iou_pupil = intersection_pupil / max(union_pupil, 1)
-        ious_pupil.append(iou_pupil)
+    # Expand params for broadcasting: (batch, 1, 1)
+    cx = cx.view(batch_size, 1, 1)
+    cy = cy.view(batch_size, 1, 1)
+    rx = rx.view(batch_size, 1, 1).clamp(min=1e-6)  # Avoid division by zero
+    ry = ry.view(batch_size, 1, 1).clamp(min=1e-6)
 
-        pred_bg = pred_mask == 0
-        target_bg = target_mask == 0
-        intersection_bg = np.logical_and(pred_bg, target_bg).sum()
-        union_bg = np.logical_or(pred_bg, target_bg).sum()
-        iou_bg = intersection_bg / max(union_bg, 1)
-        ious_bg.append(iou_bg)
+    # Ellipse equation: ((x-cx)/rx)^2 + ((y-cy)/ry)^2 <= 1
+    ellipse_eq = ((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2
+    masks = (ellipse_eq <= 1.0).float()  # (batch, H, W)
 
-    mean_bg_iou = np.mean(ious_bg)
-    mean_pupil_iou = np.mean(ious_pupil)
+    return masks
+
+
+def compute_iou_with_gt_mask_gpu(pred, gt_masks, device):
+    """Compute IoU metrics entirely on GPU.
+
+    Args:
+        pred: Predicted ellipse parameters (batch, 4) - normalized
+        gt_masks: Ground truth masks (batch, H, W) - integer labels
+
+    Returns:
+        Tuple of (mean_iou, bg_iou, pupil_iou) as GPU tensors
+    """
+    # Render predicted ellipse masks on GPU
+    pred_masks = render_ellipse_mask_gpu(pred)  # (batch, H, W)
+
+    # Convert gt_masks to float for operations
+    gt_masks_float = gt_masks.float()
+
+    # Pupil IoU (class 1)
+    pred_pupil = pred_masks  # Already 1 inside ellipse, 0 outside
+    target_pupil = (gt_masks_float == 1).float()
+
+    intersection_pupil = (pred_pupil * target_pupil).sum(dim=(1, 2))  # (batch,)
+    union_pupil = ((pred_pupil + target_pupil) > 0).float().sum(dim=(1, 2))  # (batch,)
+    iou_pupil = intersection_pupil / union_pupil.clamp(min=1.0)  # (batch,)
+
+    # Background IoU (class 0)
+    pred_bg = 1.0 - pred_masks
+    target_bg = (gt_masks_float == 0).float()
+
+    intersection_bg = (pred_bg * target_bg).sum(dim=(1, 2))  # (batch,)
+    union_bg = ((pred_bg + target_bg) > 0).float().sum(dim=(1, 2))  # (batch,)
+    iou_bg = intersection_bg / union_bg.clamp(min=1.0)  # (batch,)
+
+    # Mean across batch
+    mean_pupil_iou = iou_pupil.mean()
+    mean_bg_iou = iou_bg.mean()
     mean_iou = (mean_bg_iou + mean_pupil_iou) / 2
 
     return mean_iou, mean_bg_iou, mean_pupil_iou
+
+
+def compute_iou_with_gt_mask(pred, gt_masks, device):
+    """Wrapper for backward compatibility - delegates to GPU version."""
+    return compute_iou_with_gt_mask_gpu(pred, gt_masks, device)
 
 
 class DownBlock(nn.Module):
@@ -836,7 +884,7 @@ def parse_args():
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=4,
+        default=16,
         help="Batch size for training",
     )
     parser.add_argument(
@@ -1185,16 +1233,16 @@ def main():
 
             _ = model.train()
 
+            # All accumulators on GPU - no CPU transfers during training
             train_loss_sum = torch.tensor(0.0, device=device)
             train_center_loss_sum = torch.tensor(0.0, device=device)
             train_radius_loss_sum = torch.tensor(0.0, device=device)
+            train_center_error_sum = torch.tensor(0.0, device=device)
+            train_radius_error_sum = torch.tensor(0.0, device=device)
+            train_iou_sum = torch.tensor(0.0, device=device)
+            train_bg_iou_sum = torch.tensor(0.0, device=device)
+            train_pupil_iou_sum = torch.tensor(0.0, device=device)
             train_batch_count = 0
-
-            train_center_errors = []
-            train_radius_errors = []
-            train_ious = []
-            train_bg_ious = []
-            train_pupil_ious = []
 
             pbar = tqdm(trainloader, desc=f"Epoch {epoch+1}/{EPOCHS}")
 
@@ -1225,29 +1273,31 @@ def main():
                 scaler.scale(total_loss).backward()
                 scaler.step(optimizer)
                 scaler.update()
+
+                # Accumulate all metrics on GPU (no .item() calls)
                 train_loss_sum += total_loss.detach()
                 train_center_loss_sum += center_loss.detach()
                 train_radius_loss_sum += radius_loss.detach()
-                train_batch_count += 1
-
-                train_center_errors.append(compute_center_error(output, target_params))
-                train_radius_errors.append(compute_radius_error(output, target_params))
+                train_center_error_sum += compute_center_error(output, target_params)
+                train_radius_error_sum += compute_radius_error(output, target_params)
 
                 miou, bg_iou, pupil_iou = compute_iou_with_gt_mask(
                     output, target_labels, device
                 )
-                train_ious.append(miou)
-                train_bg_ious.append(bg_iou)
-                train_pupil_ious.append(pupil_iou)
+                train_iou_sum += miou
+                train_bg_iou_sum += bg_iou
+                train_pupil_iou_sum += pupil_iou
+                train_batch_count += 1
 
+            # Single CPU transfer at end of epoch
             loss_train = (train_loss_sum / train_batch_count).item()
             center_loss_train = (train_center_loss_sum / train_batch_count).item()
             radius_loss_train = (train_radius_loss_sum / train_batch_count).item()
-            center_error_train = np.mean(train_center_errors)
-            radius_error_train = np.mean(train_radius_errors)
-            miou_train = np.mean(train_ious)
-            bg_iou_train = np.mean(train_bg_ious)
-            pupil_iou_train = np.mean(train_pupil_ious)
+            center_error_train = (train_center_error_sum / train_batch_count).item()
+            radius_error_train = (train_radius_error_sum / train_batch_count).item()
+            miou_train = (train_iou_sum / train_batch_count).item()
+            bg_iou_train = (train_bg_iou_sum / train_batch_count).item()
+            pupil_iou_train = (train_pupil_iou_sum / train_batch_count).item()
 
             train_metrics["loss"].append(loss_train)
             train_metrics["iou"].append(miou_train)
@@ -1261,16 +1311,16 @@ def main():
 
             _ = model.eval()
 
+            # All accumulators on GPU - no CPU transfers during validation
             valid_loss_sum = torch.tensor(0.0, device=device)
             valid_center_loss_sum = torch.tensor(0.0, device=device)
             valid_radius_loss_sum = torch.tensor(0.0, device=device)
+            valid_center_error_sum = torch.tensor(0.0, device=device)
+            valid_radius_error_sum = torch.tensor(0.0, device=device)
+            valid_iou_sum = torch.tensor(0.0, device=device)
+            valid_bg_iou_sum = torch.tensor(0.0, device=device)
+            valid_pupil_iou_sum = torch.tensor(0.0, device=device)
             valid_batch_count = 0
-
-            valid_center_errors = []
-            valid_radius_errors = []
-            valid_ious = []
-            valid_bg_ious = []
-            valid_pupil_ious = []
 
             with torch.no_grad():
                 for batchdata in validloader:
@@ -1296,33 +1346,30 @@ def main():
                             output, target_params, compute_iou=False
                         )
 
+                    # Accumulate all metrics on GPU (no .item() calls)
                     valid_loss_sum += total_loss.detach()
                     valid_center_loss_sum += center_loss.detach()
                     valid_radius_loss_sum += radius_loss.detach()
-                    valid_batch_count += 1
-
-                    valid_center_errors.append(
-                        compute_center_error(output, target_params)
-                    )
-                    valid_radius_errors.append(
-                        compute_radius_error(output, target_params)
-                    )
+                    valid_center_error_sum += compute_center_error(output, target_params)
+                    valid_radius_error_sum += compute_radius_error(output, target_params)
 
                     miou, bg_iou, pupil_iou = compute_iou_with_gt_mask(
                         output, target_labels, device
                     )
-                    valid_ious.append(miou)
-                    valid_bg_ious.append(bg_iou)
-                    valid_pupil_ious.append(pupil_iou)
+                    valid_iou_sum += miou
+                    valid_bg_iou_sum += bg_iou
+                    valid_pupil_iou_sum += pupil_iou
+                    valid_batch_count += 1
 
+            # Single CPU transfer at end of validation
             loss_valid = (valid_loss_sum / valid_batch_count).item()
             center_loss_valid = (valid_center_loss_sum / valid_batch_count).item()
             radius_loss_valid = (valid_radius_loss_sum / valid_batch_count).item()
-            center_error_valid = np.mean(valid_center_errors)
-            radius_error_valid = np.mean(valid_radius_errors)
-            miou_valid = np.mean(valid_ious)
-            bg_iou_valid = np.mean(valid_bg_ious)
-            pupil_iou_valid = np.mean(valid_pupil_ious)
+            center_error_valid = (valid_center_error_sum / valid_batch_count).item()
+            radius_error_valid = (valid_radius_error_sum / valid_batch_count).item()
+            miou_valid = (valid_iou_sum / valid_batch_count).item()
+            bg_iou_valid = (valid_bg_iou_sum / valid_batch_count).item()
+            pupil_iou_valid = (valid_pupil_iou_sum / valid_batch_count).item()
 
             valid_metrics["loss"].append(loss_valid)
             valid_metrics["iou"].append(miou_valid)
