@@ -30,6 +30,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.amp import autocast, GradScaler
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from PIL import Image
@@ -42,6 +43,7 @@ import matplotlib.pyplot as plt
 from datasets import load_dataset
 
 import mlflow
+import kornia.enhance as K_enhance
 
 
 class TinyConvNorm(nn.Module):
@@ -874,10 +876,17 @@ def save_model_checkpoint(model, output_path):
     if hasattr(model, "_orig_mod"):
         save_model = model._orig_mod
 
-    save_model = save_model.to(memory_format=torch.contiguous_format)
+    # Save state_dict directly - memory format is a runtime property,
+    # not stored in the checkpoint. Avoid modifying the model in-place
+    # as this breaks torch.compile() models using channels_last format.
+    was_training = save_model.training
     save_model.eval()
 
     torch.save(save_model.state_dict(), output_path)
+
+    # Restore training mode if it was active
+    if was_training:
+        save_model.train()
 
     if not os.path.exists(output_path):
         raise RuntimeError(f"Model save failed - file not created at {output_path}")
@@ -994,10 +1003,6 @@ class IrisDataset(Dataset):
     def __init__(self, hf_dataset, split="train", transform=None):
         self.transform = transform
         self.split = split
-        self.clahe = cv2.createCLAHE(
-            clipLimit=1.5,
-            tileGridSize=(8, 8),
-        )
         self.gamma_table = 255.0 * (np.linspace(0, 1, 256) ** 0.8)
         self.dataset = hf_dataset
 
@@ -1026,7 +1031,7 @@ class IrisDataset(Dataset):
                 pilimg = Line_augment()(np.array(pilimg))
             if random.random() < 0.2:
                 pilimg = Gaussian_blur()(np.array(pilimg))
-        img = self.clahe.apply(np.array(np.uint8(pilimg)))
+        img = np.array(np.uint8(pilimg))
         img = Image.fromarray(img)
         label_pil = Image.fromarray(label)
 
@@ -1202,6 +1207,10 @@ def train(args):
     else:
         _ = torch.manual_seed(42)
 
+    # Initialize AMP scaler for mixed precision training
+    use_amp = device.type == "cuda"
+    scaler = GradScaler('cuda', enabled=use_amp)
+
     hf_dataset = load_dataset_with_cache()
     print(f"Train samples: {len(hf_dataset['train'])}")
     print(f"Validation samples: {len(hf_dataset['validation'])}")
@@ -1264,8 +1273,7 @@ def train(args):
             device, memory_format=memory_format
         )
         try:
-            with torch.amp.autocast(device.type):
-                test_output = model(test_input)
+            test_output = model(test_input)
         except Exception as e:
             if use_compile:
                 print(f"WARNING: Compiled model forward pass failed: {e}")
@@ -1286,8 +1294,7 @@ def train(args):
                 if resume_path:
                     model = load_model_checkpoint(model, resume_path, device)
                 use_compile = False
-                with torch.amp.autocast(device.type):
-                    test_output = model(test_input)
+                test_output = model(test_input)
             else:
                 raise
         print(f"Input shape: {test_input.shape}")
@@ -1306,7 +1313,6 @@ def train(args):
         eta_min=LEARNING_RATE * 0.01,  # Minimum LR is 1% of initial
     )
     criterion = CombinedLoss()
-    scaler = torch.amp.GradScaler(device.type)
 
     transform = transforms.Compose(
         [
@@ -1431,7 +1437,7 @@ def train(args):
         "horizontal_flip": 0.5,
         "line_augment": 0.2,
         "gaussian_blur": 0.2,
-        "clahe": True,
+        "histogram_equalization": "cv2.equalizeHist (CPU)",  # Applied in dataloader
         "gamma_correction": 0.8,
     }
 
@@ -1478,6 +1484,9 @@ def train(args):
         )
         print(f"MLflow run started: {run.info.run_id}")
 
+        # Pre-compute memory format once (instead of per-batch)
+        memory_format = torch.channels_last if device.type == "cuda" else torch.contiguous_format
+
         for epoch in range(EPOCHS):
             _ = model.train()
             # Zero pre-allocated accumulators (in-place, no allocation)
@@ -1492,20 +1501,20 @@ def train(args):
             pbar = tqdm(trainloader, desc=f"Epoch {epoch+1}/{EPOCHS}")
             for batchdata in pbar:
                 img, labels, _, spatialWeights, maxDist = batchdata
-                memory_format = (
-                    torch.channels_last
-                    if device.type == "cuda"
-                    else torch.contiguous_format
-                )
                 data = img.to(device, non_blocking=True, memory_format=memory_format)
+                # Apply GPU CLAHE (clip_limit=1.5 matches original cv2 settings)
+                data = (data + 0.5).clamp(0, 1)  # Denormalize to [0, 1]
+                data = K_enhance.equalize_clahe(data, clip_limit=1.5, grid_size=(8, 8))
+                data = data - 0.5  # Renormalize to [-0.5, 0.5]
                 target = labels.to(device, non_blocking=True).long()
                 spatial_weights_gpu = spatialWeights.to(
-                    device, non_blocking=True
+                    device,
+                    non_blocking=True,
                 ).float()
                 dist_map_gpu = maxDist.to(device, non_blocking=True)
 
                 optimizer.zero_grad(set_to_none=True)
-                with torch.amp.autocast(device.type):
+                with autocast('cuda', enabled=use_amp):
                     output = model(data)
                     (
                         total_loss,
@@ -1562,23 +1571,22 @@ def train(args):
             with torch.no_grad():
                 for batchdata in validloader:
                     img, labels, _, spatialWeights, maxDist = batchdata
-                    memory_format = (
-                        torch.channels_last
-                        if device.type == "cuda"
-                        else torch.contiguous_format
-                    )
                     data = img.to(
                         device,
                         non_blocking=True,
                         memory_format=memory_format,
                     )
+                    # Apply GPU CLAHE (same as training)
+                    data = (data + 0.5).clamp(0, 1)
+                    data = K_enhance.equalize_clahe(data, clip_limit=1.5, grid_size=(8, 8))
+                    data = data - 0.5
                     target = labels.to(device, non_blocking=True).long()
                     spatial_weights_gpu = spatialWeights.to(
                         device, non_blocking=True
                     ).float()
                     dist_map_gpu = maxDist.to(device, non_blocking=True)
 
-                    with torch.amp.autocast(device.type):
+                    with autocast('cuda', enabled=use_amp):
                         output = model(data)
                         (
                             total_loss,

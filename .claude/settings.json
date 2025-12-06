@@ -1,12 +1,12 @@
 {
   "hooks": {
-    "Stop": [
+    "PreCompact": [
       {
         "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "conclaude Stop"
+            "command": "conclaude PreCompact"
           }
         ]
       }
@@ -44,17 +44,6 @@
         ]
       }
     ],
-    "UserPromptSubmit": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "conclaude UserPromptSubmit"
-          }
-        ]
-      }
-    ],
     "SubagentStop": [
       {
         "matcher": "",
@@ -66,13 +55,13 @@
         ]
       }
     ],
-    "PreCompact": [
+    "Stop": [
       {
         "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "conclaude PreCompact"
+            "command": "conclaude Stop"
           }
         ]
       }
@@ -95,6 +84,39 @@
           {
             "type": "command",
             "command": "conclaude SessionStart"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "conclaude PermissionRequest"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "conclaude SubagentStart"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "conclaude UserPromptSubmit"
           }
         ]
       }
