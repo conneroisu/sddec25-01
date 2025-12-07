@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TODO: Add purpose description
+The precompute module prepares image datasets for training by converting parquet source files into optimized NPZ chunk files. It supports resuming from partial results by detecting and counting existing chunks, enabling efficient incremental processing of large datasets.
 
 ## Requirements
 
