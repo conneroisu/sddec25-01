@@ -57,3 +57,4 @@ build/
 /.pre-commit-config.yaml
 *.bak0
 *.pt
+__pycache__/
