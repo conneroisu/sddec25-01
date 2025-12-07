@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 VisionAssist Live Demo - PyTorch TinyEfficientViT Semantic Segmentation
 
@@ -32,7 +31,7 @@ import torch
 
 # Add parent directory to path for importing shared model
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from training.models.efficientvit import TinyEfficientViTSeg
+from training.train_local import TinyEfficientViTSeg
 
 
 def get_device(requested_device: str | None = None) -> torch.device:
