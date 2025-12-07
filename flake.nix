@@ -155,6 +155,7 @@
           ++ builtins.attrValues scriptPackages
           ++ preCommitCheck.enabledPackages;
 
+        env.TRITON_LIBCUDA_PATH = "/run/opengl-driver/lib";
         env.LD_LIBRARY_PATH =
           pkgs.lib.makeLibraryPath [
             pkgs.glib

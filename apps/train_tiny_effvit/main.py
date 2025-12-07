@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
 """
-Local training script for TinyEfficientViT-Micro semantic segmentation (<10k params).
+Local training script for TinyEfficientViT semantic segmentation.
 
 This script provides the same functionality as train_efficientvit.py but runs
 locally without Modal cloud infrastructure. It supports:
@@ -10,11 +9,11 @@ locally without Modal cloud infrastructure. It supports:
 - Configurable hyperparameters via command-line arguments
 
 Usage:
-    python train_efficientvit_tiny_local.py --epochs 10 --batch-size 32
-    python train_efficientvit_tiny_local.py --device cuda --output-dir ./checkpoints
-    python train_efficientvit_tiny_local.py --resume                 # Auto-detect best model
-    python train_efficientvit_tiny_local.py --resume path/to/model.pt  # Specific checkpoint
-    python train_efficientvit_tiny_local.py --help
+    python train_efficientvit_local.py --epochs 10 --batch-size 32
+    python train_efficientvit_local.py --device cuda --output-dir ./checkpoints
+    python train_efficientvit_local.py --resume                 # Auto-detect best model
+    python train_efficientvit_local.py --resume path/to/model.pt  # Specific checkpoint
+    python train_efficientvit_local.py --help
 """
 
 import argparse
@@ -22,15 +21,11 @@ import os
 import math
 import random
 import platform
-import time
-from dataclasses import dataclass, field
-from typing import Optional
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.amp import autocast, GradScaler
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from PIL import Image
@@ -44,7 +39,529 @@ from datasets import load_dataset
 
 import mlflow
 
-from training.models.efficientvit import TinyEfficientViTSeg
+
+class TinyConvNorm(nn.Module):
+    """Convolution + BatchNorm layer (parameter-efficient)."""
+
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size=3,
+        stride=1,
+        padding=1,
+        groups=1,
+        bias=False,
+    ):
+        super().__init__()
+        self.conv = nn.Conv2d(
+            in_channels,
+            out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            groups=groups,
+            bias=bias,
+        )
+        self.bn = nn.BatchNorm2d(out_channels)
+
+    def forward(self, x):
+        return self.bn(self.conv(x))
+
+
+class TinyPatchEmbedding(nn.Module):
+    """
+    Lightweight patch embedding with 2 conv layers and stride 4.
+    Reduces spatial resolution by 4x while embedding to initial dim.
+    """
+
+    def __init__(self, in_channels=1, embed_dim=8):
+        super().__init__()
+        mid_dim = embed_dim // 2 if embed_dim >= 4 else 2
+        self.conv1 = TinyConvNorm(
+            in_channels,
+            mid_dim,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+        )
+        self.act1 = nn.GELU()
+        self.conv2 = TinyConvNorm(
+            mid_dim,
+            embed_dim,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+        )
+        self.act2 = nn.GELU()
+
+    def forward(self, x):
+        x = self.act1(self.conv1(x))
+        x = self.act2(self.conv2(x))
+        return x
+
+
+class TinyCascadedGroupAttention(nn.Module):
+    """
+    Tiny version of Cascaded Group Attention.
+    Uses minimal heads and key dimensions for efficiency.
+    """
+
+    def __init__(
+        self,
+        dim,
+        num_heads=1,
+        key_dim=4,
+        attn_ratio=2,
+    ):
+        super().__init__()
+        self.num_heads = num_heads
+        self.key_dim = key_dim
+        self.scale = key_dim**-0.5
+        self.d = int(attn_ratio * key_dim)
+        self.attn_ratio = attn_ratio
+
+        qkv_dim = (num_heads * key_dim * 2) + (num_heads * self.d)
+        self.qkv = nn.Linear(dim, qkv_dim)
+        self.proj = nn.Linear(num_heads * self.d, dim)
+
+    def forward(self, x):
+        B, N, C = x.shape
+        qkv = self.qkv(x)
+
+        q_total = self.num_heads * self.key_dim
+        k_total = self.num_heads * self.key_dim
+        v_total = self.num_heads * self.d
+
+        q = (
+            qkv[:, :, :q_total]
+            .reshape(B, N, self.num_heads, self.key_dim)
+            .permute(0, 2, 1, 3)
+        )
+        k = (
+            qkv[:, :, q_total : q_total + k_total]
+            .reshape(B, N, self.num_heads, self.key_dim)
+            .permute(0, 2, 1, 3)
+        )
+        v = (
+            qkv[:, :, q_total + k_total :]
+            .reshape(B, N, self.num_heads, self.d)
+            .permute(0, 2, 1, 3)
+        )
+
+        attn = (q @ k.transpose(-2, -1)) * self.scale
+        attn = attn.softmax(dim=-1)
+        x = (attn @ v).transpose(1, 2).reshape(B, N, self.num_heads * self.d)
+        x = self.proj(x)
+        return x
+
+
+class TinyLocalWindowAttention(nn.Module):
+    """
+    Local window attention wrapper.
+    Partitions input into windows and applies attention within each window.
+    """
+
+    def __init__(
+        self,
+        dim,
+        num_heads=1,
+        key_dim=4,
+        attn_ratio=2,
+        window_size=7,
+    ):
+        super().__init__()
+        self.window_size = window_size
+        self.attn = TinyCascadedGroupAttention(
+            dim=dim,
+            num_heads=num_heads,
+            key_dim=key_dim,
+            attn_ratio=attn_ratio,
+        )
+
+    def forward(self, x):
+        B, C, H, W = x.shape
+        ws = self.window_size
+
+        pad_h = (ws - H % ws) % ws
+        pad_w = (ws - W % ws) % ws
+        if pad_h > 0 or pad_w > 0:
+            x = F.pad(x, (0, pad_w, 0, pad_h))
+        _, _, Hp, Wp = x.shape
+
+        x = x.view(B, C, Hp // ws, ws, Wp // ws, ws)
+        x = x.permute(0, 2, 4, 3, 5, 1).contiguous()
+        x = x.view(B * (Hp // ws) * (Wp // ws), ws * ws, C)
+
+        x = self.attn(x)
+
+        x = x.view(B, Hp // ws, Wp // ws, ws, ws, C)
+        x = x.permute(0, 5, 1, 3, 2, 4).contiguous()
+        x = x.view(B, C, Hp, Wp)
+
+        if pad_h > 0 or pad_w > 0:
+            x = x[:, :, :H, :W]
+
+        return x
+
+
+class TinyMLP(nn.Module):
+    """Tiny MLP with expansion ratio."""
+
+    def __init__(self, dim, expansion_ratio=2):
+        super().__init__()
+        hidden_dim = int(dim * expansion_ratio)
+        self.fc1 = nn.Linear(dim, hidden_dim)
+        self.act = nn.GELU()
+        self.fc2 = nn.Linear(hidden_dim, dim)
+
+    def forward(self, x):
+        return self.fc2(self.act(self.fc1(x)))
+
+
+class TinyEfficientVitBlock(nn.Module):
+    """
+    Single EfficientViT block:
+    - Depthwise conv for local features
+    - Window attention for global features
+    - MLP for channel mixing
+    """
+
+    def __init__(
+        self,
+        dim,
+        num_heads=1,
+        key_dim=4,
+        attn_ratio=2,
+        window_size=7,
+        mlp_ratio=2,
+    ):
+        super().__init__()
+        self.norm1 = nn.BatchNorm2d(dim)
+        self.dw_conv = nn.Conv2d(
+            dim,
+            dim,
+            kernel_size=3,
+            padding=1,
+            groups=dim,
+        )
+        self.norm2 = nn.BatchNorm2d(dim)
+        self.attn = TinyLocalWindowAttention(
+            dim=dim,
+            num_heads=num_heads,
+            key_dim=key_dim,
+            attn_ratio=attn_ratio,
+            window_size=window_size,
+        )
+        self.norm3 = nn.LayerNorm(dim)
+        self.mlp = TinyMLP(dim, expansion_ratio=mlp_ratio)
+
+    def forward(self, x):
+        x = x + self.dw_conv(self.norm1(x))
+        x = x + self.attn(self.norm2(x))
+
+        B, C, H, W = x.shape
+        x_flat = x.permute(0, 2, 3, 1).reshape(B, H * W, C)
+        x_flat = x_flat + self.mlp(self.norm3(x_flat))
+        x = x_flat.reshape(B, H, W, C).permute(0, 3, 1, 2)
+
+        return x
+
+
+class TinyEfficientVitStage(nn.Module):
+    """
+    Single stage of TinyEfficientViT.
+    Optional downsampling followed by transformer blocks.
+    """
+
+    def __init__(
+        self,
+        in_dim,
+        out_dim,
+        depth=1,
+        num_heads=1,
+        key_dim=4,
+        attn_ratio=2,
+        window_size=7,
+        mlp_ratio=2,
+        downsample=True,
+    ):
+        super().__init__()
+        self.downsample = None
+        if downsample:
+            self.downsample = nn.Sequential(
+                TinyConvNorm(
+                    in_dim,
+                    out_dim,
+                    kernel_size=3,
+                    stride=2,
+                    padding=1,
+                ),
+                nn.GELU(),
+            )
+        elif in_dim != out_dim:
+            self.downsample = nn.Sequential(
+                TinyConvNorm(
+                    in_dim,
+                    out_dim,
+                    kernel_size=1,
+                    stride=1,
+                    padding=0,
+                ),
+                nn.GELU(),
+            )
+
+        self.blocks = nn.ModuleList(
+            [
+                TinyEfficientVitBlock(
+                    dim=out_dim,
+                    num_heads=num_heads,
+                    key_dim=key_dim,
+                    attn_ratio=attn_ratio,
+                    window_size=window_size,
+                    mlp_ratio=mlp_ratio,
+                )
+                for _ in range(depth)
+            ]
+        )
+
+    def forward(self, x):
+        if self.downsample is not None:
+            x = self.downsample(x)
+        for block in self.blocks:
+            x = block(x)
+        return x
+
+
+class TinyEfficientVitEncoder(nn.Module):
+    """
+    Complete TinyEfficientViT encoder with 3 stages.
+    Produces multi-scale features for segmentation decoder.
+    """
+
+    def __init__(
+        self,
+        in_channels=1,
+        embed_dims=(8, 16, 24),
+        depths=(1, 1, 1),
+        num_heads=(1, 1, 2),
+        key_dims=(4, 4, 4),
+        attn_ratios=(2, 2, 2),
+        window_sizes=(7, 7, 7),
+        mlp_ratios=(2, 2, 2),
+    ):
+        super().__init__()
+        self.patch_embed = TinyPatchEmbedding(
+            in_channels=in_channels,
+            embed_dim=embed_dims[0],
+        )
+
+        self.stage1 = TinyEfficientVitStage(
+            in_dim=embed_dims[0],
+            out_dim=embed_dims[0],
+            depth=depths[0],
+            num_heads=num_heads[0],
+            key_dim=key_dims[0],
+            attn_ratio=attn_ratios[0],
+            window_size=window_sizes[0],
+            mlp_ratio=mlp_ratios[0],
+            downsample=False,
+        )
+
+        self.stage2 = TinyEfficientVitStage(
+            in_dim=embed_dims[0],
+            out_dim=embed_dims[1],
+            depth=depths[1],
+            num_heads=num_heads[1],
+            key_dim=key_dims[1],
+            attn_ratio=attn_ratios[1],
+            window_size=window_sizes[1],
+            mlp_ratio=mlp_ratios[1],
+            downsample=True,
+        )
+
+        self.stage3 = TinyEfficientVitStage(
+            in_dim=embed_dims[1],
+            out_dim=embed_dims[2],
+            depth=depths[2],
+            num_heads=num_heads[2],
+            key_dim=key_dims[2],
+            attn_ratio=attn_ratios[2],
+            window_size=window_sizes[2],
+            mlp_ratio=mlp_ratios[2],
+            downsample=True,
+        )
+
+    def forward(self, x):
+        x = self.patch_embed(x)
+        f1 = self.stage1(x)
+        f2 = self.stage2(f1)
+        f3 = self.stage3(f2)
+        return f1, f2, f3
+
+
+class TinySegmentationDecoder(nn.Module):
+    """
+    Lightweight FPN-style decoder with skip connections.
+    Progressively upsamples features to input resolution.
+    """
+
+    def __init__(
+        self,
+        encoder_dims=(8, 16, 24),
+        decoder_dim=16,
+        num_classes=2,
+    ):
+        super().__init__()
+        self.lateral3 = nn.Conv2d(
+            encoder_dims[2],
+            decoder_dim,
+            kernel_size=1,
+        )
+        self.lateral2 = nn.Conv2d(
+            encoder_dims[1],
+            decoder_dim,
+            kernel_size=1,
+        )
+        self.lateral1 = nn.Conv2d(
+            encoder_dims[0],
+            decoder_dim,
+            kernel_size=1,
+        )
+
+        self.smooth3 = nn.Sequential(
+            nn.Conv2d(
+                decoder_dim,
+                decoder_dim,
+                kernel_size=3,
+                padding=1,
+                groups=decoder_dim,
+            ),
+            nn.BatchNorm2d(decoder_dim),
+            nn.GELU(),
+        )
+        self.smooth2 = nn.Sequential(
+            nn.Conv2d(
+                decoder_dim,
+                decoder_dim,
+                kernel_size=3,
+                padding=1,
+                groups=decoder_dim,
+            ),
+            nn.BatchNorm2d(decoder_dim),
+            nn.GELU(),
+        )
+        self.smooth1 = nn.Sequential(
+            nn.Conv2d(
+                decoder_dim,
+                decoder_dim,
+                kernel_size=3,
+                padding=1,
+                groups=decoder_dim,
+            ),
+            nn.BatchNorm2d(decoder_dim),
+            nn.GELU(),
+        )
+
+        self.head = nn.Conv2d(
+            decoder_dim,
+            num_classes,
+            kernel_size=1,
+        )
+
+    def forward(self, f1, f2, f3, target_size):
+        p3 = self.lateral3(f3)
+        p3 = self.smooth3(p3)
+
+        p2 = self.lateral2(f2) + F.interpolate(
+            p3,
+            size=f2.shape[2:],
+            mode="bilinear",
+            align_corners=False,
+        )
+        p2 = self.smooth2(p2)
+
+        p1 = self.lateral1(f1) + F.interpolate(
+            p2,
+            size=f1.shape[2:],
+            mode="bilinear",
+            align_corners=False,
+        )
+        p1 = self.smooth1(p1)
+
+        out = self.head(p1)
+        out = F.interpolate(
+            out,
+            size=target_size,
+            mode="bilinear",
+            align_corners=False,
+        )
+        return out
+
+
+class TinyEfficientViTSeg(nn.Module):
+    """
+    Complete TinyEfficientViT for semantic segmentation.
+    Combines encoder and decoder with <60k parameters.
+    """
+
+    def __init__(
+        self,
+        in_channels=1,
+        num_classes=2,
+        embed_dims=(8, 16, 24),
+        depths=(1, 1, 1),
+        num_heads=(1, 1, 2),
+        key_dims=(4, 4, 4),
+        attn_ratios=(2, 2, 2),
+        window_sizes=(7, 7, 7),
+        mlp_ratios=(2, 2, 2),
+        decoder_dim=16,
+    ):
+        super().__init__()
+        self.encoder = TinyEfficientVitEncoder(
+            in_channels=in_channels,
+            embed_dims=embed_dims,
+            depths=depths,
+            num_heads=num_heads,
+            key_dims=key_dims,
+            attn_ratios=attn_ratios,
+            window_sizes=window_sizes,
+            mlp_ratios=mlp_ratios,
+        )
+        self.decoder = TinySegmentationDecoder(
+            encoder_dims=embed_dims,
+            decoder_dim=decoder_dim,
+            num_classes=num_classes,
+        )
+        self._initialize_weights()
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(
+                    m.weight,
+                    mode="fan_out",
+                    nonlinearity="relu",
+                )
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.ones_(m.weight)
+                nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.Linear):
+                nn.init.trunc_normal_(m.weight, std=0.02)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.LayerNorm):
+                nn.init.ones_(m.weight)
+                nn.init.zeros_(m.bias)
+
+    def forward(self, x):
+        target_size = (x.shape[2], x.shape[3])
+        f1, f2, f3 = self.encoder(x)
+        out = self.decoder(f1, f2, f3, target_size)
+        return out
 
 
 class CombinedLoss(nn.Module):
@@ -353,17 +870,10 @@ def save_model_checkpoint(model, output_path):
     if hasattr(model, "_orig_mod"):
         save_model = model._orig_mod
 
-    # Save state_dict directly - memory format is a runtime property,
-    # not stored in the checkpoint. Avoid modifying the model in-place
-    # as this breaks torch.compile() models using channels_last format.
-    was_training = save_model.training
+    save_model = save_model.to(memory_format=torch.contiguous_format)
     save_model.eval()
 
     torch.save(save_model.state_dict(), output_path)
-
-    # Restore training mode if it was active
-    if was_training:
-        save_model.train()
 
     if not os.path.exists(output_path):
         raise RuntimeError(f"Model save failed - file not created at {output_path}")
@@ -412,7 +922,7 @@ def resolve_resume_path(resume_arg, output_dir):
 
     if resume_arg == "auto":
         # Auto-detect best model in output directory
-        default_path = os.path.join(output_dir, "best_efficientvit_tiny_model.pt")
+        default_path = os.path.join(output_dir, "best_efficientvit_model.pt")
         if os.path.exists(default_path):
             print(f"Auto-detected checkpoint: {default_path}")
             return default_path
@@ -471,7 +981,7 @@ class MaskToTensor(object):
         return torch.from_numpy(np.array(img, dtype=np.int64)).long()
 
 
-HF_DATASET_REPO = "Conner/sddec25-01"
+HF_DATASET_REPO = "Conner/openeds-precomputed"
 IMAGE_HEIGHT = 400
 IMAGE_WIDTH = 640
 
@@ -480,14 +990,20 @@ class IrisDataset(Dataset):
     def __init__(self, hf_dataset, split="train", transform=None):
         self.transform = transform
         self.split = split
+        self.clahe = cv2.createCLAHE(
+            clipLimit=1.5,
+            tileGridSize=(8, 8),
+        )
+        self.gamma_table = 255.0 * (np.linspace(0, 1, 256) ** 0.8)
         self.dataset = hf_dataset
+        # Detect if dataset has preprocessed column for conditional preprocessing
+        self.has_preprocessed_column = "preprocessed" in hf_dataset.column_names
 
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, idx):
         sample = self.dataset[idx]
-        # Image is already preprocessed (gamma + CLAHE applied by precompute.py)
         image = np.array(sample["image"], dtype=np.uint8).reshape(
             IMAGE_HEIGHT, IMAGE_WIDTH
         )
@@ -502,15 +1018,32 @@ class IrisDataset(Dataset):
         )
         filename = sample["filename"]
 
-        # Stochastic augmentations for training
-        pilimg = image
+        # Check if sample is already preprocessed (gamma + CLAHE applied)
+        is_preprocessed = (
+            self.has_preprocessed_column and sample.get("preprocessed", False)
+        )
+
+        if is_preprocessed:
+            # Image already has gamma + CLAHE applied, use directly
+            pilimg = image
+        else:
+            # Apply deterministic gamma correction
+            pilimg = cv2.LUT(image, self.gamma_table)
+
+        # Stochastic augmentations (applied regardless of preprocessing status)
         if self.transform is not None and self.split == "train":
             if random.random() < 0.2:
                 pilimg = Line_augment()(np.array(pilimg))
             if random.random() < 0.2:
                 pilimg = Gaussian_blur()(np.array(pilimg))
 
-        img = Image.fromarray(np.uint8(pilimg))
+        if is_preprocessed:
+            # Already preprocessed, just ensure correct dtype
+            img = np.array(np.uint8(pilimg))
+        else:
+            # Apply CLAHE for non-preprocessed data
+            img = self.clahe.apply(np.array(np.uint8(pilimg)))
+        img = Image.fromarray(img)
         label_pil = Image.fromarray(label)
 
         if self.transform is not None:
@@ -607,7 +1140,7 @@ def setup_mlflow():
 def parse_args():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Train TinyEfficientViT-Micro for semantic segmentation (local version)",
+        description="Train TinyEfficientViT for semantic segmentation (local version)",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
@@ -619,7 +1152,7 @@ def parse_args():
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=32,
+        default=64,
         help="Batch size for training and validation",
     )
     parser.add_argument(
@@ -633,7 +1166,7 @@ def parse_args():
     parser.add_argument(
         "--num-workers",
         type=int,
-        default=6,
+        default=4,
         help="Number of data loading workers",
     )
     parser.add_argument(
@@ -685,16 +1218,12 @@ def train(args):
     else:
         _ = torch.manual_seed(42)
 
-    # Initialize AMP scaler for mixed precision training
-    use_amp = device.type == "cuda"
-    scaler = GradScaler('cuda', enabled=use_amp)
-
     hf_dataset = load_dataset_with_cache()
     print(f"Train samples: {len(hf_dataset['train'])}")
     print(f"Validation samples: {len(hf_dataset['validation'])}")
 
     print("\n" + "=" * 80)
-    print("Initializing TinyEfficientViT-Micro model")
+    print("Initializing TinyEfficientViT model")
     print("=" * 80)
 
     BATCH_SIZE = args.batch_size
@@ -705,14 +1234,14 @@ def train(args):
     model = TinyEfficientViTSeg(
         in_channels=1,
         num_classes=2,
-        embed_dims=(8, 12, 18),
+        embed_dims=(16, 32, 64),
         depths=(1, 1, 1),
-        num_heads=(1, 1, 1),
+        num_heads=(1, 1, 2),
         key_dims=(4, 4, 4),
         attn_ratios=(2, 2, 2),
         window_sizes=(7, 7, 7),
         mlp_ratios=(2, 2, 2),
-        decoder_dim=8,
+        decoder_dim=32,
     ).to(device)
 
     # Load checkpoint if resuming
@@ -722,13 +1251,13 @@ def train(args):
 
     nparams = get_nparams(model)
     print(f"N parameters: {nparams:,}")
-    if nparams >= 10000:
+    if nparams >= 60000:
         print(
             f"WARNING: Model has {nparams} parameters, "
-            f"exceeds 10k limit by {nparams - 10000}"
+            f"exceeds 60k limit by {nparams - 60000}"
         )
     else:
-        print(f"Model is within 10k parameter budget: {nparams} < 10000")
+        print(f"Model is within 60k parameter budget: {nparams} < 60000")
 
     use_compile = device.type == "cuda" and not args.no_compile
     if use_compile:
@@ -751,7 +1280,8 @@ def train(args):
             device, memory_format=memory_format
         )
         try:
-            test_output = model(test_input)
+            with torch.amp.autocast(device.type):
+                test_output = model(test_input)
         except Exception as e:
             if use_compile:
                 print(f"WARNING: Compiled model forward pass failed: {e}")
@@ -759,20 +1289,21 @@ def train(args):
                 model = TinyEfficientViTSeg(
                     in_channels=1,
                     num_classes=2,
-                    embed_dims=(8, 12, 18),
+                    embed_dims=(16, 32, 64),
                     depths=(1, 1, 1),
-                    num_heads=(1, 1, 1),
+                    num_heads=(1, 1, 2),
                     key_dims=(4, 4, 4),
                     attn_ratios=(2, 2, 2),
                     window_sizes=(7, 7, 7),
                     mlp_ratios=(2, 2, 2),
-                    decoder_dim=8,
+                    decoder_dim=32,
                 ).to(device)
                 # Reload checkpoint for fallback model
                 if resume_path:
                     model = load_model_checkpoint(model, resume_path, device)
                 use_compile = False
-                test_output = model(test_input)
+                with torch.amp.autocast(device.type):
+                    test_output = model(test_input)
             else:
                 raise
         print(f"Input shape: {test_input.shape}")
@@ -791,6 +1322,7 @@ def train(args):
         eta_min=LEARNING_RATE * 0.01,  # Minimum LR is 1% of initial
     )
     criterion = CombinedLoss()
+    scaler = torch.amp.GradScaler(device.type)
 
     transform = transforms.Compose(
         [
@@ -816,7 +1348,7 @@ def train(args):
     print(f"\n{'='*80}")
     print("Training Configuration:")
     print(f"{'='*80}")
-    print(f"  Model: TinyEfficientViT-Micro")
+    print(f"  Model: TinyEfficientViT")
     print(f"  Parameters: {nparams:,}")
     print(f"  Batch Size: {BATCH_SIZE}")
     print(f"  Epochs: {EPOCHS}")
@@ -900,14 +1432,14 @@ def train(args):
     }
 
     model_details = {
-        "architecture": "TinyEfficientViT-Micro",
+        "architecture": "TinyEfficientViT",
         "input_channels": 1,
         "output_channels": 2,
-        "embed_dims": "(8, 12, 18)",
+        "embed_dims": "(16, 32, 64)",
         "depths": "(1, 1, 1)",
-        "num_heads": "(1, 1, 1)",
+        "num_heads": "(1, 1, 2)",
         "key_dims": "(4, 4, 4)",
-        "decoder_dim": 8,
+        "decoder_dim": 32,
         "window_sizes": "(7, 7, 7)",
     }
 
@@ -915,6 +1447,8 @@ def train(args):
         "horizontal_flip": 0.5,
         "line_augment": 0.2,
         "gaussian_blur": 0.2,
+        "clahe": True,
+        "gamma_correction": 0.8,
     }
 
     setup_mlflow()
@@ -929,10 +1463,10 @@ def train(args):
     # Metrics stored on GPU during training, transferred to CPU only at end
     # (train_metrics and valid_metrics dicts populated after training completes)
 
-    with mlflow.start_run(run_name="tiny-efficientvit-micro-training") as run:
+    with mlflow.start_run(run_name="tiny-efficientvit-training") as run:
         mlflow.set_tags(
             {
-                "model_type": "TinyEfficientViT-Micro",
+                "model_type": "TinyEfficientViT",
                 "task": "semantic_segmentation",
                 "dataset": "OpenEDS",
                 "framework": "PyTorch",
@@ -960,9 +1494,6 @@ def train(args):
         )
         print(f"MLflow run started: {run.info.run_id}")
 
-        # Pre-compute memory format once (instead of per-batch)
-        memory_format = torch.channels_last if device.type == "cuda" else torch.contiguous_format
-
         for epoch in range(EPOCHS):
             _ = model.train()
             # Zero pre-allocated accumulators (in-place, no allocation)
@@ -977,16 +1508,20 @@ def train(args):
             pbar = tqdm(trainloader, desc=f"Epoch {epoch+1}/{EPOCHS}")
             for batchdata in pbar:
                 img, labels, _, spatialWeights, maxDist = batchdata
+                memory_format = (
+                    torch.channels_last
+                    if device.type == "cuda"
+                    else torch.contiguous_format
+                )
                 data = img.to(device, non_blocking=True, memory_format=memory_format)
                 target = labels.to(device, non_blocking=True).long()
                 spatial_weights_gpu = spatialWeights.to(
-                    device,
-                    non_blocking=True,
+                    device, non_blocking=True
                 ).float()
                 dist_map_gpu = maxDist.to(device, non_blocking=True)
 
                 optimizer.zero_grad(set_to_none=True)
-                with autocast('cuda', enabled=use_amp):
+                with torch.amp.autocast(device.type):
                     output = model(data)
                     (
                         total_loss,
@@ -1043,6 +1578,11 @@ def train(args):
             with torch.no_grad():
                 for batchdata in validloader:
                     img, labels, _, spatialWeights, maxDist = batchdata
+                    memory_format = (
+                        torch.channels_last
+                        if device.type == "cuda"
+                        else torch.contiguous_format
+                    )
                     data = img.to(
                         device,
                         non_blocking=True,
@@ -1054,7 +1594,7 @@ def train(args):
                     ).float()
                     dist_map_gpu = maxDist.to(device, non_blocking=True)
 
-                    with autocast('cuda', enabled=use_amp):
+                    with torch.amp.autocast(device.type):
                         output = model(data)
                         (
                             total_loss,
@@ -1102,7 +1642,7 @@ def train(args):
                 best_valid_iou_gpu = miou_valid_gpu.clone()
                 best_epoch_gpu.fill_(epoch + 1)
                 best_model_path = os.path.join(
-                    args.output_dir, "best_efficientvit_tiny_model.pt"
+                    args.output_dir, "best_efficientvit_model.pt"
                 )
                 save_model_checkpoint(model, best_model_path)
                 print(f"Epoch {epoch+1}: New best model saved!")
@@ -1110,7 +1650,7 @@ def train(args):
             # Periodic checkpoint saving (no metric transfer needed)
             if (epoch + 1) % 10 == 0 or epoch == EPOCHS - 1:
                 checkpoint_path = os.path.join(
-                    args.output_dir, f"efficientvit_tiny_model_epoch_{epoch+1}.pt"
+                    args.output_dir, f"efficientvit_model_epoch_{epoch+1}.pt"
                 )
                 save_model_checkpoint(model, checkpoint_path)
 
