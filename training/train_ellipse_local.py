@@ -802,6 +802,9 @@ class IrisDataset(Dataset):
         self.gamma_table = 255.0 * (np.linspace(0, 1, 256) ** 0.8)
         self.dataset = hf_dataset
         self.has_preprocessed_column = "preprocessed" in hf_dataset.column_names
+        self.has_ellipse_params = all(
+            k in hf_dataset.column_names for k in ("cx", "cy", "rx", "ry")
+        )
 
     def __len__(self):
         return len(self.dataset)
@@ -823,14 +826,23 @@ class IrisDataset(Dataset):
         )
         filename = sample["filename"]
 
-        cx, cy, rx, ry, _ = extract_ellipse_params(label)
-        cx_norm, cy_norm, rx_norm, ry_norm = normalize_ellipse_params(cx, cy, rx, ry)
+        # Check if sample is already preprocessed
+        is_preprocessed = self.has_preprocessed_column and sample.get("preprocessed", False)
+
+        # Use precomputed ellipse parameters if available and sample is preprocessed
+        if self.has_ellipse_params and is_preprocessed:
+            cx_norm = sample["cx"]
+            cy_norm = sample["cy"]
+            rx_norm = sample["rx"]
+            ry_norm = sample["ry"]
+        else:
+            # Fall back to runtime extraction
+            cx, cy, rx, ry, _ = extract_ellipse_params(label)
+            cx_norm, cy_norm, rx_norm, ry_norm = normalize_ellipse_params(cx, cy, rx, ry)
+
         ellipse_params = torch.tensor(
             [cx_norm, cy_norm, rx_norm, ry_norm], dtype=torch.float32
         )
-
-        # Check if sample is already preprocessed
-        is_preprocessed = self.has_preprocessed_column and sample.get("preprocessed", False)
 
         if is_preprocessed:
             pilimg = image  # Already preprocessed, skip gamma correction
