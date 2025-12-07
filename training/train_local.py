@@ -43,7 +43,6 @@ import matplotlib.pyplot as plt
 from datasets import load_dataset
 
 import mlflow
-import kornia.enhance as K_enhance
 
 
 class TinyConvNorm(nn.Module):
@@ -994,7 +993,7 @@ class MaskToTensor(object):
         return torch.from_numpy(np.array(img, dtype=np.int64)).long()
 
 
-HF_DATASET_REPO = "Conner/openeds-precomputed"
+HF_DATASET_REPO = "Conner/sddec25-01"
 IMAGE_HEIGHT = 400
 IMAGE_WIDTH = 640
 
@@ -1003,22 +1002,14 @@ class IrisDataset(Dataset):
     def __init__(self, hf_dataset, split="train", transform=None):
         self.transform = transform
         self.split = split
-        self.gamma_table = 255.0 * (np.linspace(0, 1, 256) ** 0.8)
         self.dataset = hf_dataset
-        self.has_preprocessed_column = "preprocessed" in hf_dataset.column_names
-
-    def is_preprocessed(self):
-        """Check if dataset samples are preprocessed."""
-        if not self.has_preprocessed_column:
-            return False
-        # Check first sample
-        return self.dataset[0].get("preprocessed", False)
 
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, idx):
         sample = self.dataset[idx]
+        # Image is already preprocessed (gamma + CLAHE applied by precompute.py)
         image = np.array(sample["image"], dtype=np.uint8).reshape(
             IMAGE_HEIGHT, IMAGE_WIDTH
         )
@@ -1033,20 +1024,15 @@ class IrisDataset(Dataset):
         )
         filename = sample["filename"]
 
-        # Check if sample is preprocessed (skip gamma correction if so)
-        is_preprocessed = self.has_preprocessed_column and sample.get("preprocessed", False)
-
-        if is_preprocessed:
-            pilimg = image  # Already preprocessed
-        else:
-            pilimg = cv2.LUT(image, self.gamma_table)
+        # Stochastic augmentations for training
+        pilimg = image
         if self.transform is not None and self.split == "train":
             if random.random() < 0.2:
                 pilimg = Line_augment()(np.array(pilimg))
             if random.random() < 0.2:
                 pilimg = Gaussian_blur()(np.array(pilimg))
-        img = np.array(np.uint8(pilimg))
-        img = Image.fromarray(img)
+
+        img = Image.fromarray(np.uint8(pilimg))
         label_pil = Image.fromarray(label)
 
         if self.transform is not None:
@@ -1346,11 +1332,6 @@ def train(args):
         transform=transform,
     )
 
-    # Check if dataset is preprocessed (affects GPU CLAHE application)
-    is_preprocessed_dataset = train_dataset.is_preprocessed()
-    if is_preprocessed_dataset:
-        print("Dataset is preprocessed - skipping GPU CLAHE application")
-
     print(f"Training samples: {len(train_dataset)}")
     print(f"Validation samples: {len(valid_dataset)}")
 
@@ -1456,8 +1437,6 @@ def train(args):
         "horizontal_flip": 0.5,
         "line_augment": 0.2,
         "gaussian_blur": 0.2,
-        "histogram_equalization": "cv2.equalizeHist (CPU)",  # Applied in dataloader
-        "gamma_correction": 0.8,
     }
 
     setup_mlflow()
@@ -1521,11 +1500,6 @@ def train(args):
             for batchdata in pbar:
                 img, labels, _, spatialWeights, maxDist = batchdata
                 data = img.to(device, non_blocking=True, memory_format=memory_format)
-                if not is_preprocessed_dataset:
-                    # Apply GPU CLAHE only for non-preprocessed data
-                    data = (data + 0.5).clamp(0, 1)  # Denormalize to [0, 1]
-                    data = K_enhance.equalize_clahe(data, clip_limit=1.5, grid_size=(8, 8))
-                    data = data - 0.5  # Renormalize to [-0.5, 0.5]
                 target = labels.to(device, non_blocking=True).long()
                 spatial_weights_gpu = spatialWeights.to(
                     device,
@@ -1596,11 +1570,6 @@ def train(args):
                         non_blocking=True,
                         memory_format=memory_format,
                     )
-                    if not is_preprocessed_dataset:
-                        # Apply GPU CLAHE only for non-preprocessed data
-                        data = (data + 0.5).clamp(0, 1)
-                        data = K_enhance.equalize_clahe(data, clip_limit=1.5, grid_size=(8, 8))
-                        data = data - 0.5
                     target = labels.to(device, non_blocking=True).long()
                     spatial_weights_gpu = spatialWeights.to(
                         device, non_blocking=True

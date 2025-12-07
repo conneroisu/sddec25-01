@@ -51,7 +51,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
-HF_DATASET_REPO = "Conner/openeds-precomputed"
+HF_DATASET_REPO = "Conner/sddec25-01"
 IMAGE_HEIGHT = 400
 IMAGE_WIDTH = 640
 
@@ -798,10 +798,7 @@ class IrisDataset(Dataset):
     def __init__(self, hf_dataset, split="train", transform=None):
         self.transform = transform
         self.split = split
-        self.clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(8, 8))
-        self.gamma_table = 255.0 * (np.linspace(0, 1, 256) ** 0.8)
         self.dataset = hf_dataset
-        self.has_preprocessed_column = "preprocessed" in hf_dataset.column_names
         self.has_ellipse_params = all(
             k in hf_dataset.column_names for k in ("cx", "cy", "rx", "ry")
         )
@@ -826,41 +823,27 @@ class IrisDataset(Dataset):
         )
         filename = sample["filename"]
 
-        # Check if sample is already preprocessed
-        is_preprocessed = self.has_preprocessed_column and sample.get("preprocessed", False)
-
-        # Use precomputed ellipse parameters if available and sample is preprocessed
-        if self.has_ellipse_params and is_preprocessed:
-            cx_norm = sample["cx"]
-            cy_norm = sample["cy"]
-            rx_norm = sample["rx"]
-            ry_norm = sample["ry"]
-        else:
-            # Fall back to runtime extraction
-            cx, cy, rx, ry, _ = extract_ellipse_params(label)
-            cx_norm, cy_norm, rx_norm, ry_norm = normalize_ellipse_params(cx, cy, rx, ry)
+        # Use precomputed ellipse parameters from the dataset
+        cx_norm = sample["cx"]
+        cy_norm = sample["cy"]
+        rx_norm = sample["rx"]
+        ry_norm = sample["ry"]
 
         ellipse_params = torch.tensor(
             [cx_norm, cy_norm, rx_norm, ry_norm], dtype=torch.float32
         )
 
-        if is_preprocessed:
-            pilimg = image  # Already preprocessed, skip gamma correction
-        else:
-            pilimg = cv2.LUT(image, self.gamma_table)
+        # Image is already preprocessed by precompute.py
+        pilimg = image
 
-        # Stochastic augmentations still apply for training (even for preprocessed data)
+        # Stochastic augmentations still apply for training
         if self.transform is not None and self.split == "train":
             if random.random() < 0.2:
                 pilimg = Line_augment()(np.array(pilimg))
             if random.random() < 0.2:
                 pilimg = Gaussian_blur()(np.array(pilimg))
 
-        # CLAHE only for non-preprocessed data
-        if not is_preprocessed:
-            img = self.clahe.apply(np.array(np.uint8(pilimg)))
-        else:
-            img = np.array(np.uint8(pilimg))
+        img = np.array(np.uint8(pilimg))
         img = Image.fromarray(img)
         label_pil = Image.fromarray(label)
 
@@ -1168,8 +1151,6 @@ def main():
         "horizontal_flip": 0.5,
         "line_augment": 0.2,
         "gaussian_blur": 0.2,
-        "clahe": True,
-        "gamma_correction": 0.8,
     }
 
     print("\n" + "=" * 80)
