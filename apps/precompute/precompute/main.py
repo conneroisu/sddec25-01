@@ -595,6 +595,20 @@ def process_split_generator(
 # =============================================================================
 
 
+def has_existing_chunks(split_dir: Path) -> tuple[bool, int]:
+    """
+    Check if chunks already exist for a split.
+
+    Args:
+        split_dir: Path to the split directory (e.g., parquet_chunks/train)
+
+    Returns:
+        Tuple of (exists, chunk_count) where exists is True if chunks found
+    """
+    chunks = list(split_dir.glob("chunk_*.npz"))
+    return len(chunks) > 0, len(chunks)
+
+
 def process_and_save_split(
     pairs: list[tuple[str, str]],
     split_name: str,
@@ -853,12 +867,36 @@ def main():
     print(f"\nProcessing {len(train_pairs)} train and {len(val_pairs)} validation pairs...", flush=True)
     parquet_dir = output_dir / "parquet_chunks"
 
-    train_count = process_and_save_split(train_pairs, "train", parquet_dir, chunk_size=500)
-    val_count = process_and_save_split(val_pairs, "validation", parquet_dir, chunk_size=500)
+    # Check for existing chunks
+    train_dir = parquet_dir / "train"
+    val_dir = parquet_dir / "validation"
+
+    train_exists, train_chunks = has_existing_chunks(train_dir)
+    val_exists, val_chunks = has_existing_chunks(val_dir)
+
+    # Process train split
+    if train_exists:
+        print(f"Skipping train: {train_chunks} chunks already exist in {train_dir}", flush=True)
+        train_count = None
+    else:
+        train_count = process_and_save_split(train_pairs, "train", parquet_dir, chunk_size=500)
+
+    # Process validation split
+    if val_exists:
+        print(f"Skipping validation: {val_chunks} chunks already exist in {val_dir}", flush=True)
+        val_count = None
+    else:
+        val_count = process_and_save_split(val_pairs, "validation", parquet_dir, chunk_size=500)
 
     print(f"\nParquet chunks saved to: {parquet_dir}", flush=True)
-    print(f"  Train samples: {train_count}", flush=True)
-    print(f"  Validation samples: {val_count}", flush=True)
+    if train_count is not None:
+        print(f"  Train samples: {train_count}", flush=True)
+    else:
+        print(f"  Train samples: (using existing chunks)", flush=True)
+    if val_count is not None:
+        print(f"  Validation samples: {val_count}", flush=True)
+    else:
+        print(f"  Validation samples: (using existing chunks)", flush=True)
 
     # Load npz files and create HuggingFace dataset
     # NOTE: This may OOM for very large datasets
