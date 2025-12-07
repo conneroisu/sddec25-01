@@ -1078,6 +1078,7 @@ def train():
             )
             self.gamma_table = 255.0 * (np.linspace(0, 1, 256) ** 0.8)
             self.dataset = hf_dataset
+            self.has_preprocessed_column = "preprocessed" in hf_dataset.column_names
 
         def __len__(self):
             return len(self.dataset)
@@ -1114,16 +1115,30 @@ def train():
                 IMAGE_WIDTH,
             )
             filename = sample["filename"]
-            pilimg = cv2.LUT(
-                image,
-                self.gamma_table,
-            )
+
+            # Check if sample is preprocessed (gamma + CLAHE already applied)
+            is_preprocessed = self.has_preprocessed_column and sample.get("preprocessed", False)
+
+            if is_preprocessed:
+                pilimg = image
+            else:
+                pilimg = cv2.LUT(
+                    image,
+                    self.gamma_table,
+                )
+
+            # Stochastic augmentations still apply for training
             if self.transform is not None and self.split == "train":
                 if random.random() < 0.2:
                     pilimg = Line_augment()(np.array(pilimg))
                 if random.random() < 0.2:
                     pilimg = Gaussian_blur()(np.array(pilimg))
-            img = self.clahe.apply(np.array(np.uint8(pilimg)))
+
+            # CLAHE only for non-preprocessed samples
+            if not is_preprocessed:
+                img = self.clahe.apply(np.array(np.uint8(pilimg)))
+            else:
+                img = np.array(np.uint8(pilimg))
             img = Image.fromarray(img)
             label_pil = Image.fromarray(label)
             if self.transform is not None:
