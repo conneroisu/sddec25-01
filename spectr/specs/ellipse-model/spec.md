@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TODO: Add purpose description
+Define requirements for the ellipse regression model package that provides reusable model architecture and utilities for pupil ellipse parameter prediction. This specification establishes the interface and behavior for training applications to use the shared `packages/ellipse/` model package.
 
 ## Requirements
 
