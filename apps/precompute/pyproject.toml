@@ -1,12 +1,12 @@
 [project]
-name = "demo-tiny-effvit"
+name = "precompute"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    
+    "numpy>=2.3.5",
+    "opencv-python>=4.11.0.86",
+    "scipy>=1.16.3",
+    "tqdm>=4.67.1",
 ]
-
-[tool.uv]
-dev-dependencies = []
