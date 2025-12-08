@@ -80,8 +80,9 @@ def finalize_iou(total_intersection, total_union):
     Returns:
         Mean IoU across all classes
     """
-    iou_per_class = (total_intersection / total_union.clamp(min=1)).cpu().numpy()
-    return float(np.mean(iou_per_class))
+    # Compute entirely on GPU, single .item() sync at end
+    iou_per_class = total_intersection / total_union.clamp(min=1)
+    return iou_per_class.mean().item()
 
 
 def get_predictions(output):
@@ -178,11 +179,6 @@ class IrisDataset(Dataset):
         return img, label_tensor, spatial_weights, dist_map
 
 
-# ============================================================================
-# Training Function
-# ============================================================================
-
-
 def train(args):
     """
     Main training loop.
@@ -199,10 +195,6 @@ def train(args):
     else:
         torch.manual_seed(args.seed)
 
-    # ========================================================================
-    # Load Dataset
-    # ========================================================================
-
     print(f"\nLoading dataset from {HF_DATASET_REPO}...")
     print("(First run will download ~3GB, subsequent runs use cached data)")
 
@@ -210,10 +202,6 @@ def train(args):
 
     print(f"Train samples: {len(hf_dataset['train'])}")
     print(f"Validation samples: {len(hf_dataset['validation'])}")
-
-    # ========================================================================
-    # Create Datasets and DataLoaders
-    # ========================================================================
 
     # Transforms - only normalization (no preprocessing)
     transform = transforms.Compose([
@@ -276,7 +264,8 @@ def train(args):
     )
 
     # Mixed precision training setup
-    scaler = torch.amp.GradScaler('cuda') if torch.cuda.is_available() else None
+    use_amp = torch.cuda.is_available()
+    scaler = torch.amp.GradScaler('cuda') if use_amp else None
 
     # ========================================================================
     # Alpha Scheduling (for loss weighting)
@@ -318,25 +307,29 @@ def train(args):
         pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{args.epochs} [Train]")
 
         for images, labels, spatial_weights, dist_maps in pbar:
-            # Move to device
-            images = images.to(device)
-            labels = labels.to(device)
-            spatial_weights = spatial_weights.to(device)
-            dist_maps = dist_maps.to(device)
+            # Move to device (non_blocking for async CPU->GPU transfer)
+            images = images.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
+            spatial_weights = spatial_weights.to(device, non_blocking=True)
+            dist_maps = dist_maps.to(device, non_blocking=True)
 
             optimizer.zero_grad()
 
             # Forward pass with mixed precision
-            with torch.amp.autocast('cuda'):
+            with torch.amp.autocast('cuda', enabled=use_amp):
                 outputs = model(images)
                 loss, ce_loss, dice_loss, surface_loss = criterion(
                     outputs, labels, spatial_weights, dist_maps, alpha
                 )
 
             # Backward pass with gradient scaling
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
+            if use_amp:
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                loss.backward()
+                optimizer.step()
             # Accumulate losses (stay on GPU, no sync)
             train_loss += loss.detach()
             train_ce_loss += ce_loss.detach()
@@ -352,11 +345,16 @@ def train(args):
             # Update progress bar (no GPU sync)
             pbar.set_postfix({'alpha': f'{alpha:.3f}'})
 
-        # Calculate epoch metrics (single GPU->CPU transfer per loss)
-        train_loss = (train_loss / len(train_loader)).item()
-        train_ce_loss = (train_ce_loss / len(train_loader)).item()
-        train_dice_loss = (train_dice_loss / len(train_loader)).item()
-        train_surface_loss = (train_surface_loss / len(train_loader)).item()
+        # Calculate epoch metrics (single batched GPU->CPU transfer)
+        n_train_batches = len(train_loader)
+        train_metrics_gpu = torch.cat([
+            train_loss / n_train_batches,
+            train_ce_loss / n_train_batches,
+            train_dice_loss / n_train_batches,
+            train_surface_loss / n_train_batches,
+        ])
+        train_metrics = train_metrics_gpu.tolist()
+        train_loss_val, train_ce_val, train_dice_val, train_surface_val = train_metrics
         train_iou = finalize_iou(train_intersection, train_union)
 
         # ====================================================================
@@ -375,14 +373,14 @@ def train(args):
             pbar = tqdm(valid_loader, desc=f"Epoch {epoch+1}/{args.epochs} [Valid]")
 
             for images, labels, spatial_weights, dist_maps in pbar:
-                # Move to device
-                images = images.to(device)
-                labels = labels.to(device)
-                spatial_weights = spatial_weights.to(device)
-                dist_maps = dist_maps.to(device)
+                # Move to device (non_blocking for async CPU->GPU transfer)
+                images = images.to(device, non_blocking=True)
+                labels = labels.to(device, non_blocking=True)
+                spatial_weights = spatial_weights.to(device, non_blocking=True)
+                dist_maps = dist_maps.to(device, non_blocking=True)
 
                 # Forward pass
-                with torch.amp.autocast('cuda'):
+                with torch.amp.autocast('cuda', enabled=use_amp):
                     outputs = model(images)
                     loss, ce_loss, dice_loss, surface_loss = criterion(
                         outputs, labels, spatial_weights, dist_maps, alpha
@@ -402,18 +400,23 @@ def train(args):
 
                 # No GPU sync in progress bar
 
-        # Calculate epoch metrics (single GPU->CPU transfer per loss)
-        valid_loss = (valid_loss / len(valid_loader)).item()
-        valid_ce_loss = (valid_ce_loss / len(valid_loader)).item()
-        valid_dice_loss = (valid_dice_loss / len(valid_loader)).item()
-        valid_surface_loss = (valid_surface_loss / len(valid_loader)).item()
+        # Calculate epoch metrics (single batched GPU->CPU transfer)
+        n_valid_batches = len(valid_loader)
+        valid_metrics_gpu = torch.cat([
+            valid_loss / n_valid_batches,
+            valid_ce_loss / n_valid_batches,
+            valid_dice_loss / n_valid_batches,
+            valid_surface_loss / n_valid_batches,
+        ])
+        valid_metrics = valid_metrics_gpu.tolist()
+        valid_loss_val, valid_ce_val, valid_dice_val, valid_surface_val = valid_metrics
         valid_iou = finalize_iou(valid_intersection, valid_union)
 
         # ====================================================================
         # Learning Rate Scheduling
         # ====================================================================
 
-        scheduler.step(valid_loss)
+        scheduler.step(valid_loss_val)
         current_lr = optimizer.param_groups[0]['lr']
 
         # ====================================================================
@@ -421,11 +424,11 @@ def train(args):
         # ====================================================================
 
         print(f"\nEpoch {epoch+1}/{args.epochs}")
-        print(f"  Train Loss: {train_loss:.4f} | Valid Loss: {valid_loss:.4f}")
+        print(f"  Train Loss: {train_loss_val:.4f} | Valid Loss: {valid_loss_val:.4f}")
         print(f"  Train IoU:  {train_iou:.4f} | Valid IoU:  {valid_iou:.4f}")
-        print(f"  CE Loss:    {train_ce_loss:.4f} | {valid_ce_loss:.4f}")
-        print(f"  Dice Loss:  {train_dice_loss:.4f} | {valid_dice_loss:.4f}")
-        print(f"  Surf Loss:  {train_surface_loss:.4f} | {valid_surface_loss:.4f}")
+        print(f"  CE Loss:    {train_ce_val:.4f} | {valid_ce_val:.4f}")
+        print(f"  Dice Loss:  {train_dice_val:.4f} | {valid_dice_val:.4f}")
+        print(f"  Surf Loss:  {train_surface_val:.4f} | {valid_surface_val:.4f}")
         print(f"  LR: {current_lr:.6f} | Alpha: {alpha:.4f}")
 
         # ====================================================================
@@ -442,7 +445,7 @@ def train(args):
                 'optimizer_state_dict': optimizer.state_dict(),
                 'scheduler_state_dict': scheduler.state_dict(),
                 'valid_iou': valid_iou,
-                'valid_loss': valid_loss,
+                'valid_loss': valid_loss_val,
             }, f"{args.checkpoint_dir}/best_model.pth")
 
             print(f"  >> Saved best model with IoU={best_iou:.4f}")
@@ -455,7 +458,7 @@ def train(args):
                 'optimizer_state_dict': optimizer.state_dict(),
                 'scheduler_state_dict': scheduler.state_dict(),
                 'valid_iou': valid_iou,
-                'valid_loss': valid_loss,
+                'valid_loss': valid_loss_val,
             }, f"{args.checkpoint_dir}/checkpoint_epoch_{epoch+1}.pth")
             print(f"  >> Saved checkpoint at epoch {epoch+1}")
 

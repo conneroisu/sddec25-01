@@ -120,63 +120,69 @@ def process_single_sample(
     images_path: str, labels_path: str, filename: str
 ) -> list[dict] | None:
     """Process one sample and return original + 3 augmented variants."""
-    basename = filename.replace(".png", "")
-    img_path = os.path.join(images_path, filename)
-    img = PILImage.open(img_path).convert("L")
-    H, W = img.width, img.height
-    label_path = os.path.join(labels_path, basename + ".npy")
-    if not os.path.exists(label_path):
+    try:
+        basename = filename.replace(".png", "")
+        img_path = os.path.join(images_path, filename)
+        img = PILImage.open(img_path).convert("L")
+        label_path = os.path.join(labels_path, basename + ".npy")
+        if not os.path.exists(label_path):
+            return None
+        label = np.load(label_path)
+        # Resize label to target dimensions using cv2.resize with INTER_NEAREST for label data
+        label = cv2.resize(label, (IMAGE_WIDTH, IMAGE_HEIGHT), interpolation=cv2.INTER_NEAREST)
+        label_binary = np.zeros_like(label, dtype=np.uint8)
+        label_binary[label == 3] = 1
+        spatial_weights = compute_spatial_weights(label_binary)
+        dist_map = compute_distance_map(label_binary)
+        # Also resize the image to match target dimensions
+        image = np.array(img)
+        image = cv2.resize(image, (IMAGE_WIDTH, IMAGE_HEIGHT), interpolation=cv2.INTER_LINEAR)
+
+        samples = []
+
+        # 1. Original (no augmentation)
+        samples.append({
+            "image": image,
+            "label": label_binary,
+            "spatial_weights": spatial_weights,
+            "dist_map": dist_map,
+            "filename": basename,
+        })
+
+        # 2. Horizontal flip (affects ALL arrays)
+        flip_img, flip_label, flip_sw, flip_dm = horizontal_flip(
+            image, label_binary, spatial_weights, dist_map
+        )
+        samples.append({
+            "image": flip_img,
+            "label": flip_label,
+            "spatial_weights": flip_sw,
+            "dist_map": flip_dm,
+            "filename": f"{basename}_flip",
+        })
+
+        # 3. Gaussian blur (only image changes)
+        samples.append({
+            "image": gaussian_blur(image),
+            "label": label_binary,
+            "spatial_weights": spatial_weights,
+            "dist_map": dist_map,
+            "filename": f"{basename}_blur",
+        })
+
+        # 4. Line augment (only image changes)
+        samples.append({
+            "image": line_augment(image),
+            "label": label_binary,
+            "spatial_weights": spatial_weights,
+            "dist_map": dist_map,
+            "filename": f"{basename}_lines",
+        })
+
+        return samples
+    except Exception as e:
+        print(f"Warning: Failed to process {filename}: {e}")
         return None
-    label = np.load(label_path)
-    label = np.resize(label, (W, H))
-    label_binary = np.zeros_like(label, dtype=np.uint8)
-    label_binary[label == 3] = 1
-    spatial_weights = compute_spatial_weights(label_binary)
-    dist_map = compute_distance_map(label_binary)
-    image = np.array(img)
-
-    samples = []
-
-    # 1. Original (no augmentation)
-    samples.append({
-        "image": image,
-        "label": label_binary,
-        "spatial_weights": spatial_weights,
-        "dist_map": dist_map,
-        "filename": basename,
-    })
-
-    # 2. Horizontal flip (affects ALL arrays)
-    flip_img, flip_label, flip_sw, flip_dm = horizontal_flip(
-        image, label_binary, spatial_weights, dist_map
-    )
-    samples.append({
-        "image": flip_img,
-        "label": flip_label,
-        "spatial_weights": flip_sw,
-        "dist_map": flip_dm,
-        "filename": f"{basename}_flip",
-    })
-
-    # 3. Gaussian blur (only image changes)
-    samples.append({
-        "image": gaussian_blur(image),
-        "label": label_binary,
-        "spatial_weights": spatial_weights,
-        "dist_map": dist_map,
-        "filename": f"{basename}_blur",
-    })
-
-    # 4. Line augment (only image changes)
-    samples.append({
-        "image": line_augment(image),
-        "label": label_binary,
-        "spatial_weights": spatial_weights,
-        "dist_map": dist_map,
-        "filename": f"{basename}_lines",
-    })
-
-    return samples
 
 
 def process_split_to_parquet(dataset_path: str, split: str, output_dir: str) -> str:
@@ -195,6 +201,9 @@ def process_split_to_parquet(dataset_path: str, split: str, output_dir: str) -> 
     shard_idx = 0
     processed_count = 0
     skipped_shards = 0
+
+    # Simplified approach: synchronous writes since we only have 2 workers anyway
+    # This avoids memory accumulation from keeping all futures/tables in memory
     for chunk_start in range(0, total_images, CHUNK_SIZE):
         chunk_end = min(chunk_start + CHUNK_SIZE, total_images)
         chunk_files = image_files[chunk_start:chunk_end]
@@ -233,11 +242,15 @@ def process_split_to_parquet(dataset_path: str, split: str, output_dir: str) -> 
                     "filename": chunk_data["filename"],
                 }
             )
+            sample_count = len(chunk_data["filename"])
+            # Write synchronously to avoid memory accumulation
             pq.write_table(table, parquet_path)
-            print(f"Saved shard {shard_idx} with {len(chunk_data['filename'])} samples")
+            print(f"Saved shard {shard_idx} with {sample_count} samples")
+            del table
         del chunk_data
         gc.collect()
         shard_idx += 1
+
     print(
         f"Processed {processed_count} samples into {shard_idx - skipped_shards} new shards ({skipped_shards} skipped)"
     )
