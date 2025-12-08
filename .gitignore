@@ -56,3 +56,5 @@ build/
 !assets/*.png
 /.pre-commit-config.yaml
 *.bak0
+.env
+__pycache__/

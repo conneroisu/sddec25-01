@@ -26,6 +26,8 @@
     flake-utils.lib.eachDefaultSystem (system: let
       pkgs = import nixpkgs {
         inherit system;
+        config.allowUnfree = true;
+        config.cudaSupport = true;
       };
 
       rooted = exec:
@@ -110,6 +112,7 @@
         programs = {
           alejandra.enable = true; # Nix formatter
           texfmt.enable = true; # TeX formatter
+          black.enable = true; # Python formatter
         };
       };
 
@@ -148,14 +151,21 @@
 
             # Python tooling for training scripts
             uv # Python package manager
+            ruff
           ]
           ++ builtins.attrValues scriptPackages
           ++ preCommitCheck.enabledPackages;
 
-        env.LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
-          pkgs.glib
-          pkgs.libGL
-        ];
+        env.TRITON_LIBCUDA_PATH = "/run/opengl-driver/lib";
+        env.LD_LIBRARY_PATH =
+          pkgs.lib.makeLibraryPath [
+            pkgs.glib
+            pkgs.libGL
+            pkgs.cudaPackages.cudatoolkit
+            pkgs.cudaPackages.cudnn
+            pkgs.stdenv.cc.cc.lib
+          ]
+          + ":/run/opengl-driver/lib";
 
         shellHook =
           preCommitCheck.shellHook
