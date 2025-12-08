@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "1.1",
+      "section": "Implementation",
+      "description": "Add GitHub profile link for Tyler Schaefer (TSSchaef)",
+      "status": "completed"
+    },
+    {
+      "id": "1.2",
+      "section": "Implementation",
+      "description": "Add GitHub profile link for Conner Ohnesorge (connerohnesorge)",
+      "status": "completed"
+    },
+    {
+      "id": "1.3",
+      "section": "Implementation",
+      "description": "Add GitHub profile link for Aidan Perry (priedieux)",
+      "status": "completed"
+    },
+    {
+      "id": "1.4",
+      "section": "Implementation",
+      "description": "Add GitHub profile link for Joey Metzen (jjmetzen)",
+      "status": "completed"
+    },
+    {
+      "id": "1.5",
+      "section": "Implementation",
+      "description": "Add .team-github-link CSS class with hover effects to site.css",
+      "status": "completed"
+    },
+    {
+      "id": "2.1",
+      "section": "Validation",
+      "description": "Validate Spectr proposal with spectr validate add-github-profile-links --strict",
+      "status": "completed"
+    },
+    {
+      "id": "2.2",
+      "section": "Validation",
+      "description": "Verify all 4 GitHub profile links work correctly and open in new tabs",
+      "status": "pending"
+    },
+    {
+      "id": "2.3",
+      "section": "Validation",
+      "description": "Test hover effects on all team member GitHub icons",
+      "status": "pending"
+    }
+  ]
+}
