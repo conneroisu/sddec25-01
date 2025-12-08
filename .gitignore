@@ -51,7 +51,6 @@ logs
 .bak
 .mtc
 build/
-*.pdf
 *.png
 !assets/*.png
 /.pre-commit-config.yaml
