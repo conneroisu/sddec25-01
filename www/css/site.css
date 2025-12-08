@@ -752,6 +752,8 @@ footer {
 }
 
 .pdf-link-container {
+  display: flex;
+  align-items: center;
   padding: 12px 15px;
   margin-bottom: 15px;
   border: 1px solid #eee;
@@ -973,7 +975,11 @@ footer {
 }
 
 /* Additional styling for icon links in document sections */
-.pdf-link-container .github-link,
+.pdf-link-container .github-link {
+  margin-left: auto;
+  font-size: 1em;
+}
+
 .pdf-link-container .markdown-link {
   margin-left: 10px;
   font-size: 1em;
