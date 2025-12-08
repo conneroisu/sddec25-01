@@ -24,10 +24,11 @@
     ...
   }:
     flake-utils.lib.eachDefaultSystem (system: let
+      isLinux = builtins.elem system ["x86_64-linux" "aarch64-linux"];
       pkgs = import nixpkgs {
         inherit system;
         config.allowUnfree = true;
-        config.cudaSupport = true;
+        config.cudaSupport = isLinux;
       };
 
       rooted = exec:
@@ -123,56 +124,57 @@
         };
       };
     in {
-      devShells.default = pkgs.mkShell {
-        name = "latex-dev";
+      devShells.default = pkgs.mkShell ({
+          name = "latex-dev";
 
-        # Available packages on https://search.nixos.org/packages
-        packages = with pkgs;
-          [
-            # Nix tooling
-            alejandra
-            nixd
-            statix
-            deadnix
+          # Available packages on https://search.nixos.org/packages
+          packages = with pkgs;
+            [
+              # Nix tooling
+              alejandra
+              nixd
+              statix
+              deadnix
 
-            # Core LaTeX - Full TeX Live distribution
-            texliveFull # Includes all LaTeX packages, fonts, and tools
+              # Core LaTeX - Full TeX Live distribution
+              texliveFull # Includes all LaTeX packages, fonts, and tools
 
-            # LaTeX language server and IDE support
-            texlab # LSP for LaTeX
-            ltex-ls # Grammar/spell checking LSP
+              # LaTeX language server and IDE support
+              texlab # LSP for LaTeX
+              ltex-ls # Grammar/spell checking LSP
 
-            # Additional utilities
-            pandoc # Document conversion (Markdown ↔ LaTeX)
-            ghostscript # PostScript/PDF manipulation
-            poppler_utils # PDF utilities (pdfinfo, pdftotext, etc.)
-            watchexec # File watcher alternative to latexmk -pvc
-            pyrefly
+              # Additional utilities
+              pandoc # Document conversion (Markdown ↔ LaTeX)
+              ghostscript # PostScript/PDF manipulation
+              poppler_utils # PDF utilities (pdfinfo, pdftotext, etc.)
+              watchexec # File watcher alternative to latexmk -pvc
+              pyrefly
 
-            # Python tooling for training scripts
-            uv # Python package manager
-            ruff
-          ]
-          ++ builtins.attrValues scriptPackages
-          ++ preCommitCheck.enabledPackages;
+              # Python tooling for training scripts
+              uv # Python package manager
+              ruff
+            ]
+            ++ builtins.attrValues scriptPackages
+            ++ preCommitCheck.enabledPackages;
 
-        env.TRITON_LIBCUDA_PATH = "/run/opengl-driver/lib";
-        env.LD_LIBRARY_PATH =
-          pkgs.lib.makeLibraryPath [
-            pkgs.glib
-            pkgs.libGL
-            pkgs.cudaPackages.cudatoolkit
-            pkgs.cudaPackages.cudnn
-            pkgs.stdenv.cc.cc.lib
-          ]
-          + ":/run/opengl-driver/lib";
-
-        shellHook =
-          preCommitCheck.shellHook
-          + ''
-            echo "🎓 LaTeX Development Environment 🎓"
-          '';
-      };
+          shellHook =
+            preCommitCheck.shellHook
+            + ''
+              echo "🎓 LaTeX Development Environment 🎓"
+            '';
+        }
+        // pkgs.lib.optionalAttrs isLinux {
+          env.TRITON_LIBCUDA_PATH = "/run/opengl-driver/lib";
+          env.LD_LIBRARY_PATH =
+            pkgs.lib.makeLibraryPath [
+              pkgs.glib
+              pkgs.libGL
+              pkgs.cudaPackages.cudatoolkit
+              pkgs.cudaPackages.cudnn
+              pkgs.stdenv.cc.cc.lib
+            ]
+            + ":/run/opengl-driver/lib";
+        });
 
       # Minimal CI/CD devShell optimized for automated builds
       devShells.ci = pkgs.mkShell {

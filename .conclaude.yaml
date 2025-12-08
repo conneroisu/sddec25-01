@@ -13,6 +13,11 @@ stop:
       showStderr: true
       message: "Spectr validation failed - please fix errors before continuing"
       maxOutputLines: 100
+    - run: "nix flake check"
+      showStdout: true
+      showStderr: true
+      message: "Nix flake check failed - please fix errors before continuing"
+      maxOutputLines: 100
     - run: "nix develop -c lint"
       showStdout: true
       showStderr: true
