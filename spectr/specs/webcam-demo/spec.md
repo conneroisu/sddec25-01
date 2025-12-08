@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TODO: Add purpose description
+This specification defines the requirements for a real-time webcam demonstration of the VisionAssist pupil segmentation system.
 
 ## Requirements
 

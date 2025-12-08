@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TODO: Add purpose description
+This specification defines the structure and content requirements for the VisionAssist project design document.
 
 ## Requirements
 

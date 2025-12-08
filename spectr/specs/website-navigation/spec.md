@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TODO: Add purpose description
+This specification defines the navigation structure and GitHub integration requirements for the VisionAssist project website.
 
 ## Requirements
 
