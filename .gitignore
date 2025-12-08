@@ -58,3 +58,5 @@ build/
 *.bak0
 .env
 __pycache__/
+*.pth
+*.onnx
