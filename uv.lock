@@ -20,12 +20,9 @@ members = [
     "ellipse",
     "hf-dataset",
     "precompute",
-    "precompute-inf",
     "sddec25-01",
     "train-ellipse",
-    "train-ellipse-inf",
     "train-tiny-effvit",
-    "train-tiny-effvit-inf",
 ]
 
 [[package]]
@@ -2793,29 +2790,6 @@ requires-dist = [
 ]
 
 [[package]]
-name = "precompute-inf"
-version = "0.1.0"
-source = { editable = "apps/precompute_inf" }
-dependencies = [
-    { name = "hf-dataset" },
-    { name = "kagglehub" },
-    { name = "numpy" },
-    { name = "opencv-python" },
-    { name = "scipy" },
-    { name = "tqdm" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "hf-dataset", editable = "packages/hf_dataset" },
-    { name = "kagglehub", specifier = ">=0.3.13" },
-    { name = "numpy", specifier = ">=2.3.5" },
-    { name = "opencv-python", specifier = ">=4.11.0.86" },
-    { name = "scipy", specifier = ">=1.16.3" },
-    { name = "tqdm", specifier = ">=4.67.1" },
-]
-
-[[package]]
 name = "propcache"
 version = "0.4.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3717,61 +3691,6 @@ requires-dist = [
 ]
 
 [[package]]
-name = "train-ellipse-inf"
-version = "0.1.0"
-source = { editable = "apps/train_ellipse_inf" }
-dependencies = [
-    { name = "datasets" },
-    { name = "ellipse" },
-    { name = "huggingface-hub" },
-    { name = "kaggle" },
-    { name = "kagglehub" },
-    { name = "kornia" },
-    { name = "matplotlib" },
-    { name = "mlflow" },
-    { name = "modal" },
-    { name = "numpy" },
-    { name = "onnx" },
-    { name = "onnxruntime" },
-    { name = "opencv-python-headless" },
-    { name = "pillow" },
-    { name = "pyarrow" },
-    { name = "pyyaml" },
-    { name = "requests" },
-    { name = "scikit-learn" },
-    { name = "scipy" },
-    { name = "torch" },
-    { name = "torchvision" },
-    { name = "tqdm" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "datasets", specifier = ">=4.4.1" },
-    { name = "ellipse", editable = "packages/ellipse" },
-    { name = "huggingface-hub", specifier = ">=0.21.0" },
-    { name = "kaggle", specifier = ">=1.6.0" },
-    { name = "kagglehub", specifier = ">=0.3.0" },
-    { name = "kornia", specifier = ">=0.7.0" },
-    { name = "matplotlib", specifier = ">=3.5.0" },
-    { name = "mlflow", specifier = ">=3.5.0" },
-    { name = "modal", specifier = ">=0.64.0" },
-    { name = "numpy", specifier = ">=1.21.0" },
-    { name = "onnx", specifier = ">=1.15.0" },
-    { name = "onnxruntime", specifier = ">=1.17.0" },
-    { name = "opencv-python-headless", specifier = ">=4.5.0" },
-    { name = "pillow", specifier = ">=8.3.0" },
-    { name = "pyarrow", specifier = ">=14.0.0" },
-    { name = "pyyaml", specifier = ">=6.0.0" },
-    { name = "requests", specifier = ">=2.28.1" },
-    { name = "scikit-learn", specifier = ">=1.0.0" },
-    { name = "scipy", specifier = ">=1.7.0" },
-    { name = "torch", specifier = ">=2.0.0", index = "https://download.pytorch.org/whl/cu124" },
-    { name = "torchvision", specifier = ">=0.15.0", index = "https://download.pytorch.org/whl/cu124" },
-    { name = "tqdm", specifier = ">=4.62.0" },
-]
-
-[[package]]
 name = "train-tiny-effvit"
 version = "0.1.0"
 source = { editable = "apps/train_tiny_effvit" }
@@ -3802,61 +3721,6 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "datasets", specifier = ">=4.4.1" },
-    { name = "huggingface-hub", specifier = ">=0.21.0" },
-    { name = "kaggle", specifier = ">=1.6.0" },
-    { name = "kagglehub", specifier = ">=0.3.0" },
-    { name = "kornia", specifier = ">=0.7.0" },
-    { name = "matplotlib", specifier = ">=3.5.0" },
-    { name = "mlflow", specifier = ">=3.5.0" },
-    { name = "modal", specifier = ">=0.64.0" },
-    { name = "numpy", specifier = ">=1.21.0" },
-    { name = "onnx", specifier = ">=1.15.0" },
-    { name = "onnxruntime", specifier = ">=1.17.0" },
-    { name = "opencv-python-headless", specifier = ">=4.5.0" },
-    { name = "pillow", specifier = ">=8.3.0" },
-    { name = "pyarrow", specifier = ">=14.0.0" },
-    { name = "pyyaml", specifier = ">=6.0.0" },
-    { name = "requests", specifier = ">=2.28.1" },
-    { name = "scikit-learn", specifier = ">=1.0.0" },
-    { name = "scipy", specifier = ">=1.7.0" },
-    { name = "torch", specifier = ">=2.0.0", index = "https://download.pytorch.org/whl/cu124" },
-    { name = "torchvision", specifier = ">=0.15.0", index = "https://download.pytorch.org/whl/cu124" },
-    { name = "tqdm", specifier = ">=4.62.0" },
-]
-
-[[package]]
-name = "train-tiny-effvit-inf"
-version = "0.1.0"
-source = { editable = "apps/train_tiny_effvit_inf" }
-dependencies = [
-    { name = "datasets" },
-    { name = "effvit" },
-    { name = "huggingface-hub" },
-    { name = "kaggle" },
-    { name = "kagglehub" },
-    { name = "kornia" },
-    { name = "matplotlib" },
-    { name = "mlflow" },
-    { name = "modal" },
-    { name = "numpy" },
-    { name = "onnx" },
-    { name = "onnxruntime" },
-    { name = "opencv-python-headless" },
-    { name = "pillow" },
-    { name = "pyarrow" },
-    { name = "pyyaml" },
-    { name = "requests" },
-    { name = "scikit-learn" },
-    { name = "scipy" },
-    { name = "torch" },
-    { name = "torchvision" },
-    { name = "tqdm" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "datasets", specifier = ">=4.4.1" },
-    { name = "effvit", editable = "packages/effvit" },
     { name = "huggingface-hub", specifier = ">=0.21.0" },
     { name = "kaggle", specifier = ">=1.6.0" },
     { name = "kagglehub", specifier = ">=0.3.0" },

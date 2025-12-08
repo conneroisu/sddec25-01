@@ -62,11 +62,11 @@
           '';
           description = "Precompute Dataset with preprocessing.";
         };
-        precompute-inf = {
+        train-effvit = {
           exec = ''
-            uv run --package precompute_inf precompute_inf "$@"
+            uv run --package train_tiny_effvit train-tiny-effvit "$@"
           '';
-          description = "Precompute Dataset with preprocessing.";
+          description = "Train EfficientViT model.";
         };
         ltx-watch = {
           exec = ''

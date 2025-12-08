@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 
 from .encoder import TinyEfficientVitEncoder
-from .decoder import TinySegmentationDecoder
+from .decoder import SegmentationDecoder
 
 
 class TinyEfficientViTSeg(nn.Module):
@@ -41,7 +41,7 @@ class TinyEfficientViTSeg(nn.Module):
             window_sizes=window_sizes,
             mlp_ratios=mlp_ratios,
         )
-        self.decoder = TinySegmentationDecoder(
+        self.decoder = SegmentationDecoder(
             encoder_dims=embed_dims,
             decoder_dim=decoder_dim,
             num_classes=num_classes,

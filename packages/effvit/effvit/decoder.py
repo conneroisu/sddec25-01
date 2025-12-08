@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class TinySegmentationDecoder(nn.Module):
+class SegmentationDecoder(nn.Module):
     """
     Lightweight FPN-style decoder with skip connections.
     Progressively upsamples features to input resolution.

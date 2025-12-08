@@ -9,7 +9,6 @@ Preprocessing Pipeline:
 2. Skip Empty Masks: Skip samples with no pupil in mask
 3. Gamma Correction: Apply gamma=0.8 via LUT
 4. CLAHE: Adaptive histogram equalization (clipLimit=1.5, tileGridSize=8x8)
-5. Ellipse Parameter Extraction: Fit ellipse to pupil contour
 6. Spatial Weights: Compute boundary weights using morphological gradient
 7. Distance Map: Signed distance transform per class
 
@@ -47,6 +46,12 @@ IMAGE_WIDTH = 640
 IMAGE_HEIGHT = 400
 MAX_RADIUS = math.sqrt(IMAGE_WIDTH**2 + IMAGE_HEIGHT**2) / 2  # ~377.36
 KAGGLE_DATASET_ID = "soumicksarker/openeds-dataset"
+
+# Module-level CLAHE singleton for default parameters (clipLimit=1.5, tileGridSize=(8, 8))
+_CLAHE = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(8, 8))
+
+# Module-level gamma lookup table for default gamma=0.8
+_GAMMA_08_TABLE = (255.0 * (np.linspace(0, 1, 256) ** 0.8)).astype(np.uint8)
 
 
 def parse_args() -> argparse.Namespace:
@@ -132,155 +137,6 @@ def is_empty_mask(binary_label: np.ndarray) -> bool:
     return np.sum(binary_label) == 0
 
 
-def apply_gamma_correction(image: np.ndarray, gamma: float = 0.8) -> np.ndarray:
-    """
-    Apply gamma correction using a lookup table.
-
-    Args:
-        image: Grayscale image [H, W] uint8
-        gamma: Gamma value (default 0.8)
-
-    Returns:
-        Gamma-corrected image [H, W] uint8
-    """
-    gamma_table = 255.0 * (np.linspace(0, 1, 256) ** gamma)
-    gamma_table = gamma_table.astype(np.uint8)
-    return cv2.LUT(image, gamma_table)
-
-
-def apply_clahe(
-    image: np.ndarray, clip_limit: float = 1.5, tile_grid_size: tuple = (8, 8)
-) -> np.ndarray:
-    """
-    Apply Contrast Limited Adaptive Histogram Equalization (CLAHE).
-
-    Args:
-        image: Grayscale image [H, W] uint8
-        clip_limit: Threshold for contrast limiting
-        tile_grid_size: Size of grid for histogram equalization
-
-    Returns:
-        CLAHE-enhanced image [H, W] uint8
-    """
-    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
-    return clahe.apply(image)
-
-
-def extract_ellipse_params(
-    binary_mask: np.ndarray,
-) -> tuple[float, float, float, float]:
-    """
-    Extract ellipse parameters from binary mask.
-
-    Fits an ellipse to the largest contour in the mask. Falls back to
-    moments-based circle fitting if ellipse fitting fails or contour
-    is degenerate (collinear points can cause cv2.fitEllipse to crash).
-
-    Args:
-        binary_mask: Binary segmentation mask [H, W]
-
-    Returns:
-        Tuple of (cx, cy, rx, ry) - center and radii in pixels
-        Returns (0, 0, 0, 0) if no valid contour found
-    """
-    contours, _ = cv2.findContours(
-        binary_mask.astype(np.uint8),
-        cv2.RETR_EXTERNAL,
-        cv2.CHAIN_APPROX_SIMPLE,
-    )
-
-    if len(contours) == 0:
-        return 0.0, 0.0, 0.0, 0.0
-
-    # Find largest contour
-    largest_contour = max(contours, key=cv2.contourArea)
-
-    def moments_fallback(contour) -> tuple[float, float, float, float]:
-        """Fallback to moments-based circle fitting."""
-        M = cv2.moments(contour)
-        if M["m00"] > 0:
-            cx = M["m10"] / M["m00"]
-            cy = M["m01"] / M["m00"]
-            area = cv2.contourArea(contour)
-            radius = math.sqrt(area / math.pi) if area > 0 else 0.0
-            return cx, cy, radius, radius
-        return 0.0, 0.0, 0.0, 0.0
-
-    # Need at least 5 points for ellipse fitting
-    if len(largest_contour) < 5:
-        return moments_fallback(largest_contour)
-
-    # Check for degenerate contours that can crash cv2.fitEllipse
-    contour_points = largest_contour.reshape(-1, 2).astype(np.float64)
-
-    # Check spread in both dimensions - thin contours can cause issues
-    x_spread = contour_points[:, 0].max() - contour_points[:, 0].min()
-    y_spread = contour_points[:, 1].max() - contour_points[:, 1].min()
-
-    if x_spread < 2.0 or y_spread < 2.0:
-        return moments_fallback(largest_contour)
-
-    # Check if contour has reasonable aspect ratio (not too elongated)
-    if max(x_spread, y_spread) / max(min(x_spread, y_spread), 1.0) > 50.0:
-        return moments_fallback(largest_contour)
-
-    # Check if area is too small (could indicate degenerate contour)
-    area = cv2.contourArea(largest_contour)
-    if area < 10.0:
-        return moments_fallback(largest_contour)
-
-    # Check for collinearity using covariance eigenvalues
-    # Collinear points cause cv2.fitEllipse to segfault at C++ level
-    if len(contour_points) >= 3:
-        mean = contour_points.mean(axis=0)
-        centered = contour_points - mean
-        cov = np.cov(centered.T)
-        eigenvals = np.linalg.eigvalsh(cov)
-        # If smallest eigenvalue is near zero, points are nearly collinear
-        # Use conservative threshold of 5.0 to catch borderline cases
-        if eigenvals.min() < 5.0:
-            return moments_fallback(largest_contour)
-        # Check condition number - high values indicate near-singularity
-        if eigenvals.max() / max(eigenvals.min(), 1e-10) > 100.0:
-            return moments_fallback(largest_contour)
-
-    try:
-        ellipse = cv2.fitEllipse(largest_contour)
-        (cx, cy), (width, height), angle = ellipse
-
-        # Validate output - check for NaN/Inf and positive dimensions
-        if not np.isfinite([cx, cy, width, height]).all():
-            return moments_fallback(largest_contour)
-        if width <= 0 or height <= 0:
-            return moments_fallback(largest_contour)
-
-        rx = width / 2.0
-        ry = height / 2.0
-        return cx, cy, rx, ry
-    except cv2.error:
-        return moments_fallback(largest_contour)
-
-
-def normalize_ellipse_params(
-    cx: float, cy: float, rx: float, ry: float
-) -> tuple[float, float, float, float]:
-    """
-    Normalize ellipse parameters to [0, 1] range.
-
-    Args:
-        cx: Center x in pixels
-        cy: Center y in pixels
-        rx: X-radius in pixels
-        ry: Y-radius in pixels
-
-    Returns:
-        Normalized (cx_norm, cy_norm, rx_norm, ry_norm)
-    """
-    cx_norm = cx / IMAGE_WIDTH
-    cy_norm = cy / IMAGE_HEIGHT
-    rx_norm = rx / MAX_RADIUS
-    ry_norm = ry / MAX_RADIUS
-    return cx_norm, cy_norm, rx_norm, ry_norm
 
 
 def compute_spatial_weights(label: np.ndarray, sigma: float = 5.0) -> np.ndarray:
@@ -323,16 +179,28 @@ def compute_dist_map(label: np.ndarray, num_classes: int = 2) -> np.ndarray:
     """
     dist_map = np.zeros((num_classes, *label.shape), dtype=np.float32)
 
-    for c in range(num_classes):
-        class_mask = label == c
-        if class_mask.any():
-            dist_inside = distance_transform_edt(class_mask)
-            dist_outside = distance_transform_edt(~class_mask)
-            # Signed distance: positive outside, negative inside
-            dist_map[c] = dist_outside - dist_inside
-        else:
-            # If class is not present, distance is everywhere
-            dist_map[c] = distance_transform_edt(np.ones_like(label))
+    if num_classes == 2:
+        # Optimized path for binary segmentation
+        # Only need 2 transforms instead of 4 due to complementary relationship
+        mask_1 = label == 1  # Pupil mask
+        dist_inside_1 = distance_transform_edt(mask_1)
+        dist_outside_1 = distance_transform_edt(~mask_1)
+
+        # Class 1 (pupil): positive outside, negative inside
+        dist_map[1] = dist_outside_1 - dist_inside_1
+        # Class 0 (background): negation of class 1 (complementary)
+        dist_map[0] = -dist_map[1]
+    else:
+        # General case for multi-class segmentation
+        for c in range(num_classes):
+            class_mask = label == c
+            if class_mask.any():
+                dist_inside = distance_transform_edt(class_mask)
+                dist_outside = distance_transform_edt(~class_mask)
+                dist_map[c] = dist_outside - dist_inside
+            else:
+                # If class is not present, distance is everywhere
+                dist_map[c] = distance_transform_edt(np.ones_like(label))
 
     # Normalize by image diagonal
     max_dist = np.sqrt(label.shape[0] ** 2 + label.shape[1] ** 2)
@@ -352,7 +220,6 @@ def preprocess_sample(
     2. Check for empty mask (skip if empty)
     3. Gamma correction
     4. CLAHE
-    5. Extract ellipse parameters
     6. Compute spatial weights
     7. Compute distance map
 
@@ -371,16 +238,6 @@ def preprocess_sample(
     if is_empty_mask(binary_label):
         return None
 
-    # 3. Gamma correction
-    gamma_image = apply_gamma_correction(image, gamma=0.8)
-
-    # 4. CLAHE
-    clahe_image = apply_clahe(gamma_image, clip_limit=1.5, tile_grid_size=(8, 8))
-
-    # 5. Extract and normalize ellipse parameters
-    cx, cy, rx, ry = extract_ellipse_params(binary_label)
-    cx_norm, cy_norm, rx_norm, ry_norm = normalize_ellipse_params(cx, cy, rx, ry)
-
     # 6. Compute spatial weights
     spatial_weights = compute_spatial_weights(binary_label, sigma=5.0)
 
@@ -388,14 +245,10 @@ def preprocess_sample(
     dist_map = compute_dist_map(binary_label, num_classes=2)
 
     return {
-        "image": clahe_image,
+        "image": image,
         "label": binary_label,
         "spatial_weights": spatial_weights,
         "dist_map": dist_map,
-        "cx": float(cx_norm),
-        "cy": float(cy_norm),
-        "rx": float(rx_norm),
-        "ry": float(ry_norm),
         "filename": filename,
         "preprocessed": True,
     }
@@ -646,10 +499,6 @@ def process_and_save_split(
     labels = []
     spatial_weights = []
     dist_maps = []
-    cxs = []
-    cys = []
-    rxs = []
-    rys = []
     filenames = []
 
     chunk_idx = 0
@@ -669,10 +518,6 @@ def process_and_save_split(
             labels=np.stack(labels),
             spatial_weights=np.stack(spatial_weights),
             dist_maps=np.stack(dist_maps),
-            cx=np.array(cxs, dtype=np.float32),
-            cy=np.array(cys, dtype=np.float32),
-            rx=np.array(rxs, dtype=np.float32),
-            ry=np.array(rys, dtype=np.float32),
             filenames=np.array(filenames),
         )
 
@@ -681,10 +526,6 @@ def process_and_save_split(
         labels.clear()
         spatial_weights.clear()
         dist_maps.clear()
-        cxs.clear()
-        cys.clear()
-        rxs.clear()
-        rys.clear()
         filenames.clear()
         chunk_idx += 1
 
@@ -705,10 +546,6 @@ def process_and_save_split(
             labels.append(sample["label"])
             spatial_weights.append(sample["spatial_weights"])
             dist_maps.append(sample["dist_map"])
-            cxs.append(sample["cx"])
-            cys.append(sample["cy"])
-            rxs.append(sample["rx"])
-            rys.append(sample["ry"])
             filenames.append(sample["filename"])
             total_processed += 1
 
@@ -898,8 +735,7 @@ def main():
     print(f"  Train samples: {train_count}", flush=True)
     print(f"  Validation samples: {val_count}", flush=True)
 
-    # Load npz files and create HuggingFace dataset
-    # NOTE: This may OOM for very large datasets
+    # Load npz files and create HuggingFace dataset (uses streaming generators)
     hf_dataset = create_hf_dataset_from_npz(parquet_dir)
 
     # Print dataset info

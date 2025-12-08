@@ -14,7 +14,7 @@ from .layers import TinyConvNorm, TinyPatchEmbedding, TinyMLP
 from .attention import TinyLocalWindowAttention
 
 
-class TinyEfficientVitBlock(nn.Module):
+class VitBlock(nn.Module):
     """
     Single EfficientViT block:
     - Depthwise conv for local features
@@ -108,7 +108,7 @@ class TinyEfficientVitStage(nn.Module):
 
         self.blocks = nn.ModuleList(
             [
-                TinyEfficientVitBlock(
+                VitBlock(
                     dim=out_dim,
                     num_heads=num_heads,
                     key_dim=key_dim,

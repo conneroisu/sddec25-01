@@ -7,8 +7,8 @@ architecture designed for efficient semantic segmentation tasks.
 
 from .layers import TinyConvNorm, TinyPatchEmbedding, TinyMLP
 from .attention import TinyCascadedGroupAttention, TinyLocalWindowAttention
-from .encoder import TinyEfficientVitBlock, TinyEfficientVitStage, TinyEfficientVitEncoder
-from .decoder import TinySegmentationDecoder
+from .encoder import VitBlock, TinyEfficientVitStage, TinyEfficientVitEncoder
+from .decoder import SegmentationDecoder
 from .model import TinyEfficientViTSeg
 
 __all__ = [
