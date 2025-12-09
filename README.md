@@ -6,6 +6,10 @@ Eduroam Accessible Site: <https://sddec25-01.sd.ece.iastate.edu/>
 
 **Project Focus**: Optimizing AI-powered eye tracking systems for real-time medical monitoring and assistive technology deployment on edge computing platforms.
 
+---
+
+> **Note on Project Description:** The initial project description submitted to Iowa State University by our client stated: *"This project will break up an existing U-Net model into code segments that can then be pipelined. The result will be slightly higher latency but also higher throughput of the algorithm."* This description represents the client's original proposal to Iowa State and has not been edited or verified by our team. Our actual research findings differ significantly from this initial description—our analysis demonstrated that model splitting on the DPU architecture does not provide the performance benefits originally anticipated.
+
 ## Development
 
 Have the choice of a few different development environments:
