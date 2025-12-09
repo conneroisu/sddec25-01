@@ -93,6 +93,15 @@ The design effectively addresses user needs by improving response time for assis
 
 ### Summary of Requirements
 
+> [!IMPORTANT]
+> **Client's Original Project Description to Iowa State**
+>
+> The following requirements reflect the client's original project proposal submitted to Iowa State University and have not been edited or construed by the team. The team recognizes that some aspects of this description may not accurately reflect the technical implementation or capabilities of the actual system being developed.
+>
+> Original client description: "This project will break up an existing U-Net model into code segments that can then be pipelined. The result will be slightly higher latency but also higher throughput of the algorithm."
+>
+> **Reference:** [Iowa State Approved Senior Design Projects (Fall 2024)](https://sddec25-01.sd.ece.iastate.edu/documents/approved-projects-sddec25.pdf)
+
 - Divide U-Net semantic segmentation algorithm into four equal parts for parallel processing
 - Implement a pipelined architecture for concurrent execution across multiple cores
 - Achieve system throughput of less than 33.2 ms per frame when processing four frames
@@ -169,6 +178,13 @@ Each of these user groups plays a critical role in the success and impact of thi
 ### 2.1. Requirements & Constraints
 
 #### Functional Requirements
+
+> [!IMPORTANT]
+> **Note on Client's Original Project Proposal**
+>
+> The requirements in this section are based on the client's original project proposal to Iowa State University. The team notes that the term "pipelined" in the original proposal implies the ability to perform multiple inferences simultaneously, which does not accurately reflect the technical implementation. These requirements have been retained as originally submitted by the client and should not be interpreted as the team's technical assessment or endorsement of the described approach.
+>
+> **Reference:** [Iowa State Approved Senior Design Projects (Fall 2024)](https://sddec25-01.sd.ece.iastate.edu/documents/approved-projects-sddec25.pdf)
 
 1. **Algorithm Splitting and Pipelining:**
    - Split the U-Net semantic segmentation algorithm into four equal parts to enable parallel processing across multiple cores
