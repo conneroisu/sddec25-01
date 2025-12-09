@@ -78,6 +78,19 @@ resource-constrained edge devices:
     (99.8\% IoU) but could only process a single frame every 160ms,
     which is insufficient for real-time application needs.
 
+  \item \textbf{Ellipse-based Approaches} such as CondSeg~\cite{li2021condseg}
+    and EllSeg~\cite{fuhl2024ellseg} offer promising alternatives by
+    estimating pupil and iris boundaries as ellipses through conditioned
+    segmentation. These methods provide robust gaze tracking with explicit
+    geometric constraints, though require adaptation for edge deployment.
+
+  \item \textbf{Attention-based Architectures} like EfficientViT~\cite{cai2022efficientvit}
+    leverage multi-scale linear attention for high-resolution dense
+    prediction, offering potential efficiency improvements. Recent work
+    on native sparse attention~\cite{tang2025nativesparseattention}
+    demonstrates hardware-aligned approaches that could benefit edge
+    deployment scenarios.
+
   \item \textbf{Commercial Solutions} like Tobii Pro Fusion offer
     high-speed eye tracking (250 Hz) but require dedicated hardware
     and specialized processors, making them expensive and difficult
@@ -513,7 +526,10 @@ the constrained output space:
       \item Radius or ellipse parameters (pupil size and orientation)
     \end{itemize}
   \item \textbf{Circle/Ellipse Rendering:} Generate the final segmentation
-    mask from predicted geometric parameters
+    mask from predicted geometric parameters. This approach is validated
+    by recent work on ellipse-based segmentation~\cite{li2021condseg,fuhl2024ellseg},
+    which demonstrates robust pupil and iris boundary estimation through
+    conditioned segmentation frameworks.
   \item \textbf{Benefits:} Significantly reduced computational requirements
     by fully exploiting the ``one blob, roughly round'' constraint
   \item \textbf{Trade-off:} Less flexibility for handling edge cases with
