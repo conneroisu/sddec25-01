@@ -584,6 +584,46 @@ The team's project demonstrates significant technical complexity in both its com
 
 The combination of these elements, particularly maintaining mathematical consistency while dividing a complex neural network for parallel execution, represents technical complexity beyond standard engineering solutions.
 
+#### 4.1.4 Key Observations and Domain Limitations
+
+Through the course of this project, we have identified several critical observations regarding the pupil segmentation task that were not fully leveraged or considered in the initial approach:
+
+1. **High Precision Localization Requirements**
+   - Pupil segmentation is a task demanding highly precise pixel localization
+   - Unlike general object detection, eye tracking for medical assistive technology requires sub-pixel accuracy to reliably detect subtle eye movements that may indicate medical distress
+   - Current U-Net architecture does not explicitly encode this precision requirement
+
+2. **Spatial Constraint of Pupil Location**
+   - The pupil is exclusively located within the boundaries of the eye region
+   - This strong spatial prior is not leveraged by the standard U-Net model architecture
+   - Incorporating eye boundary detection as a preprocessing constraint could significantly improve segmentation accuracy and reduce false positives
+
+3. **Model Architecture Limitations**
+   - The above spatial and precision constraints are not explicitly encoded in the U-Net model architecture
+   - The model must learn these constraints implicitly from data, which may be inefficient and potentially less reliable
+   - Future architectures could benefit from attention mechanisms or region-of-interest processing that explicitly enforce these domain-specific constraints
+
+4. **Dataset Domain Gap**
+   - OpenEDS dataset originates exclusively from VR headset environments with controlled conditions
+   - The dataset lacks real-world deformations, lighting variations, and optical artifacts that would be encountered in actual assistive wheelchair deployments
+   - This domain gap represents a significant limitation in achieving the client's goal of robust real-world performance
+   - The VR domain does not include conditions such as:
+     - Variable ambient lighting (indoor/outdoor transitions, sunlight, shadows)
+     - Eyewear interactions (prescription glasses, reflective coatings)
+     - Head movement and vibration from wheelchair mobility
+     - Wide range of eye anatomies and medical conditions affecting eye appearance
+
+**Implications for Design:**
+
+These observations suggest that while the current optimization approach can improve processing speed, fundamental limitations in the model architecture and training data may constrain real-world performance. Future work should consider:
+
+- Incorporating explicit spatial priors and attention mechanisms for the eye region
+- Developing or acquiring training datasets that better represent real-world deployment conditions
+- Implementing adaptive preprocessing that detects and masks eye boundaries before segmentation
+- Exploring domain adaptation techniques to bridge the VR-to-real-world gap
+
+The team acknowledges these limitations and has documented them to inform future iterations and to ensure stakeholders have realistic expectations about system capabilities and deployment requirements.
+
 ### 4.2 Design Exploration
 
 #### 4.2.1 Design Decisions
