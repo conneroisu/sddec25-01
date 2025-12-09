@@ -262,9 +262,13 @@ At a high level, our system:
     technology for appropriate response
 \end{enumerate}
 
-The key innovation is pipelined processing and efficient DPU scheduling
-on the AMD Kria KV260, which has limited memory and a single DPU but
-powerful acceleration when properly leveraged.
+The key innovation is parallelized CPU processing with efficient sequential
+DPU scheduling on the AMD Kria KV260, which has limited memory and a single
+DPU but powerful acceleration when properly leveraged. While the original
+design concept targeted physical pipelining of model segments, hardware
+constraints (single-threaded DPU, one xmodel at a time) necessitated a pivot
+to parallelization with optimized sequential execution and overlapped
+CPU pre/post-processing.
 
 \subsection{Detailed Design}\label{subsec:detailed-design}
 
