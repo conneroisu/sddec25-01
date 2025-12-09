@@ -972,13 +972,13 @@ footer {
 
 /* Team member GitHub profile links */
 .team-github-link {
-  display: block;
+  display: inline-block;
   color: #666;
   font-size: 1.2em;
   margin-top: 8px;
+  margin-right: 8px;
   transition: color 0.2s ease, transform 0.2s ease;
   cursor: pointer;
-  text-align: center;
 }
 
 .team-github-link:hover {
@@ -988,6 +988,26 @@ footer {
 }
 
 .team-github-link i {
+  pointer-events: none;
+}
+
+/* Team member personal website links */
+.team-website-link {
+  display: inline-block;
+  color: #666;
+  font-size: 1.2em;
+  margin-top: 8px;
+  transition: color 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+}
+
+.team-website-link:hover {
+  color: #c8102e;
+  transform: scale(1.15);
+  text-decoration: none;
+}
+
+.team-website-link i {
   pointer-events: none;
 }
 
