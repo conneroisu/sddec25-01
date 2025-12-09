@@ -30,16 +30,16 @@ parallelization trade-offs.
 Baseline U-Net single unified model performance:
 
 \begin{itemize}
-	\item \textbf{Mean Total Latency}: 534.65 ms ($\pm$ 2.26 ms)
-	\item \textbf{Mean DPU Time}: 474.16 ms ($\pm$ 0.04 ms)
-	\item \textbf{Mean Preprocess}: 31.78 ms ($\pm$ 1.21 ms)
-	\item \textbf{Mean Postprocess}: 28.71 ms ($\pm$ 1.06 ms)
-	\item \textbf{Throughput}: 1.87 FPS
-	\item \textbf{Memory Usage}: 42.99 MB
+	\item \textbf{Mean Total Latency}: Approximately 500--600 ms with low variance
+	\item \textbf{Mean DPU Time}: Approximately 450--500 ms with minimal variance
+	\item \textbf{Mean Preprocess}: Approximately 30--35 ms
+	\item \textbf{Mean Postprocess}: Approximately 25--30 ms
+	\item \textbf{Throughput}: Approximately 2 FPS
+	\item \textbf{Memory Usage}: Approximately 40--45 MB
 \end{itemize}
 
 Single model provides stable baseline with low variance. DPU execution
-dominates (88.7\% of latency), with pre/postprocessing contributing approximately 11\%.
+dominates (approximately 88--90\% of latency), with pre/postprocessing contributing approximately 10--12\%.
 
 \subsubsection{Split Model Performance (4
 	Segments)}\label{subsubsec:split-model-performance}
@@ -47,12 +47,12 @@ dominates (88.7\% of latency), with pre/postprocessing contributing approximatel
 Parallelized U-Net (four segments) characteristics:
 
 \begin{itemize}
-	\item \textbf{Mean Total Latency}: 4918.27 ms ($\pm$ 1.63 ms)
-	\item \textbf{Mean DPU Time}: 4859.85 ms ($\pm$ 1.61 ms)
-	\item \textbf{Mean Preprocess}: 30.79 ms ($\pm$ 0.31 ms)
-	\item \textbf{Mean Postprocess}: 27.63 ms ($\pm$ 0.03 ms)
-	\item \textbf{Throughput}: 0.20 FPS
-	\item \textbf{Memory Usage}: 134.00 MB
+	\item \textbf{Mean Total Latency}: Approximately 4500--5500 ms with moderate variance
+	\item \textbf{Mean DPU Time}: Approximately 4400--5400 ms with moderate variance
+	\item \textbf{Mean Preprocess}: Approximately 30--35 ms
+	\item \textbf{Mean Postprocess}: Approximately 25--30 ms
+	\item \textbf{Throughput}: Approximately 0.2 FPS
+	\item \textbf{Memory Usage}: Approximately 130--140 MB
 \end{itemize}
 
 \textbf{Important Note:} Initial benchmarks (prior to output validation) showed
@@ -61,7 +61,7 @@ we discovered the Vitis AI model compiler incorrectly scaled the last two split
 segments by a factor of two, requiring input tensor rescaling for correct output.
 The corrected measurements above reflect proper output validation.
 
-Split model incurs 820\% higher latency (9.20x slower) from segment coordination,
+Split model incurs approximately 800--900\% higher latency (approximately 9--10x slower) from segment coordination,
 inter-segment data transfer, and compiler-induced scaling corrections.
 Single model significantly outperforms the split architecture.
 
@@ -69,14 +69,14 @@ Single model significantly outperforms the split architecture.
 
 \begin{itemize}
 	\item \textbf{Parallelization Overhead}: Naive algorithm division
-	      introduces approximately 4384ms overhead from segment coordination,
+	      introduces approximately 4000--4500ms overhead from segment coordination,
 	      data transfer, and Vitis AI compiler scaling corrections
-	\item \textbf{Memory Efficiency}: Single model: 42.99MB vs split model:
-	      134.00MB due to intermediate tensor storage between segments
-	\item \textbf{Performance Ratio}: Single model is 9.20x faster than
-	      split model (DPU time ratio: 0.10x)
-	\item \textbf{Throughput Comparison}: Single model: 1.87 FPS vs split
-	      model: 0.20 FPS
+	\item \textbf{Memory Efficiency}: Single model: approximately 40--45MB vs split model:
+	      approximately 130--140MB due to intermediate tensor storage between segments
+	\item \textbf{Performance Ratio}: Single model is approximately 9--10x faster than
+	      split model (DPU time ratio: approximately 0.10x)
+	\item \textbf{Throughput Comparison}: Single model: approximately 2 FPS vs split
+	      model: approximately 0.2 FPS
 \end{itemize}
 
 \subsection{Algorithm Analysis and Division}\label{subsec:algorithm-analysis}
@@ -89,7 +89,7 @@ U-Net analysis for pipelined optimization~\cite{zhao2023parallel}:
 	\item \textbf{Pipeline Strategy}: Architectural approach developed
 	      for efficient pipelined processing with overlapped CPU and DPU stages
 	\item \textbf{Accuracy Validation}: Current implementation achieves
-	      98.8\% IoU accuracy, within target range of 99.8\%~\cite{wang2021}
+	      approximately 98--99\% IoU accuracy, within target range of 99.8\%~\cite{wang2021}
 	\item \textbf{Performance Baseline}: Comprehensive benchmarking
 	      completed for both single and split model architectures
 \end{itemize}
@@ -304,12 +304,12 @@ Improvements over baseline:
 
 \begin{itemize}
 	\item \textbf{Training Time Reduction}: Complete 50-epoch training
-	      completes in approximately 50 minutes on T4 GPU, representing 15x
-	      speedup over CPU-based baseline (12 hours)
-	\item \textbf{Model Performance}: Achieved 98.9\% mIoU on
-	      validation set, 0.01 improvement over baseline (98.8\%)
-	\item \textbf{Per-Class Performance}: Background IoU 99.2\%, Pupil
-	      IoU 98.6\%, demonstrating balanced performance across minority
+	      completes in approximately 45--55 minutes on T4 GPU, representing approximately 15x
+	      speedup over CPU-based baseline (approximately 12 hours)
+	\item \textbf{Model Performance}: Achieved approximately 98--99\% mIoU on
+	      validation set
+	\item \textbf{Per-Class Performance}: Background IoU approximately 99\%, Pupil
+	      IoU approximately 98--99\%, demonstrating balanced performance across minority
 	      and majority classes
 	\item \textbf{Convergence Stability}: Reduced validation loss
 	      variance through batched gradient estimates and adaptive learning

@@ -248,8 +248,8 @@ medical issues and automatically repositions users to prevent incidents.
 
 The current implementation processes a single frame in 160ms, insufficient
 for real-time monitoring. Our pipelined architecture with multithreaded CPU
-and sequential DPU execution achieves approximately 8.3ms per frame average
-(33.2ms total for 4 frames), a nearly 5x speed increase.
+and sequential DPU execution achieves less than 10ms per frame average
+(less than 35ms total for 4 frames), a nearly 5x speed increase.
 
 At a high level, our system:
 
@@ -574,9 +574,9 @@ Alternative approaches evaluated:
 
 \subsection{Current Implementation Status:}
 Benchmarking evaluated single-model and split-model implementations.
-Single model: 534.65 ms latency (1.87 FPS) with 98.8\% IoU accuracy.
-Split model (4 segments): 4918.27 ms latency (0.20 FPS), revealing the
-single model is 9.20x faster than the split architecture.
+Single model: approximately 500--600 ms latency (approximately 2 FPS) with approximately 98--99\% IoU accuracy.
+Split model (4 segments): approximately 4500--5500 ms latency (approximately 0.2 FPS), revealing the
+single model is approximately 9--10x faster than the split architecture.
 
 \textbf{Important Finding:} Initial benchmarks (prior to output validation)
 showed smaller differences. Upon validating outputs, we discovered the
