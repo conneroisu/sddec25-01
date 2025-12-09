@@ -30,16 +30,15 @@ parallelization trade-offs.
 Baseline U-Net single unified model performance:
 
 \begin{itemize}
-	\item \textbf{Mean Total Latency}: 534.65 ms ($\pm$ 2.26 ms)
-	\item \textbf{Mean DPU Time}: 474.16 ms ($\pm$ 0.04 ms)
-	\item \textbf{Mean Preprocess}: 31.78 ms ($\pm$ 1.21 ms)
-	\item \textbf{Mean Postprocess}: 28.71 ms ($\pm$ 1.06 ms)
-	\item \textbf{Throughput}: 1.87 FPS
-	\item \textbf{Memory Usage}: 42.99 MB
+	\item \textbf{Mean Total Latency}: $\sim$600 ms
+	\item \textbf{Mean DPU Time}: $\sim$500 ms
+	\item \textbf{Mean Preprocess}: 49 ms
+	\item \textbf{Mean Postprocess}: 51 ms
+	\item \textbf{Memory Usage}: $\sim$50 MB
 \end{itemize}
 
 Single model provides stable baseline with low variance. DPU execution
-dominates (88.7\% of latency), with pre/postprocessing contributing approximately 11\%.
+dominates (89.6\% of latency), with pre/postprocessing contributing approximately 10\%.
 
 \subsubsection{Split Model Performance (4
 	Segments)}\label{subsubsec:split-model-performance}
@@ -47,12 +46,10 @@ dominates (88.7\% of latency), with pre/postprocessing contributing approximatel
 Parallelized U-Net (four segments) characteristics:
 
 \begin{itemize}
-	\item \textbf{Mean Total Latency}: 4918.27 ms ($\pm$ 1.63 ms)
-	\item \textbf{Mean DPU Time}: 4859.85 ms ($\pm$ 1.61 ms)
-	\item \textbf{Mean Preprocess}: 30.79 ms ($\pm$ 0.31 ms)
-	\item \textbf{Mean Postprocess}: 27.63 ms ($\pm$ 0.03 ms)
-	\item \textbf{Throughput}: 0.20 FPS
-	\item \textbf{Memory Usage}: 134.00 MB
+	\item \textbf{Mean Total Latency}: 850 ms
+	\item \textbf{Mean DPU Time}: $\sim$750 ms
+	\item \textbf{Mean Preprocess}: $\sim$49 ms
+	\item \textbf{Mean Postprocess}: $\sim$51 ms
 \end{itemize}
 
 \textbf{Important Note:} Initial benchmarks (prior to output validation) showed
@@ -61,22 +58,17 @@ we discovered the Vitis AI model compiler incorrectly scaled the last two split
 segments by a factor of two, requiring input tensor rescaling for correct output.
 The corrected measurements above reflect proper output validation.
 
-Split model incurs 820\% higher latency (9.20x slower) from segment coordination,
-inter-segment data transfer, and compiler-induced scaling corrections.
-Single model significantly outperforms the split architecture.
+Split model incurs $\sim$50\% higher latency from thread coordination and data transfer.
+Increased variance indicates synchronization overhead.
 
 \subsection{Performance Analysis}\label{subsec:performance-analysis}
 
 \begin{itemize}
 	\item \textbf{Parallelization Overhead}: Naive algorithm division
-	      introduces approximately 4384ms overhead from segment coordination,
-	      data transfer, and Vitis AI compiler scaling corrections
-	\item \textbf{Memory Efficiency}: Single model: 42.99MB vs split model:
-	      134.00MB due to intermediate tensor storage between segments
-	\item \textbf{Performance Ratio}: Single model is 9.20x faster than
-	      split model (DPU time ratio: 0.10x)
-	\item \textbf{Throughput Comparison}: Single model: 1.87 FPS vs split
-	      model: 0.20 FPS
+	      introduces overhead from segment coordination and data transfer
+	\item \textbf{Memory Efficiency}: Single model uses approximately 50MB
+	\item \textbf{Performance Impact}: Split model shows $\sim$50\% higher
+	      latency compared to single model due to thread coordination overhead
 \end{itemize}
 
 \subsection{Algorithm Analysis and Division}\label{subsec:algorithm-analysis}
