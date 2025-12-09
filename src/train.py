@@ -564,13 +564,18 @@ def main():
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=32,
+        default=64,
         help="Batch size for training and validation",
     )
     parser.add_argument(
         "--epochs", type=int, default=15, help="Number of training epochs"
     )
-    parser.add_argument("--lr", type=float, default=1e-3, help="Initial learning rate")
+    parser.add_argument(
+            "--lr",
+            type=float,
+            default=1e-2,
+            help="Initial learning rate",
+    )
     parser.add_argument(
         "--seed", type=int, default=42, help="Random seed for reproducibility"
     )
