@@ -1,0 +1,60 @@
+[project]
+name = "sparse"
+version = "0.1.0"
+description = "sddec25-01"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "torch>=2.0.0",
+    "numpy>=1.21.0",
+    "torchvision>=0.15.0",
+    "opencv-python-headless>=4.5.0",
+    "Pillow>=8.3.0",
+    "scipy>=1.7.0",
+    "scikit-learn>=1.0.0",
+    "tqdm>=4.62.0",
+    "mlflow>=3.5.0",
+    "kornia>=0.7.0",
+    "requests>=2.28.1",
+    "matplotlib>=3.5.0",
+    "kaggle>=1.6.0",
+    "kagglehub>=0.3.0",
+    "huggingface_hub>=0.21.0",
+    "onnx>=1.15.0",
+    "onnxruntime>=1.17.0",
+    "pyyaml>=6.0.0",
+    "datasets>=4.4.1",
+    "pyarrow>=14.0.0",
+    "torchview>=0.2.7",
+]
+
+[project.scripts]
+train-ellipse = "train_ellipse.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["train_ellipse"]
+
+[tool.pyright]
+pythonVersion = "3.10"
+typeCheckingMode = "basic"
+
+[tool.uv]
+index-strategy = "unsafe-best-match"
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+
+[tool.uv.sources]
+ellipse = { workspace = true }
+torch = { index = "pytorch-cu124" }
+torchvision = { index = "pytorch-cu124" }

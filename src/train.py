@@ -28,72 +28,8 @@ from PIL import Image
 from tqdm import tqdm
 from datasets import load_dataset
 
-# MLflow for experiment tracking
-try:
-    import mlflow
-    MLFLOW_AVAILABLE = True
-except ImportError:
-    MLFLOW_AVAILABLE = False
-    print("Warning: MLflow not installed. Training will continue without MLflow logging.")
-
 # Import model and loss from local model.py
 from model import TinyEfficientViTSeg, CombinedLoss
-
-
-# ============================================================================
-# MLflow Setup
-# ============================================================================
-
-def setup_mlflow():
-    """
-    Configure MLflow using environment variables.
-
-    Required environment variables:
-        - DATABRICKS_TOKEN: Authentication token for Databricks
-        - DATABRICKS_HOST: Databricks workspace URL
-        - MLFLOW_TRACKING_URI: MLflow tracking server URI
-        - MLFLOW_REGISTRY_URI: MLflow model registry URI
-        - MLFLOW_EXPERIMENT_ID: Experiment ID to log runs to
-
-    Returns:
-        bool: True if MLflow is configured successfully, False otherwise
-    """
-    if not MLFLOW_AVAILABLE:
-        return False
-
-    # Check for required environment variables
-    required_vars = [
-        "DATABRICKS_TOKEN",
-        "DATABRICKS_HOST",
-        "MLFLOW_TRACKING_URI",
-        "MLFLOW_EXPERIMENT_ID"
-    ]
-
-    missing_vars = [var for var in required_vars if not os.environ.get(var)]
-
-    if missing_vars:
-        print(f"Warning: Missing MLflow environment variables: {missing_vars}")
-        print("Training will continue without MLflow logging.")
-        return False
-
-    try:
-        # Set tracking URI
-        tracking_uri = os.environ.get("MLFLOW_TRACKING_URI")
-        mlflow.set_tracking_uri(tracking_uri)
-
-        # Set experiment
-        experiment_id = os.environ.get("MLFLOW_EXPERIMENT_ID")
-        mlflow.set_experiment(experiment_id=experiment_id)
-
-        print(f"MLflow configured successfully:")
-        print(f"  Tracking URI: {tracking_uri}")
-        print(f"  Experiment ID: {experiment_id}")
-
-        return True
-    except Exception as e:
-        print(f"Warning: Failed to configure MLflow: {e}")
-        print("Training will continue without MLflow logging.")
-        return False
 
 # ============================================================================
 # Constants
@@ -262,9 +198,6 @@ def train(args):
     Args:
         args: Command line arguments
     """
-    # Setup MLflow tracking
-    mlflow_enabled = setup_mlflow()
-
     # Device setup
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -379,29 +312,6 @@ def train(args):
         alpha_schedule[125:] = 0
 
     # ========================================================================
-    # MLflow Run Setup
-    # ========================================================================
-
-    mlflow_run = None
-    if mlflow_enabled:
-        try:
-            mlflow_run = mlflow.start_run()
-            # Log hyperparameters
-            mlflow.log_params({
-                "batch_size": args.batch_size,
-                "epochs": args.epochs,
-                "lr": args.lr,
-                "seed": args.seed,
-                "num_workers": args.num_workers,
-                "model_params_count": nparams,
-            })
-            print(f"MLflow run started: {mlflow_run.info.run_id}")
-        except Exception as e:
-            print(f"Warning: Failed to start MLflow run: {e}")
-            mlflow_enabled = False
-            mlflow_run = None
-
-    # ========================================================================
     # Training Loop
     # ========================================================================
 
@@ -411,23 +321,79 @@ def train(args):
 
     os.makedirs(args.checkpoint_dir, exist_ok=True)
 
-    try:
-        for epoch in range(start_epoch, args.epochs):
-            alpha = alpha_schedule[epoch]
+    for epoch in range(start_epoch, args.epochs):
+        alpha = alpha_schedule[epoch]
 
-            # ================================================================
-            # Training Phase
-            # ================================================================
+        # ====================================================================
+        # Training Phase
+        # ====================================================================
 
-            model.train()
-            train_loss = torch.zeros(1, device=device)
-            train_ce_loss = torch.zeros(1, device=device)
-            train_dice_loss = torch.zeros(1, device=device)
-            train_surface_loss = torch.zeros(1, device=device)
-            train_intersection = torch.zeros(2, device=device)
-            train_union = torch.zeros(2, device=device)
+        model.train()
+        train_loss = torch.zeros(1, device=device)
+        train_ce_loss = torch.zeros(1, device=device)
+        train_dice_loss = torch.zeros(1, device=device)
+        train_surface_loss = torch.zeros(1, device=device)
+        train_intersection = torch.zeros(2, device=device)
+        train_union = torch.zeros(2, device=device)
 
-            pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{args.epochs} [Train]")
+        pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{args.epochs} [Train]")
+
+        for images, labels, spatial_weights, dist_maps in pbar:
+            # Move to device (non_blocking for async CPU->GPU transfer)
+            images = images.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
+            spatial_weights = spatial_weights.to(device, non_blocking=True)
+            dist_maps = dist_maps.to(device, non_blocking=True)
+
+            optimizer.zero_grad()
+
+            # Forward pass with mixed precision
+            with torch.amp.autocast("cuda", enabled=use_amp):
+                outputs = model(images)
+                loss, ce_loss, dice_loss, surface_loss = criterion(
+                    outputs, labels, spatial_weights, dist_maps, alpha
+                )
+
+            # Backward pass with gradient scaling
+            if use_amp:
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                loss.backward()
+                optimizer.step()
+            # Accumulate losses (stay on GPU, no sync)
+            train_loss += loss.detach()
+            train_ce_loss += ce_loss.detach()
+            train_dice_loss += dice_loss.detach()
+            train_surface_loss += surface_loss.detach()
+
+            # Compute IoU
+            preds = get_predictions(outputs)
+            inter, uni = compute_iou_tensors(preds, labels)
+            train_intersection += inter
+            train_union += uni
+
+            # Update progress bar (no GPU sync)
+            pbar.set_postfix({"alpha": f"{alpha:.3f}"})
+
+        # Store batch count for later metrics calculation (no GPU sync yet)
+        n_train_batches = len(train_loader)
+
+        # ====================================================================
+        # Validation Phase
+        # ====================================================================
+
+        model.eval()
+        valid_loss = torch.zeros(1, device=device)
+        valid_ce_loss = torch.zeros(1, device=device)
+        valid_dice_loss = torch.zeros(1, device=device)
+        valid_surface_loss = torch.zeros(1, device=device)
+        valid_intersection = torch.zeros(2, device=device)
+        valid_union = torch.zeros(2, device=device)
+
+        with torch.no_grad():
+            pbar = tqdm(valid_loader, desc=f"Epoch {epoch+1}/{args.epochs} [Valid]")
 
             for images, labels, spatial_weights, dist_maps in pbar:
                 # Move to device (non_blocking for async CPU->GPU transfer)
@@ -436,242 +402,140 @@ def train(args):
                 spatial_weights = spatial_weights.to(device, non_blocking=True)
                 dist_maps = dist_maps.to(device, non_blocking=True)
 
-                optimizer.zero_grad()
-
-                # Forward pass with mixed precision
+                # Forward pass
                 with torch.amp.autocast("cuda", enabled=use_amp):
                     outputs = model(images)
                     loss, ce_loss, dice_loss, surface_loss = criterion(
                         outputs, labels, spatial_weights, dist_maps, alpha
                     )
 
-                # Backward pass with gradient scaling
-                if use_amp:
-                    scaler.scale(loss).backward()
-                    scaler.step(optimizer)
-                    scaler.update()
-                else:
-                    loss.backward()
-                    optimizer.step()
                 # Accumulate losses (stay on GPU, no sync)
-                train_loss += loss.detach()
-                train_ce_loss += ce_loss.detach()
-                train_dice_loss += dice_loss.detach()
-                train_surface_loss += surface_loss.detach()
+                valid_loss += loss.detach()
+                valid_ce_loss += ce_loss.detach()
+                valid_dice_loss += dice_loss.detach()
+                valid_surface_loss += surface_loss.detach()
 
                 # Compute IoU
                 preds = get_predictions(outputs)
                 inter, uni = compute_iou_tensors(preds, labels)
-                train_intersection += inter
-                train_union += uni
+                valid_intersection += inter
+                valid_union += uni
 
-                # Update progress bar (no GPU sync)
-                pbar.set_postfix({"alpha": f"{alpha:.3f}"})
+                # No GPU sync in progress bar
 
-            # Store batch count for later metrics calculation (no GPU sync yet)
-            n_train_batches = len(train_loader)
-
-            # ================================================================
-            # Validation Phase
-            # ================================================================
-
-            model.eval()
-            valid_loss = torch.zeros(1, device=device)
-            valid_ce_loss = torch.zeros(1, device=device)
-            valid_dice_loss = torch.zeros(1, device=device)
-            valid_surface_loss = torch.zeros(1, device=device)
-            valid_intersection = torch.zeros(2, device=device)
-            valid_union = torch.zeros(2, device=device)
-
-            with torch.no_grad():
-                pbar = tqdm(valid_loader, desc=f"Epoch {epoch+1}/{args.epochs} [Valid]")
-
-                for images, labels, spatial_weights, dist_maps in pbar:
-                    # Move to device (non_blocking for async CPU->GPU transfer)
-                    images = images.to(device, non_blocking=True)
-                    labels = labels.to(device, non_blocking=True)
-                    spatial_weights = spatial_weights.to(device, non_blocking=True)
-                    dist_maps = dist_maps.to(device, non_blocking=True)
-
-                    # Forward pass
-                    with torch.amp.autocast("cuda", enabled=use_amp):
-                        outputs = model(images)
-                        loss, ce_loss, dice_loss, surface_loss = criterion(
-                            outputs, labels, spatial_weights, dist_maps, alpha
-                        )
-
-                    # Accumulate losses (stay on GPU, no sync)
-                    valid_loss += loss.detach()
-                    valid_ce_loss += ce_loss.detach()
-                    valid_dice_loss += dice_loss.detach()
-                    valid_surface_loss += surface_loss.detach()
-
-                    # Compute IoU
-                    preds = get_predictions(outputs)
-                    inter, uni = compute_iou_tensors(preds, labels)
-                    valid_intersection += inter
-                    valid_union += uni
-
-                    # No GPU sync in progress bar
-
-            # ================================================================
-            # Single Batched GPU->CPU Transfer (THE ONLY SYNC POINT PER EPOCH)
-            # ================================================================
-
-            # Batch ALL epoch metrics into one tensor: 16 values total
-            n_valid_batches = len(valid_loader)
-            all_metrics_gpu = torch.cat(
-                [
-                    # Train losses (4 values)
-                    train_loss / n_train_batches,
-                    train_ce_loss / n_train_batches,
-                    train_dice_loss / n_train_batches,
-                    train_surface_loss / n_train_batches,
-                    # Valid losses (4 values)
-                    valid_loss / n_valid_batches,
-                    valid_ce_loss / n_valid_batches,
-                    valid_dice_loss / n_valid_batches,
-                    valid_surface_loss / n_valid_batches,
-                    # Train IoU components (4 values: 2 intersection + 2 union)
-                    train_intersection,
-                    train_union,
-                    # Valid IoU components (4 values: 2 intersection + 2 union)
-                    valid_intersection,
-                    valid_union,
-                ]
-            )
-
-            # Single GPU->CPU transfer for entire epoch
-            all_metrics = all_metrics_gpu.tolist()
-
-            # Unpack metrics
-            (
-                train_loss_val,
-                train_ce_val,
-                train_dice_val,
-                train_surface_val,
-                valid_loss_val,
-                valid_ce_val,
-                valid_dice_val,
-                valid_surface_val,
-                train_inter_0,
-                train_inter_1,
-                train_union_0,
-                train_union_1,
-                valid_inter_0,
-                valid_inter_1,
-                valid_union_0,
-                valid_union_1,
-            ) = all_metrics
-
-            # Compute IoU on CPU (no GPU sync)
-            train_iou = compute_iou_cpu(
-                [train_inter_0, train_inter_1], [train_union_0, train_union_1]
-            )
-            valid_iou = compute_iou_cpu(
-                [valid_inter_0, valid_inter_1], [valid_union_0, valid_union_1]
-            )
-
-            # ================================================================
-            # Learning Rate Scheduling
-            # ================================================================
-
-            scheduler.step(valid_loss_val)
-            current_lr = optimizer.param_groups[0]["lr"]
-
-            # ================================================================
-            # Logging
-            # ================================================================
-
-            print(f"\nEpoch {epoch+1}/{args.epochs}")
-            print(f"  Train Loss: {train_loss_val:.4f} | Valid Loss: {valid_loss_val:.4f}")
-            print(f"  Train IoU:  {train_iou:.4f} | Valid IoU:  {valid_iou:.4f}")
-            print(f"  CE Loss:    {train_ce_val:.4f} | {valid_ce_val:.4f}")
-            print(f"  Dice Loss:  {train_dice_val:.4f} | {valid_dice_val:.4f}")
-            print(f"  Surf Loss:  {train_surface_val:.4f} | {valid_surface_val:.4f}")
-            print(f"  LR: {current_lr:.6f} | Alpha: {alpha:.4f}")
-
-            # ================================================================
-            # MLflow Metric Logging
-            # ================================================================
-
-            if mlflow_enabled:
-                try:
-                    mlflow.log_metrics({
-                        "train_loss": train_loss_val,
-                        "train_ce_loss": train_ce_val,
-                        "train_dice_loss": train_dice_val,
-                        "train_surface_loss": train_surface_val,
-                        "train_iou": train_iou,
-                        "valid_loss": valid_loss_val,
-                        "valid_ce_loss": valid_ce_val,
-                        "valid_dice_loss": valid_dice_val,
-                        "valid_surface_loss": valid_surface_val,
-                        "valid_iou": valid_iou,
-                        "learning_rate": current_lr,
-                        "alpha": alpha,
-                    }, step=epoch)
-                except Exception as e:
-                    print(f"Warning: Failed to log metrics to MLflow: {e}")
-
-            # ================================================================
-            # Save Best Model
-            # ================================================================
-
-            if valid_iou > best_iou:
-                best_iou = valid_iou
-
-                best_model_path = f"{args.checkpoint_dir}/best_model.pth"
-
-                # Save PyTorch checkpoint
-                torch.save(
-                    {
-                        "epoch": epoch,
-                        "model_state_dict": model.state_dict(),
-                        "optimizer_state_dict": optimizer.state_dict(),
-                        "scheduler_state_dict": scheduler.state_dict(),
-                        "valid_iou": valid_iou,
-                        "valid_loss": valid_loss_val,
-                    },
-                    best_model_path,
-                )
-
-                print(f"  >> Saved best model with IoU={best_iou:.4f}")
-
-                # Log best model to MLflow
-                if mlflow_enabled:
-                    try:
-                        mlflow.log_artifact(best_model_path, artifact_path="models")
-                        mlflow.log_metric("best_valid_iou", best_iou, step=epoch)
-                        print(f"  >> Logged best model to MLflow")
-                    except Exception as e:
-                        print(f"Warning: Failed to log model artifact to MLflow: {e}")
-
-            # Save periodic checkpoints
-            if (epoch + 1) % 5 == 0:
-                torch.save(
-                    {
-                        "epoch": epoch,
-                        "model_state_dict": model.state_dict(),
-                        "optimizer_state_dict": optimizer.state_dict(),
-                        "scheduler_state_dict": scheduler.state_dict(),
-                        "valid_iou": valid_iou,
-                        "valid_loss": valid_loss_val,
-                    },
-                    f"{args.checkpoint_dir}/checkpoint_epoch_{epoch+1}.pth",
-                )
-                print(f"  >> Saved checkpoint at epoch {epoch+1}")
-
-    finally:
         # ====================================================================
-        # End MLflow Run
+        # Single Batched GPU->CPU Transfer (THE ONLY SYNC POINT PER EPOCH)
         # ====================================================================
-        if mlflow_enabled and mlflow_run is not None:
-            try:
-                mlflow.end_run()
-                print("MLflow run ended successfully")
-            except Exception as e:
-                print(f"Warning: Failed to end MLflow run: {e}")
+
+        # Batch ALL epoch metrics into one tensor: 16 values total
+        n_valid_batches = len(valid_loader)
+        all_metrics_gpu = torch.cat(
+            [
+                # Train losses (4 values)
+                train_loss / n_train_batches,
+                train_ce_loss / n_train_batches,
+                train_dice_loss / n_train_batches,
+                train_surface_loss / n_train_batches,
+                # Valid losses (4 values)
+                valid_loss / n_valid_batches,
+                valid_ce_loss / n_valid_batches,
+                valid_dice_loss / n_valid_batches,
+                valid_surface_loss / n_valid_batches,
+                # Train IoU components (4 values: 2 intersection + 2 union)
+                train_intersection,
+                train_union,
+                # Valid IoU components (4 values: 2 intersection + 2 union)
+                valid_intersection,
+                valid_union,
+            ]
+        )
+
+        # Single GPU->CPU transfer for entire epoch
+        all_metrics = all_metrics_gpu.tolist()
+
+        # Unpack metrics
+        (
+            train_loss_val,
+            train_ce_val,
+            train_dice_val,
+            train_surface_val,
+            valid_loss_val,
+            valid_ce_val,
+            valid_dice_val,
+            valid_surface_val,
+            train_inter_0,
+            train_inter_1,
+            train_union_0,
+            train_union_1,
+            valid_inter_0,
+            valid_inter_1,
+            valid_union_0,
+            valid_union_1,
+        ) = all_metrics
+
+        # Compute IoU on CPU (no GPU sync)
+        train_iou = compute_iou_cpu(
+            [train_inter_0, train_inter_1], [train_union_0, train_union_1]
+        )
+        valid_iou = compute_iou_cpu(
+            [valid_inter_0, valid_inter_1], [valid_union_0, valid_union_1]
+        )
+
+        # ====================================================================
+        # Learning Rate Scheduling
+        # ====================================================================
+
+        scheduler.step(valid_loss_val)
+        current_lr = optimizer.param_groups[0]["lr"]
+
+        # ====================================================================
+        # Logging
+        # ====================================================================
+
+        print(f"\nEpoch {epoch+1}/{args.epochs}")
+        print(f"  Train Loss: {train_loss_val:.4f} | Valid Loss: {valid_loss_val:.4f}")
+        print(f"  Train IoU:  {train_iou:.4f} | Valid IoU:  {valid_iou:.4f}")
+        print(f"  CE Loss:    {train_ce_val:.4f} | {valid_ce_val:.4f}")
+        print(f"  Dice Loss:  {train_dice_val:.4f} | {valid_dice_val:.4f}")
+        print(f"  Surf Loss:  {train_surface_val:.4f} | {valid_surface_val:.4f}")
+        print(f"  LR: {current_lr:.6f} | Alpha: {alpha:.4f}")
+
+        # ====================================================================
+        # Save Best Model
+        # ====================================================================
+
+        if valid_iou > best_iou:
+            best_iou = valid_iou
+
+            # Save PyTorch checkpoint
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "scheduler_state_dict": scheduler.state_dict(),
+                    "valid_iou": valid_iou,
+                    "valid_loss": valid_loss_val,
+                },
+                f"{args.checkpoint_dir}/best_model.pth",
+            )
+
+            print(f"  >> Saved best model with IoU={best_iou:.4f}")
+
+        # Save periodic checkpoints
+        if (epoch + 1) % 5 == 0:
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "scheduler_state_dict": scheduler.state_dict(),
+                    "valid_iou": valid_iou,
+                    "valid_loss": valid_loss_val,
+                },
+                f"{args.checkpoint_dir}/checkpoint_epoch_{epoch+1}.pth",
+            )
+            print(f"  >> Saved checkpoint at epoch {epoch+1}")
 
     # ========================================================================
     # Training Complete
@@ -682,8 +546,6 @@ def train(args):
     print("=" * 80)
     print(f"Best validation IoU: {best_iou:.4f}")
     print(f"\nPyTorch checkpoint saved to: {args.checkpoint_dir}/best_model.pth")
-    if mlflow_enabled:
-        print("Training metrics logged to MLflow/Databricks")
 
 
 # ============================================================================
