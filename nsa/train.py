@@ -16,16 +16,17 @@ import os
 import argparse
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import (
     Dataset,
     DataLoader,
 )
-from torchvision import transforms
-from PIL import Image
 from tqdm import tqdm
 from datasets import load_dataset
 import mlflow
+import kornia.augmentation as K
+from kornia.augmentation import AugmentationSequential
 
 # MLflow for experiment tracking
 try:
@@ -90,6 +91,83 @@ IMAGE_WIDTH = 640
 HF_DATASET_REPO = (
     "Conner/openeds-precomputed"
 )
+
+
+class GPUAugmentation(nn.Module):
+    """GPU-native augmentation using Kornia."""
+
+    def __init__(self, training: bool = True):
+        super().__init__()
+        self.training_mode = training
+
+        if training:
+            # Geometric augmentations (applied to image AND all masks)
+            self.geometric = AugmentationSequential(
+                K.RandomHorizontalFlip(p=0.5),
+                K.RandomRotation(degrees=10, p=0.3),
+                K.RandomAffine(degrees=0, translate=(0.05, 0.05), scale=(0.95, 1.05), p=0.2),
+                data_keys=["input", "mask"],
+                same_on_batch=False,
+            )
+
+            # Intensity augmentations (image only)
+            self.intensity = nn.Sequential(
+                K.RandomBrightness(brightness=(0.9, 1.1), p=0.3),
+                K.RandomContrast(contrast=(0.9, 1.1), p=0.3),
+                K.RandomGaussianNoise(mean=0.0, std=0.05, p=0.2),
+                K.RandomGaussianBlur(kernel_size=(3, 3), sigma=(0.1, 0.5), p=0.1),
+            )
+        else:
+            self.geometric = None
+            self.intensity = None
+
+    def forward(self, image, label, spatial_weights, dist_map, eye_mask, eye_weight):
+        """
+        Apply augmentation to batch on GPU.
+
+        Args:
+            image: (B, 1, H, W) - grayscale image
+            label: (B, H, W) - segmentation mask (long tensor)
+            spatial_weights: (B, H, W) - float weights
+            dist_map: (B, 2, H, W) - distance maps
+            eye_mask: (B, H, W) - eye region mask
+            eye_weight: (B, H, W) - eye region weights
+
+        Returns:
+            Augmented tensors with same shapes
+        """
+        if not self.training_mode or self.geometric is None:
+            return image, label, spatial_weights, dist_map, eye_mask, eye_weight
+
+        B, _, H, W = image.shape
+
+        # Stack all masks into a single tensor for consistent geometric transform
+        # label needs to be float for interpolation, will convert back
+        label_float = label.float().unsqueeze(1)  # (B, 1, H, W)
+        spatial_weights_4d = spatial_weights.unsqueeze(1)  # (B, 1, H, W)
+        eye_mask_float = eye_mask.float().unsqueeze(1)  # (B, 1, H, W)
+        eye_weight_4d = eye_weight.unsqueeze(1)  # (B, 1, H, W)
+        # dist_map is already (B, 2, H, W)
+
+        # Concatenate all masks: (B, 6, H, W)
+        all_masks = torch.cat([
+            label_float, spatial_weights_4d, eye_mask_float, eye_weight_4d, dist_map
+        ], dim=1)
+
+        # Apply geometric transforms to image and all masks together
+        image_aug, masks_aug = self.geometric(image, all_masks)
+
+        # Split masks back
+        label_aug = masks_aug[:, 0:1, :, :].squeeze(1).round().long()  # Back to long
+        spatial_weights_aug = masks_aug[:, 1:2, :, :].squeeze(1)
+        eye_mask_aug = masks_aug[:, 2:3, :, :].squeeze(1).round().long()
+        eye_weight_aug = masks_aug[:, 3:4, :, :].squeeze(1)
+        dist_map_aug = masks_aug[:, 4:6, :, :]
+
+        # Apply intensity augmentation (image only)
+        image_aug = self.intensity(image_aug)
+
+        return image_aug, label_aug, spatial_weights_aug, dist_map_aug, eye_mask_aug, eye_weight_aug
 
 
 # Helper Functions
@@ -177,81 +255,42 @@ def compute_iou_cpu(
 
 
 # Dataset Class
-class MaskToTensor:
-    """Convert PIL Image mask to long tensor."""
-
-    def __call__(self, img):
-        return torch.from_numpy(
-            np.array(
-                img, dtype=np.int64
-            )
-        )
-
-
 class IrisDataset(Dataset):
-    """
-    Dataset class for OpenEDS precomputed dataset.
-    """
+    """Dataset class for OpenEDS precomputed dataset."""
 
-    def __init__(
-        self, hf_dataset, transform=None
-    ):
+    def __init__(self, hf_dataset):
         self.dataset = hf_dataset
-        self.transform = transform
+        self.normalize_mean = 0.5
+        self.normalize_std = 0.5
 
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, idx):
         sample = self.dataset[idx]
+
         # Reshape flat arrays to images
-        image = np.array(
-            sample["image"],
-            dtype=np.uint8,
-        ).reshape(
-            IMAGE_HEIGHT, IMAGE_WIDTH
-        )
-        label = np.array(
-            sample["label"],
-            dtype=np.uint8,
-        ).reshape(
-            IMAGE_HEIGHT, IMAGE_WIDTH
-        )
-        spatial_weights = torch.from_numpy(
-            np.array(
-                sample[
-                    "spatial_weights"
-                ],
-                dtype=np.float32,
-            ).reshape(
-                IMAGE_HEIGHT,
-                IMAGE_WIDTH,
-            )
-        )
-        dist_map = torch.from_numpy(
-            np.array(
-                sample["dist_map"],
-                dtype=np.float32,
-            ).reshape(
-                2,
-                IMAGE_HEIGHT,
-                IMAGE_WIDTH,
-            )
-        )
-        # Convert to PIL for transforms
-        img = Image.fromarray(image)
-        if self.transform:
-            img = self.transform(img)
-        # Convert label to tensor
-        label_tensor = MaskToTensor()(
-            Image.fromarray(label)
-        )
-        return (
-            img,
-            label_tensor,
-            spatial_weights,
-            dist_map,
-        )
+        image = np.array(sample["image"], dtype=np.uint8).reshape(IMAGE_HEIGHT, IMAGE_WIDTH)
+        label = np.array(sample["label"], dtype=np.uint8).reshape(IMAGE_HEIGHT, IMAGE_WIDTH)
+        spatial_weights = np.array(sample["spatial_weights"], dtype=np.float32).reshape(IMAGE_HEIGHT, IMAGE_WIDTH)
+        dist_map = np.array(sample["dist_map"], dtype=np.float32).reshape(2, IMAGE_HEIGHT, IMAGE_WIDTH)
+        eye_mask = np.array(sample["eye_mask"], dtype=np.uint8).reshape(IMAGE_HEIGHT, IMAGE_WIDTH)
+        eye_weight = np.array(sample["eye_weight"], dtype=np.float32).reshape(IMAGE_HEIGHT, IMAGE_WIDTH)
+
+        # Normalize image and convert to tensor
+        image = image.astype(np.float32) / 255.0
+        image = (image - self.normalize_mean) / self.normalize_std
+        img_tensor = torch.from_numpy(image).unsqueeze(0)  # (1, H, W)
+
+        # Convert other arrays to tensors
+        label_tensor = torch.from_numpy(label.astype(np.int64))
+        spatial_weights_tensor = torch.from_numpy(spatial_weights)
+        dist_map_tensor = torch.from_numpy(dist_map)
+        eye_mask_tensor = torch.from_numpy(eye_mask.astype(np.int64))
+        eye_weight_tensor = torch.from_numpy(eye_weight)
+
+        return (img_tensor, label_tensor, spatial_weights_tensor, dist_map_tensor,
+                eye_mask_tensor, eye_weight_tensor)
 
 
 # Training Function
@@ -297,44 +336,27 @@ def train(args):
     print(
         f"Validation samples: {num_valid_samples}"
     )
-    # Transforms
-    transform = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Normalize(
-                [0.5], [0.5]
-            ),
-        ]
-    )
-    train_dataset = IrisDataset(
-        hf_dataset["train"],
-        transform=transform,
-    )
-    valid_dataset = IrisDataset(
-        hf_dataset["validation"],
-        transform=transform,
-    )
+    # Create datasets (no CPU augmentation - augmentation happens on GPU)
+    train_dataset = IrisDataset(hf_dataset["train"])
+    valid_dataset = IrisDataset(hf_dataset["validation"])
+
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=args.num_workers,
-        pin_memory=(
-            True
-            if torch.cuda.is_available()
-            else False
-        ),
+        pin_memory=torch.cuda.is_available(),
+        persistent_workers=args.num_workers > 0,
+        prefetch_factor=2 if args.num_workers > 0 else None,
     )
     valid_loader = DataLoader(
         valid_dataset,
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=args.num_workers,
-        pin_memory=(
-            True
-            if torch.cuda.is_available()
-            else False
-        ),
+        pin_memory=torch.cuda.is_available(),
+        persistent_workers=args.num_workers > 0,
+        prefetch_factor=2 if args.num_workers > 0 else None,
     )
     # Initialize NSA Model
     print(
@@ -349,6 +371,11 @@ def train(args):
     print(
         f"Model parameters: {nparams:,}"
     )
+
+    # Initialize GPU augmentation modules
+    train_augment = GPUAugmentation(training=True).to(device)
+    val_augment = GPUAugmentation(training=False).to(device)
+
     use_mlflow = is_mlflow_configured()
     mlflow_run = None
     print(
@@ -404,6 +431,7 @@ def train(args):
             "num_train_samples": num_train_samples,
             "num_valid_samples": num_valid_samples,
             "device": str(device),
+            "augmentation": "kornia_gpu",
         }
     )
     print(
@@ -464,19 +492,12 @@ def train(args):
         print(
             f"Resumed from epoch {checkpoint['epoch'] + 1}, best IoU: {best_iou:.4f}"
         )
-    # Alpha Scheduling
-    alpha_schedule = np.zeros(
-        args.epochs
-    )
-    alpha_schedule[
-        0 : min(125, args.epochs)
-    ] = 1 - np.arange(
-        1, min(125, args.epochs) + 1
-    ) / min(
-        125, args.epochs
-    )
-    if args.epochs > 125:
-        alpha_schedule[125:] = 0
+    # Alpha schedule: 1.0 -> 0.2 over 125 epochs (maintain minimum for surface loss)
+    # Use Python list (not numpy) to avoid CPU numpy scalar during training
+    alpha_schedule = [
+        max(1.0 - i / min(125, args.epochs), 0.2)
+        for i in range(args.epochs)
+    ]
     # Training Loop
     print("\n" + "=" * 80)
     print("Starting NSA Training")
@@ -491,80 +512,46 @@ def train(args):
         alpha = alpha_schedule[epoch]
         # Training Phase
         model.train()
-        train_loss = torch.zeros(
-            1, device=device
-        )
-        train_ce_loss = torch.zeros(
-            1, device=device
-        )
-        train_dice_loss = torch.zeros(
-            1, device=device
-        )
-        train_surface_loss = (
-            torch.zeros(
-                1, device=device
-            )
-        )
-        train_intersection = (
-            torch.zeros(
-                2, device=device
-            )
-        )
-        train_union = torch.zeros(
-            2, device=device
-        )
+        train_augment.train()
+        train_loss = torch.zeros(1, device=device)
+        train_ce_loss = torch.zeros(1, device=device)
+        train_dice_loss = torch.zeros(1, device=device)
+        train_surface_loss = torch.zeros(1, device=device)
+        train_boundary_loss = torch.zeros(1, device=device)
+        train_intersection = torch.zeros(2, device=device)
+        train_union = torch.zeros(2, device=device)
         pbar = tqdm(
             train_loader,
             desc=f"Epoch {epoch+1}/{args.epochs} [Train]",
         )
-        for (
-            images,
-            labels,
-            spatial_weights,
-            dist_maps,
-        ) in pbar:
-            images = images.to(
-                device,
-                non_blocking=True,
+        for (images, labels, spatial_weights, dist_maps, eye_masks, eye_weights) in pbar:
+            # Move to GPU
+            images = images.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
+            spatial_weights = spatial_weights.to(device, non_blocking=True)
+            dist_maps = dist_maps.to(device, non_blocking=True)
+            eye_masks = eye_masks.to(device, non_blocking=True)
+            eye_weights = eye_weights.to(device, non_blocking=True)
+
+            # Apply GPU augmentation
+            images, labels, spatial_weights, dist_maps, eye_masks, eye_weights = train_augment(
+                images, labels, spatial_weights, dist_maps, eye_masks, eye_weights
             )
-            labels = labels.to(
-                device,
-                non_blocking=True,
-            )
-            spatial_weights = (
-                spatial_weights.to(
-                    device,
-                    non_blocking=True,
-                )
-            )
-            dist_maps = dist_maps.to(
-                device,
-                non_blocking=True,
-            )
+
             optimizer.zero_grad()
-            with torch.amp.autocast(
-                "cuda", enabled=use_amp
-            ):
+            with torch.amp.autocast("cuda", enabled=use_amp):
                 outputs = model(images)
-                (
-                    loss,
-                    ce_loss,
-                    dice_loss,
-                    surface_loss,
-                ) = criterion(
+                (loss, ce_loss, dice_loss, surface_loss, boundary_loss) = criterion(
                     outputs,
                     labels,
                     spatial_weights,
                     dist_maps,
                     alpha,
+                    eye_weights,
                 )
             if use_amp:
-                scaler.scale(
-                    loss
-                ).backward()
-                scaler.unscale_(
-                    optimizer
-                )
+                scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(
                     model.parameters(),
                     max_norm=1.0,
@@ -579,167 +566,94 @@ def train(args):
                 )
                 optimizer.step()
             train_loss += loss.detach()
-            train_ce_loss += (
-                ce_loss.detach()
-            )
-            train_dice_loss += (
-                dice_loss.detach()
-            )
-            train_surface_loss += (
-                surface_loss.detach()
-            )
-            preds = get_predictions(
-                outputs
-            )
-            inter, uni = (
-                compute_iou_tensors(
-                    preds, labels
-                )
-            )
+            train_ce_loss += ce_loss.detach()
+            train_dice_loss += dice_loss.detach()
+            train_surface_loss += surface_loss.detach()
+            train_boundary_loss += boundary_loss.detach()
+            preds = get_predictions(outputs)
+            inter, uni = compute_iou_tensors(preds, labels)
             train_intersection += inter
             train_union += uni
-            pbar.set_postfix(
-                {
-                    "alpha": f"{alpha:.3f}"
-                }
-            )
-        n_train_batches = len(
-            train_loader
-        )
+            pbar.set_postfix({"alpha": f"{alpha:.3f}"})
+        n_train_batches = len(train_loader)
         # Validation Phase
         model.eval()
-        valid_loss = torch.zeros(
-            1, device=device
-        )
-        valid_ce_loss = torch.zeros(
-            1, device=device
-        )
-        valid_dice_loss = torch.zeros(
-            1, device=device
-        )
-        valid_surface_loss = (
-            torch.zeros(
-                1, device=device
-            )
-        )
-        valid_intersection = (
-            torch.zeros(
-                2, device=device
-            )
-        )
-        valid_union = torch.zeros(
-            2, device=device
-        )
+        val_augment.eval()
+        valid_loss = torch.zeros(1, device=device)
+        valid_ce_loss = torch.zeros(1, device=device)
+        valid_dice_loss = torch.zeros(1, device=device)
+        valid_surface_loss = torch.zeros(1, device=device)
+        valid_boundary_loss = torch.zeros(1, device=device)
+        valid_intersection = torch.zeros(2, device=device)
+        valid_union = torch.zeros(2, device=device)
         with torch.no_grad():
             pbar = tqdm(
                 valid_loader,
                 desc=f"Epoch {epoch+1}/{args.epochs} [Valid]",
             )
-            for (
-                images,
-                labels,
-                spatial_weights,
-                dist_maps,
-            ) in pbar:
-                images = images.to(
-                    device,
-                    non_blocking=True,
+            for (images, labels, spatial_weights, dist_maps, eye_masks, eye_weights) in pbar:
+                # Move to GPU
+                images = images.to(device, non_blocking=True)
+                labels = labels.to(device, non_blocking=True)
+                spatial_weights = spatial_weights.to(device, non_blocking=True)
+                dist_maps = dist_maps.to(device, non_blocking=True)
+                eye_masks = eye_masks.to(device, non_blocking=True)
+                eye_weights = eye_weights.to(device, non_blocking=True)
+
+                # Apply validation augmentation (no-op but keeps consistent interface)
+                images, labels, spatial_weights, dist_maps, eye_masks, eye_weights = val_augment(
+                    images, labels, spatial_weights, dist_maps, eye_masks, eye_weights
                 )
-                labels = labels.to(
-                    device,
-                    non_blocking=True,
-                )
-                spatial_weights = spatial_weights.to(
-                    device,
-                    non_blocking=True,
-                )
-                dist_maps = dist_maps.to(
-                    device,
-                    non_blocking=True,
-                )
-                with torch.amp.autocast(
-                    "cuda",
-                    enabled=use_amp,
-                ):
-                    outputs = model(
-                        images
-                    )
-                    (
-                        loss,
-                        ce_loss,
-                        dice_loss,
-                        surface_loss,
-                    ) = criterion(
+
+                with torch.amp.autocast("cuda", enabled=use_amp):
+                    outputs = model(images)
+                    (loss, ce_loss, dice_loss, surface_loss, boundary_loss) = criterion(
                         outputs,
                         labels,
                         spatial_weights,
                         dist_maps,
                         alpha,
+                        eye_weights,
                     )
-                valid_loss += (
-                    loss.detach()
-                )
-                valid_ce_loss += (
-                    ce_loss.detach()
-                )
-                valid_dice_loss += (
-                    dice_loss.detach()
-                )
-                valid_surface_loss += (
-                    surface_loss.detach()
-                )
-                preds = get_predictions(
-                    outputs
-                )
-                inter, uni = (
-                    compute_iou_tensors(
-                        preds, labels
-                    )
-                )
-                valid_intersection += (
-                    inter
-                )
+                valid_loss += loss.detach()
+                valid_ce_loss += ce_loss.detach()
+                valid_dice_loss += dice_loss.detach()
+                valid_surface_loss += surface_loss.detach()
+                valid_boundary_loss += boundary_loss.detach()
+                preds = get_predictions(outputs)
+                inter, uni = compute_iou_tensors(preds, labels)
+                valid_intersection += inter
                 valid_union += uni
         # Metrics Calculation
-        n_valid_batches = len(
-            valid_loader
-        )
-        all_metrics_gpu = torch.cat(
-            [
-                train_loss
-                / n_train_batches,
-                train_ce_loss
-                / n_train_batches,
-                train_dice_loss
-                / n_train_batches,
-                train_surface_loss
-                / n_train_batches,
-                valid_loss
-                / n_valid_batches,
-                valid_ce_loss
-                / n_valid_batches,
-                valid_dice_loss
-                / n_valid_batches,
-                valid_surface_loss
-                / n_valid_batches,
-                train_intersection,
-                train_union,
-                valid_intersection,
-                valid_union,
-            ]
-        )
-        all_metrics = (
-            all_metrics_gpu.tolist()
-        )
+        n_valid_batches = len(valid_loader)
+        all_metrics_gpu = torch.cat([
+            train_loss / n_train_batches,
+            train_ce_loss / n_train_batches,
+            train_dice_loss / n_train_batches,
+            train_surface_loss / n_train_batches,
+            train_boundary_loss / n_train_batches,
+            valid_loss / n_valid_batches,
+            valid_ce_loss / n_valid_batches,
+            valid_dice_loss / n_valid_batches,
+            valid_surface_loss / n_valid_batches,
+            valid_boundary_loss / n_valid_batches,
+            train_intersection,
+            train_union,
+            valid_intersection,
+            valid_union,
+        ])
+        all_metrics = all_metrics_gpu.tolist()
         (
             train_loss_val,
             train_ce_val,
             train_dice_val,
             train_surface_val,
+            train_boundary_val,
             valid_loss_val,
             valid_ce_val,
             valid_dice_val,
             valid_surface_val,
+            valid_boundary_val,
             train_inter_0,
             train_inter_1,
             train_union_0,
@@ -750,54 +664,25 @@ def train(args):
             valid_union_1,
         ) = all_metrics
         train_iou = compute_iou_cpu(
-            [
-                train_inter_0,
-                train_inter_1,
-            ],
-            [
-                train_union_0,
-                train_union_1,
-            ],
+            [train_inter_0, train_inter_1],
+            [train_union_0, train_union_1],
         )
         valid_iou = compute_iou_cpu(
-            [
-                valid_inter_0,
-                valid_inter_1,
-            ],
-            [
-                valid_union_0,
-                valid_union_1,
-            ],
+            [valid_inter_0, valid_inter_1],
+            [valid_union_0, valid_union_1],
         )
         # Learning Rate Scheduling
         scheduler.step()
-        current_lr = (
-            optimizer.param_groups[0][
-                "lr"
-            ]
-        )
+        current_lr = optimizer.param_groups[0]["lr"]
         # Logging
-        print(
-            f"\nEpoch {epoch+1}/{args.epochs}"
-        )
-        print(
-            f"  Train Loss: {train_loss_val:.4f} | Valid Loss: {valid_loss_val:.4f}"
-        )
-        print(
-            f"  Train IoU:  {train_iou:.4f} | Valid IoU:  {valid_iou:.4f}"
-        )
-        print(
-            f"  CE Loss:    {train_ce_val:.4f} | {valid_ce_val:.4f}"
-        )
-        print(
-            f"  Dice Loss:  {train_dice_val:.4f} | {valid_dice_val:.4f}"
-        )
-        print(
-            f"  Surf Loss:  {train_surface_val:.4f} | {valid_surface_val:.4f}"
-        )
-        print(
-            f"  LR: {current_lr:.6f} | Alpha: {alpha:.4f}"
-        )
+        print(f"\nEpoch {epoch+1}/{args.epochs}")
+        print(f"  Train Loss: {train_loss_val:.4f} | Valid Loss: {valid_loss_val:.4f}")
+        print(f"  Train IoU:  {train_iou:.4f} | Valid IoU:  {valid_iou:.4f}")
+        print(f"  CE Loss:    {train_ce_val:.4f} | {valid_ce_val:.4f}")
+        print(f"  Dice Loss:  {train_dice_val:.4f} | {valid_dice_val:.4f}")
+        print(f"  Surf Loss:  {train_surface_val:.4f} | {valid_surface_val:.4f}")
+        print(f"  Bound Loss: {train_boundary_val:.4f} | {valid_boundary_val:.4f}")
+        print(f"  LR: {current_lr:.6f} | Alpha: {alpha:.4f}")
         # MLflow Metrics Logging
         if use_mlflow:
             mlflow.log_metrics(
@@ -807,11 +692,13 @@ def train(args):
                     "train_ce_loss": train_ce_val,
                     "train_dice_loss": train_dice_val,
                     "train_surface_loss": train_surface_val,
+                    "train_boundary_loss": train_boundary_val,
                     "valid_loss": valid_loss_val,
                     "valid_iou": valid_iou,
                     "valid_ce_loss": valid_ce_val,
                     "valid_dice_loss": valid_dice_val,
                     "valid_surface_loss": valid_surface_val,
+                    "valid_boundary_loss": valid_boundary_val,
                     "learning_rate": current_lr,
                     "alpha": alpha,
                 },
@@ -989,6 +876,7 @@ def main():
         f"Resume from: {args.resume if args.resume else 'None'}"
     )
     print(f"Random seed: {args.seed}")
+    print("Augmentation: Kornia (GPU-native)")
     print("=" * 80)
     # Start training
     try:

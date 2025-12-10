@@ -1472,19 +1472,104 @@ class NSAPupilSeg(nn.Module):
 # =============================================================================
 
 
+def focal_surface_loss(
+    probs: torch.Tensor,
+    dist_map: torch.Tensor,
+    gamma: float = 2.0,
+) -> torch.Tensor:
+    """Surface loss with focal weighting for hard boundary pixels.
+
+    Args:
+        probs: Predicted probabilities (B, C, H, W)
+        dist_map: Distance transform (B, 2, H, W)
+        gamma: Focal weighting exponent
+
+    Returns:
+        Focal-weighted surface loss scalar
+    """
+    focal_weight = (1 - probs) ** gamma
+    return (
+        (focal_weight * probs * dist_map)
+        .flatten(start_dim=2)
+        .mean(dim=2)
+        .mean(dim=1)
+        .mean()
+    )
+
+
+def boundary_dice_loss(
+    probs: torch.Tensor,
+    target: torch.Tensor,
+    kernel_size: int = 3,
+    epsilon: float = 1e-5,
+) -> torch.Tensor:
+    """Dice loss computed only on boundary pixels.
+
+    Args:
+        probs: Predicted probabilities (B, C, H, W)
+        target: Ground truth labels (B, H, W)
+        kernel_size: Size of kernel for boundary extraction
+        epsilon: Small constant for numerical stability
+
+    Returns:
+        Boundary dice loss scalar
+    """
+    # Extract boundary via morphological gradient
+    target_float = target.float().unsqueeze(1)
+    padding = kernel_size // 2
+    dilated = F.max_pool2d(
+        target_float,
+        kernel_size,
+        stride=1,
+        padding=padding,
+    )
+    eroded = -F.max_pool2d(
+        -target_float,
+        kernel_size,
+        stride=1,
+        padding=padding,
+    )
+    boundary = (dilated - eroded).squeeze(1)  # (B, H, W)
+
+    # Compute Dice only on boundary pixels
+    probs_pupil = probs[:, 1]  # pupil class probabilities (B, H, W)
+    probs_boundary = probs_pupil * boundary
+    target_boundary = target.float() * boundary
+
+    intersection = (
+        probs_boundary * target_boundary
+    ).sum(dim=(1, 2))
+    union = probs_boundary.sum(
+        dim=(1, 2)
+    ) + target_boundary.sum(dim=(1, 2))
+
+    dice = (
+        2.0 * intersection + epsilon
+    ) / (union + epsilon)
+    return (1.0 - dice).mean()
+
+
 class CombinedLoss(nn.Module):
     """
     Combined loss for pupil segmentation:
     - Weighted Cross Entropy: Handles class imbalance
     - Dice Loss: Better for small regions like pupils
-    - Surface Loss: Boundary-aware optimization
+    - Focal Surface Loss: Boundary-aware optimization with focal weighting
+    - Boundary Dice Loss: Explicit optimization for edge pixels
     """
 
     def __init__(
-        self, epsilon: float = 1e-5
+        self,
+        epsilon: float = 1e-5,
+        focal_gamma: float = 2.0,
+        boundary_weight: float = 0.3,
+        boundary_kernel_size: int = 3,
     ):
         super().__init__()
         self.epsilon = epsilon
+        self.focal_gamma = focal_gamma
+        self.boundary_weight = boundary_weight
+        self.boundary_kernel_size = boundary_kernel_size
         self.nll = nn.NLLLoss(
             reduction="none"
         )
@@ -1496,6 +1581,7 @@ class CombinedLoss(nn.Module):
         spatial_weights: torch.Tensor,
         dist_map: torch.Tensor,
         alpha: float,
+        eye_weight: torch.Tensor = None,
     ) -> tuple:
         """
         Args:
@@ -1504,8 +1590,9 @@ class CombinedLoss(nn.Module):
             spatial_weights: Spatial weighting map (B, H, W)
             dist_map: Distance map for surface loss (B, 2, H, W)
             alpha: Balance between dice and surface loss
+            eye_weight: Soft distance weighting from eye region (B, H, W)
         Returns:
-            (total_loss, ce_loss, dice_loss, surface_loss)
+            (total_loss, ce_loss, dice_loss, surface_loss, boundary_loss)
         """
         probs = F.softmax(logits, dim=1)
         log_probs = F.log_softmax(
@@ -1516,9 +1603,12 @@ class CombinedLoss(nn.Module):
         ce_loss = self.nll(
             log_probs, target
         )
+        # Apply spatial weights and optional eye weight
+        weight_factor = 1.0 + spatial_weights
+        if eye_weight is not None:
+            weight_factor = weight_factor * eye_weight
         weighted_ce = (
-            ce_loss
-            * (1.0 + spatial_weights)
+            ce_loss * weight_factor
         ).mean()
 
         # Dice Loss
@@ -1566,26 +1656,29 @@ class CombinedLoss(nn.Module):
             )
         ).mean()
 
-        # Surface Loss
-        surface_loss = (
-            (
-                probs.flatten(
-                    start_dim=2
-                )
-                * dist_map.flatten(
-                    start_dim=2
-                )
-            )
-            .mean(dim=2)
-            .mean(dim=1)
-            .mean()
+        # Focal Surface Loss (replaces standard surface loss)
+        surface_loss = focal_surface_loss(
+            probs,
+            dist_map,
+            gamma=self.focal_gamma,
         )
 
+        # Boundary Dice Loss
+        bdice_loss = boundary_dice_loss(
+            probs,
+            target,
+            kernel_size=self.boundary_kernel_size,
+            epsilon=self.epsilon,
+        )
+
+        # Total loss with updated weighting
+        # Use max(1 - alpha, 0.2) for surface loss weight
+        surface_weight = max(1.0 - alpha, 0.2)
         total_loss = (
             weighted_ce
             + alpha * dice_loss
-            + (1.0 - alpha)
-            * surface_loss
+            + surface_weight * surface_loss
+            + self.boundary_weight * bdice_loss
         )
 
         return (
@@ -1593,6 +1686,7 @@ class CombinedLoss(nn.Module):
             weighted_ce,
             dice_loss,
             surface_loss,
+            bdice_loss,
         )
 
 

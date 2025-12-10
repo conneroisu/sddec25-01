@@ -8,7 +8,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from huggingface_hub import HfApi
 from PIL import Image as PILImage
-from scipy.ndimage import distance_transform_edt as distance
+from scipy.ndimage import distance_transform_edt, distance_transform_edt as distance
 from tqdm import tqdm
 
 CHUNK_SIZE = 50  # Reduced from 500 to prevent OOM (~1.5GB per shard)
@@ -41,6 +41,32 @@ def compute_distance_map(label_binary: np.ndarray) -> np.ndarray:
     return distMap.astype(np.float32)
 
 
+def compute_eye_weight(
+    label: np.ndarray, max_decay_distance: float = 50.0
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute eye region mask and soft distance-based weight.
+
+    Args:
+        label: Original 4-class label (0=bg, 1=sclera, 2=iris, 3=pupil)
+        max_decay_distance: Distance in pixels for weight to decay to ~0.37
+
+    Returns:
+        eye_weight: Soft weight (1.0 inside eye, decaying outside)
+        eye_mask: Binary mask of eye region
+    """
+    eye_mask = (label >= 1).astype(np.uint8)  # sclera + iris + pupil
+
+    # Compute distance from eye boundary for outside pixels
+    dist_outside = distance_transform_edt(1 - eye_mask)
+
+    # Create weight: 1.0 inside, exponentially decaying outside
+    eye_weight = np.ones_like(label, dtype=np.float32)
+    outside_mask = eye_mask == 0
+    eye_weight[outside_mask] = np.exp(-dist_outside[outside_mask] / max_decay_distance)
+
+    return eye_weight, eye_mask
+
+
 def gaussian_blur(img: np.ndarray) -> np.ndarray:
     """Apply Gaussian blur with random sigma 2-7, kernel (7,7)."""
     sigma = np.random.randint(2, 7)
@@ -68,13 +94,17 @@ def horizontal_flip(
     label: np.ndarray,
     spatial_weights: np.ndarray,
     dist_map: np.ndarray,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    eye_mask: np.ndarray,
+    eye_weight: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Flip all arrays horizontally. dist_map is [2, H, W] so flip axis=2."""
     return (
         np.fliplr(image).copy(),
         np.fliplr(label).copy(),
         np.fliplr(spatial_weights).copy(),
         np.flip(dist_map, axis=2).copy(),
+        np.fliplr(eye_mask).copy(),
+        np.fliplr(eye_weight).copy(),
     )
 
 
@@ -134,6 +164,10 @@ def process_single_sample(
         label = cv2.resize(
             label, (IMAGE_WIDTH, IMAGE_HEIGHT), interpolation=cv2.INTER_NEAREST
         )
+
+        # Compute eye_mask and eye_weight from ORIGINAL 4-class label (before binary conversion)
+        eye_weight, eye_mask = compute_eye_weight(label)
+
         label_binary = np.zeros_like(label, dtype=np.uint8)
         label_binary[label == 3] = 1
         spatial_weights = compute_spatial_weights(label_binary)
@@ -153,13 +187,15 @@ def process_single_sample(
                 "label": label_binary,
                 "spatial_weights": spatial_weights,
                 "dist_map": dist_map,
+                "eye_mask": eye_mask,
+                "eye_weight": eye_weight,
                 "filename": basename,
             }
         )
 
         # 2. Horizontal flip (affects ALL arrays)
-        flip_img, flip_label, flip_sw, flip_dm = horizontal_flip(
-            image, label_binary, spatial_weights, dist_map
+        flip_img, flip_label, flip_sw, flip_dm, flip_eye_mask, flip_eye_weight = horizontal_flip(
+            image, label_binary, spatial_weights, dist_map, eye_mask, eye_weight
         )
         samples.append(
             {
@@ -167,28 +203,34 @@ def process_single_sample(
                 "label": flip_label,
                 "spatial_weights": flip_sw,
                 "dist_map": flip_dm,
+                "eye_mask": flip_eye_mask,
+                "eye_weight": flip_eye_weight,
                 "filename": f"{basename}_flip",
             }
         )
 
-        # 3. Gaussian blur (only image changes)
+        # 3. Gaussian blur (only image changes, eye_mask and eye_weight stay the same)
         samples.append(
             {
                 "image": gaussian_blur(image),
                 "label": label_binary,
                 "spatial_weights": spatial_weights,
                 "dist_map": dist_map,
+                "eye_mask": eye_mask,
+                "eye_weight": eye_weight,
                 "filename": f"{basename}_blur",
             }
         )
 
-        # 4. Line augment (only image changes)
+        # 4. Line augment (only image changes, eye_mask and eye_weight stay the same)
         samples.append(
             {
                 "image": line_augment(image),
                 "label": label_binary,
                 "spatial_weights": spatial_weights,
                 "dist_map": dist_map,
+                "eye_mask": eye_mask,
+                "eye_weight": eye_weight,
                 "filename": f"{basename}_lines",
             }
         )
@@ -232,6 +274,8 @@ def process_split_to_parquet(dataset_path: str, split: str, output_dir: str) -> 
             "label": [],
             "spatial_weights": [],
             "dist_map": [],
+            "eye_mask": [],
+            "eye_weight": [],
             "filename": [],
         }
         for filename in tqdm(chunk_files, desc=f"{split} shard {shard_idx}"):
@@ -244,6 +288,8 @@ def process_split_to_parquet(dataset_path: str, split: str, output_dir: str) -> 
                         sample["spatial_weights"].flatten()
                     )
                     chunk_data["dist_map"].append(sample["dist_map"].flatten())
+                    chunk_data["eye_mask"].append(sample["eye_mask"].flatten())
+                    chunk_data["eye_weight"].append(sample["eye_weight"].flatten())
                     chunk_data["filename"].append(sample["filename"])
                     processed_count += 1
         if chunk_data["filename"]:
@@ -253,6 +299,8 @@ def process_split_to_parquet(dataset_path: str, split: str, output_dir: str) -> 
                     "label": chunk_data["label"],
                     "spatial_weights": chunk_data["spatial_weights"],
                     "dist_map": chunk_data["dist_map"],
+                    "eye_mask": chunk_data["eye_mask"],
+                    "eye_weight": chunk_data["eye_weight"],
                     "filename": chunk_data["filename"],
                 }
             )
