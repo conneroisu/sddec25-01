@@ -51,11 +51,21 @@ class ConvBNReLU(nn.Module):
             groups=groups,
             bias=bias,
         )
-        self.bn = nn.BatchNorm2d(out_channels)
-        self.act = nn.GELU() if activation else nn.Identity()
+        self.bn = nn.BatchNorm2d(
+            out_channels
+        )
+        self.act = (
+            nn.GELU()
+            if activation
+            else nn.Identity()
+        )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.act(self.bn(self.conv(x)))
+    def forward(
+        self, x: torch.Tensor
+    ) -> torch.Tensor:
+        return self.act(
+            self.bn(self.conv(x))
+        )
 
 
 class PatchEmbedding(nn.Module):
@@ -64,16 +74,35 @@ class PatchEmbedding(nn.Module):
     Uses strided convolutions to reduce spatial resolution.
     """
 
-    def __init__(self, in_channels: int = 1, embed_dim: int = 32, patch_size: int = 4):
+    def __init__(
+        self,
+        in_channels: int = 1,
+        embed_dim: int = 32,
+        patch_size: int = 4,
+    ):
         super().__init__()
         self.patch_size = patch_size
         mid_dim = embed_dim // 2
 
         # Two-stage downsampling for smoother feature transition
-        self.conv1 = ConvBNReLU(in_channels, mid_dim, kernel_size=3, stride=2, padding=1)
-        self.conv2 = ConvBNReLU(mid_dim, embed_dim, kernel_size=3, stride=2, padding=1)
+        self.conv1 = ConvBNReLU(
+            in_channels,
+            mid_dim,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+        )
+        self.conv2 = ConvBNReLU(
+            mid_dim,
+            embed_dim,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+        )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor
+    ) -> torch.Tensor:
         """
         Args:
             x: Input image (B, C, H, W)
@@ -112,24 +141,44 @@ class TokenCompression(nn.Module):
 
         # Learnable compression MLP with position encoding
         self.compress_k = nn.Sequential(
-            nn.Linear(dim * block_size * block_size, dim * 2),
+            nn.Linear(
+                dim
+                * block_size
+                * block_size,
+                dim * 2,
+            ),
             nn.GELU(),
             nn.Linear(dim * 2, dim),
         )
         self.compress_v = nn.Sequential(
-            nn.Linear(dim * block_size * block_size, dim * 2),
+            nn.Linear(
+                dim
+                * block_size
+                * block_size,
+                dim * 2,
+            ),
             nn.GELU(),
             nn.Linear(dim * 2, dim),
         )
 
         # Intra-block position encoding
         self.pos_embed = nn.Parameter(
-            torch.randn(1, block_size * block_size, dim) * 0.02
+            torch.randn(
+                1,
+                block_size * block_size,
+                dim,
+            )
+            * 0.02
         )
 
     def forward(
-        self, k: torch.Tensor, v: torch.Tensor, spatial_size: tuple[int, int]
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+        self,
+        k: torch.Tensor,
+        v: torch.Tensor,
+        spatial_size: tuple[int, int],
+    ) -> tuple[
+        torch.Tensor, torch.Tensor
+    ]:
         """
         Compress keys and values into block-level representations.
 
@@ -149,32 +198,78 @@ class TokenCompression(nn.Module):
         stride = self.stride
 
         # Calculate number of blocks
-        n_blocks_h = (H - bs) // stride + 1
-        n_blocks_w = (W - bs) // stride + 1
+        n_blocks_h = (
+            H - bs
+        ) // stride + 1
+        n_blocks_w = (
+            W - bs
+        ) // stride + 1
 
         # Extract overlapping blocks using unfold
         # Use reshape instead of view for non-contiguous tensors
-        k_2d = k.reshape(B, H, W, dim).permute(0, 3, 1, 2).contiguous()  # (B, dim, H, W)
-        v_2d = v.reshape(B, H, W, dim).permute(0, 3, 1, 2).contiguous()
+        k_2d = (
+            k.reshape(B, H, W, dim)
+            .permute(0, 3, 1, 2)
+            .contiguous()
+        )  # (B, dim, H, W)
+        v_2d = (
+            v.reshape(B, H, W, dim)
+            .permute(0, 3, 1, 2)
+            .contiguous()
+        )
 
         # Unfold to get blocks: (B, dim*bs*bs, n_blocks)
-        k_blocks = F.unfold(k_2d, kernel_size=bs, stride=stride)
-        v_blocks = F.unfold(v_2d, kernel_size=bs, stride=stride)
+        k_blocks = F.unfold(
+            k_2d,
+            kernel_size=bs,
+            stride=stride,
+        )
+        v_blocks = F.unfold(
+            v_2d,
+            kernel_size=bs,
+            stride=stride,
+        )
 
         # Reshape for compression: (B, n_blocks, dim*bs*bs)
         n_blocks = k_blocks.shape[2]
-        k_blocks = k_blocks.permute(0, 2, 1).contiguous()
-        v_blocks = v_blocks.permute(0, 2, 1).contiguous()
+        k_blocks = k_blocks.permute(
+            0, 2, 1
+        ).contiguous()
+        v_blocks = v_blocks.permute(
+            0, 2, 1
+        ).contiguous()
 
         # Add position encoding before compression
         # Reshape blocks to add position encoding: (B, n_blocks, bs*bs, dim)
-        k_blocks_reshaped = k_blocks.reshape(B, n_blocks, bs * bs, dim)
-        k_blocks_reshaped = k_blocks_reshaped + self.pos_embed.unsqueeze(0)
-        k_blocks_pos = k_blocks_reshaped.reshape(B, n_blocks, bs * bs * dim)
+        k_blocks_reshaped = (
+            k_blocks.reshape(
+                B,
+                n_blocks,
+                bs * bs,
+                dim,
+            )
+        )
+        k_blocks_reshaped = (
+            k_blocks_reshaped
+            + self.pos_embed.unsqueeze(
+                0
+            )
+        )
+        k_blocks_pos = (
+            k_blocks_reshaped.reshape(
+                B,
+                n_blocks,
+                bs * bs * dim,
+            )
+        )
 
         # Compress to single tokens
-        k_cmp = self.compress_k(k_blocks_pos)
-        v_cmp = self.compress_v(v_blocks)
+        k_cmp = self.compress_k(
+            k_blocks_pos
+        )
+        v_cmp = self.compress_v(
+            v_blocks
+        )
 
         return k_cmp, v_cmp
 
@@ -213,7 +308,11 @@ class TokenSelection(nn.Module):
         v: torch.Tensor,
         attn_scores_cmp: torch.Tensor,
         spatial_size: tuple[int, int],
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+    ]:
         """
         Select important blocks based on compressed attention scores.
 
@@ -228,19 +327,31 @@ class TokenSelection(nn.Module):
             v_slc: Selected values
             indices: Selected block indices
         """
-        B, num_heads, N, N_cmp = attn_scores_cmp.shape
+        B, num_heads, N, N_cmp = (
+            attn_scores_cmp.shape
+        )
         H, W = spatial_size
         bs = self.block_size
 
         # Sum attention across heads for shared selection (GQA-style)
-        importance = attn_scores_cmp.sum(dim=1)  # (B, N, N_cmp)
+        importance = (
+            attn_scores_cmp.sum(dim=1)
+        )  # (B, N, N_cmp)
 
         # Average importance across queries to get block scores
-        block_importance = importance.mean(dim=1)  # (B, N_cmp)
+        block_importance = (
+            importance.mean(dim=1)
+        )  # (B, N_cmp)
 
         # Select top-n blocks
-        num_select = min(self.num_select, N_cmp)
-        _, indices = torch.topk(block_importance, num_select, dim=-1)  # (B, num_select)
+        num_select = min(
+            self.num_select, N_cmp
+        )
+        _, indices = torch.topk(
+            block_importance,
+            num_select,
+            dim=-1,
+        )  # (B, num_select)
 
         # Map compressed indices back to original token blocks
         # This is simplified - in practice would need proper index mapping
@@ -251,28 +362,79 @@ class TokenSelection(nn.Module):
         n_blocks_w = (W - bs) // bs + 1
 
         # Gather selected blocks
-        k_2d = k.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
-        v_2d = v.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+        k_2d = (
+            k.reshape(B, H, W, -1)
+            .permute(0, 3, 1, 2)
+            .contiguous()
+        )
+        v_2d = (
+            v.reshape(B, H, W, -1)
+            .permute(0, 3, 1, 2)
+            .contiguous()
+        )
 
         # Use unfold to extract all blocks
-        k_blocks = F.unfold(k_2d, kernel_size=bs, stride=bs)  # (B, dim*bs*bs, n_blocks)
-        v_blocks = F.unfold(v_2d, kernel_size=bs, stride=bs)
+        k_blocks = F.unfold(
+            k_2d,
+            kernel_size=bs,
+            stride=bs,
+        )  # (B, dim*bs*bs, n_blocks)
+        v_blocks = F.unfold(
+            v_2d,
+            kernel_size=bs,
+            stride=bs,
+        )
 
         n_blocks = k_blocks.shape[2]
-        k_blocks = k_blocks.permute(0, 2, 1).contiguous().reshape(B, n_blocks, bs * bs, -1)
-        v_blocks = v_blocks.permute(0, 2, 1).contiguous().reshape(B, n_blocks, bs * bs, -1)
+        k_blocks = (
+            k_blocks.permute(0, 2, 1)
+            .contiguous()
+            .reshape(
+                B, n_blocks, bs * bs, -1
+            )
+        )
+        v_blocks = (
+            v_blocks.permute(0, 2, 1)
+            .contiguous()
+            .reshape(
+                B, n_blocks, bs * bs, -1
+            )
+        )
 
         # Clamp indices to valid range
-        indices = indices.clamp(0, n_blocks - 1)
+        indices = indices.clamp(
+            0, n_blocks - 1
+        )
 
         # Gather selected blocks
-        indices_expanded = indices.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, bs * bs, k.shape[-1])
-        k_slc = torch.gather(k_blocks, 1, indices_expanded)  # (B, num_select, bs*bs, dim)
-        v_slc = torch.gather(v_blocks, 1, indices_expanded)
+        indices_expanded = (
+            indices.unsqueeze(-1)
+            .unsqueeze(-1)
+            .expand(
+                -1,
+                -1,
+                bs * bs,
+                k.shape[-1],
+            )
+        )
+        k_slc = torch.gather(
+            k_blocks,
+            1,
+            indices_expanded,
+        )  # (B, num_select, bs*bs, dim)
+        v_slc = torch.gather(
+            v_blocks,
+            1,
+            indices_expanded,
+        )
 
         # Flatten selected blocks
-        k_slc = k_slc.view(B, num_select * bs * bs, -1)
-        v_slc = v_slc.view(B, num_select * bs * bs, -1)
+        k_slc = k_slc.view(
+            B, num_select * bs * bs, -1
+        )
+        v_slc = v_slc.view(
+            B, num_select * bs * bs, -1
+        )
 
         return k_slc, v_slc, indices
 
@@ -304,31 +466,72 @@ class SlidingWindowAttention(nn.Module):
         self.num_heads = num_heads
         self.window_size = window_size
         self.head_dim = dim // num_heads
-        self.scale = self.head_dim ** -0.5
+        self.scale = self.head_dim**-0.5
 
-        self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
+        self.qkv = nn.Linear(
+            dim, dim * 3, bias=qkv_bias
+        )
         self.proj = nn.Linear(dim, dim)
 
         # Relative position bias
         self.relative_position_bias_table = nn.Parameter(
-            torch.zeros((2 * window_size - 1) * (2 * window_size - 1), num_heads)
+            torch.zeros(
+                (2 * window_size - 1)
+                * (2 * window_size - 1),
+                num_heads,
+            )
         )
-        nn.init.trunc_normal_(self.relative_position_bias_table, std=0.02)
+        nn.init.trunc_normal_(
+            self.relative_position_bias_table,
+            std=0.02,
+        )
 
         # Create position index
-        coords_h = torch.arange(window_size)
-        coords_w = torch.arange(window_size)
-        coords = torch.stack(torch.meshgrid(coords_h, coords_w, indexing='ij'))
-        coords_flatten = coords.flatten(1)
-        relative_coords = coords_flatten[:, :, None] - coords_flatten[:, None, :]
-        relative_coords = relative_coords.permute(1, 2, 0).contiguous()
-        relative_coords[:, :, 0] += window_size - 1
-        relative_coords[:, :, 1] += window_size - 1
-        relative_coords[:, :, 0] *= 2 * window_size - 1
-        relative_position_index = relative_coords.sum(-1)
-        self.register_buffer("relative_position_index", relative_position_index)
+        coords_h = torch.arange(
+            window_size
+        )
+        coords_w = torch.arange(
+            window_size
+        )
+        coords = torch.stack(
+            torch.meshgrid(
+                coords_h,
+                coords_w,
+                indexing="ij",
+            )
+        )
+        coords_flatten = coords.flatten(
+            1
+        )
+        relative_coords = (
+            coords_flatten[:, :, None]
+            - coords_flatten[:, None, :]
+        )
+        relative_coords = (
+            relative_coords.permute(
+                1, 2, 0
+            ).contiguous()
+        )
+        relative_coords[:, :, 0] += (
+            window_size - 1
+        )
+        relative_coords[:, :, 1] += (
+            window_size - 1
+        )
+        relative_coords[:, :, 0] *= (
+            2 * window_size - 1
+        )
+        relative_position_index = (
+            relative_coords.sum(-1)
+        )
+        self.register_buffer(
+            "relative_position_index",
+            relative_position_index,
+        )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor
+    ) -> torch.Tensor:
         """
         Apply sliding window attention.
 
@@ -344,40 +547,83 @@ class SlidingWindowAttention(nn.Module):
         pad_h = (ws - H % ws) % ws
         pad_w = (ws - W % ws) % ws
         if pad_h > 0 or pad_w > 0:
-            x = F.pad(x, (0, pad_w, 0, pad_h))
+            x = F.pad(
+                x, (0, pad_w, 0, pad_h)
+            )
 
         _, _, Hp, Wp = x.shape
 
         # Reshape to windows: (B*num_windows, ws*ws, C)
-        x = x.view(B, C, Hp // ws, ws, Wp // ws, ws)
-        x = x.permute(0, 2, 4, 3, 5, 1).contiguous()
+        x = x.view(
+            B,
+            C,
+            Hp // ws,
+            ws,
+            Wp // ws,
+            ws,
+        )
+        x = x.permute(
+            0, 2, 4, 3, 5, 1
+        ).contiguous()
         x = x.view(-1, ws * ws, C)
 
         # Compute QKV
         B_win = x.shape[0]
-        qkv = self.qkv(x).reshape(B_win, ws * ws, 3, self.num_heads, self.head_dim)
+        qkv = self.qkv(x).reshape(
+            B_win,
+            ws * ws,
+            3,
+            self.num_heads,
+            self.head_dim,
+        )
         qkv = qkv.permute(2, 0, 3, 1, 4)
         q, k, v = qkv[0], qkv[1], qkv[2]
 
         # Attention
-        attn = (q @ k.transpose(-2, -1)) * self.scale
+        attn = (
+            q @ k.transpose(-2, -1)
+        ) * self.scale
 
         # Add relative position bias
         relative_position_bias = self.relative_position_bias_table[
-            self.relative_position_index.view(-1)
-        ].view(ws * ws, ws * ws, -1)
-        relative_position_bias = relative_position_bias.permute(2, 0, 1).contiguous()
-        attn = attn + relative_position_bias.unsqueeze(0)
+            self.relative_position_index.view(
+                -1
+            )
+        ].view(
+            ws * ws, ws * ws, -1
+        )
+        relative_position_bias = relative_position_bias.permute(
+            2, 0, 1
+        ).contiguous()
+        attn = (
+            attn
+            + relative_position_bias.unsqueeze(
+                0
+            )
+        )
 
         attn = attn.softmax(dim=-1)
-        x = (attn @ v).transpose(1, 2).reshape(B_win, ws * ws, C)
+        x = (
+            (attn @ v)
+            .transpose(1, 2)
+            .reshape(B_win, ws * ws, C)
+        )
         x = self.proj(x)
 
         # Reshape back
         num_windows_h = Hp // ws
         num_windows_w = Wp // ws
-        x = x.view(B, num_windows_h, num_windows_w, ws, ws, C)
-        x = x.permute(0, 5, 1, 3, 2, 4).contiguous()
+        x = x.view(
+            B,
+            num_windows_h,
+            num_windows_w,
+            ws,
+            ws,
+            C,
+        )
+        x = x.permute(
+            0, 5, 1, 3, 2, 4
+        ).contiguous()
         x = x.view(B, C, Hp, Wp)
 
         # Remove padding
@@ -421,11 +667,15 @@ class SpatialNSA(nn.Module):
         self.dim = dim
         self.num_heads = num_heads
         self.head_dim = dim // num_heads
-        self.scale = self.head_dim ** -0.5
+        self.scale = self.head_dim**-0.5
 
         # Separate QKV for each branch (prevents shortcut learning)
-        self.qkv_cmp = nn.Linear(dim, dim * 3, bias=qkv_bias)
-        self.qkv_slc = nn.Linear(dim, dim * 3, bias=qkv_bias)
+        self.qkv_cmp = nn.Linear(
+            dim, dim * 3, bias=qkv_bias
+        )
+        self.qkv_slc = nn.Linear(
+            dim, dim * 3, bias=qkv_bias
+        )
 
         # Token compression module
         self.compression = TokenCompression(
@@ -442,16 +692,22 @@ class SpatialNSA(nn.Module):
         )
 
         # Sliding window attention
-        self.window_attn = SlidingWindowAttention(
-            dim=dim,
-            num_heads=num_heads,
-            window_size=window_size,
-            qkv_bias=qkv_bias,
+        self.window_attn = (
+            SlidingWindowAttention(
+                dim=dim,
+                num_heads=num_heads,
+                window_size=window_size,
+                qkv_bias=qkv_bias,
+            )
         )
 
         # Output projections
-        self.proj_cmp = nn.Linear(dim, dim)
-        self.proj_slc = nn.Linear(dim, dim)
+        self.proj_cmp = nn.Linear(
+            dim, dim
+        )
+        self.proj_slc = nn.Linear(
+            dim, dim
+        )
 
         # Gating mechanism (NSA paper Eq. 5)
         self.gate = nn.Sequential(
@@ -461,7 +717,9 @@ class SpatialNSA(nn.Module):
             nn.Sigmoid(),
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor
+    ) -> torch.Tensor:
         """
         Apply Native Sparse Attention.
 
@@ -474,82 +732,170 @@ class SpatialNSA(nn.Module):
         N = H * W
 
         # Reshape to sequence
-        x_seq = x.flatten(2).transpose(1, 2)  # (B, N, C)
+        x_seq = x.flatten(2).transpose(
+            1, 2
+        )  # (B, N, C)
 
         # =================================================================
         # Branch 1: Compressed Attention (Global Coarse-Grained)
         # =================================================================
         qkv_cmp = self.qkv_cmp(x_seq)
-        qkv_cmp = qkv_cmp.reshape(B, N, 3, self.num_heads, self.head_dim)
-        qkv_cmp = qkv_cmp.permute(2, 0, 3, 1, 4)
-        q_cmp, k_cmp_raw, v_cmp_raw = qkv_cmp[0], qkv_cmp[1], qkv_cmp[2]
+        qkv_cmp = qkv_cmp.reshape(
+            B,
+            N,
+            3,
+            self.num_heads,
+            self.head_dim,
+        )
+        qkv_cmp = qkv_cmp.permute(
+            2, 0, 3, 1, 4
+        )
+        q_cmp, k_cmp_raw, v_cmp_raw = (
+            qkv_cmp[0],
+            qkv_cmp[1],
+            qkv_cmp[2],
+        )
 
         # Reshape k, v for compression
-        k_for_cmp = k_cmp_raw.transpose(1, 2).reshape(B, N, C)
-        v_for_cmp = v_cmp_raw.transpose(1, 2).reshape(B, N, C)
+        k_for_cmp = k_cmp_raw.transpose(
+            1, 2
+        ).reshape(B, N, C)
+        v_for_cmp = v_cmp_raw.transpose(
+            1, 2
+        ).reshape(B, N, C)
 
         # Compress tokens
-        k_cmp, v_cmp = self.compression(k_for_cmp, v_for_cmp, (H, W))
+        k_cmp, v_cmp = self.compression(
+            k_for_cmp, v_for_cmp, (H, W)
+        )
         N_cmp = k_cmp.shape[1]
 
         # Reshape for multi-head attention
-        k_cmp = k_cmp.view(B, N_cmp, self.num_heads, self.head_dim).transpose(1, 2)
-        v_cmp = v_cmp.view(B, N_cmp, self.num_heads, self.head_dim).transpose(1, 2)
+        k_cmp = k_cmp.view(
+            B,
+            N_cmp,
+            self.num_heads,
+            self.head_dim,
+        ).transpose(1, 2)
+        v_cmp = v_cmp.view(
+            B,
+            N_cmp,
+            self.num_heads,
+            self.head_dim,
+        ).transpose(1, 2)
 
         # Compute compressed attention
-        attn_cmp = (q_cmp @ k_cmp.transpose(-2, -1)) * self.scale
-        attn_cmp_softmax = attn_cmp.softmax(dim=-1)
-        o_cmp = (attn_cmp_softmax @ v_cmp)
-        o_cmp = o_cmp.transpose(1, 2).reshape(B, N, C)
+        attn_cmp = (
+            q_cmp
+            @ k_cmp.transpose(-2, -1)
+        ) * self.scale
+        attn_cmp_softmax = (
+            attn_cmp.softmax(dim=-1)
+        )
+        o_cmp = attn_cmp_softmax @ v_cmp
+        o_cmp = o_cmp.transpose(
+            1, 2
+        ).reshape(B, N, C)
         o_cmp = self.proj_cmp(o_cmp)
 
         # =================================================================
         # Branch 2: Selected Attention (Fine-Grained Important)
         # =================================================================
         qkv_slc = self.qkv_slc(x_seq)
-        qkv_slc = qkv_slc.reshape(B, N, 3, self.num_heads, self.head_dim)
-        qkv_slc = qkv_slc.permute(2, 0, 3, 1, 4)
-        q_slc, k_slc_raw, v_slc_raw = qkv_slc[0], qkv_slc[1], qkv_slc[2]
+        qkv_slc = qkv_slc.reshape(
+            B,
+            N,
+            3,
+            self.num_heads,
+            self.head_dim,
+        )
+        qkv_slc = qkv_slc.permute(
+            2, 0, 3, 1, 4
+        )
+        q_slc, k_slc_raw, v_slc_raw = (
+            qkv_slc[0],
+            qkv_slc[1],
+            qkv_slc[2],
+        )
 
-        k_for_slc = k_slc_raw.transpose(1, 2).reshape(B, N, C)
-        v_for_slc = v_slc_raw.transpose(1, 2).reshape(B, N, C)
+        k_for_slc = k_slc_raw.transpose(
+            1, 2
+        ).reshape(B, N, C)
+        v_for_slc = v_slc_raw.transpose(
+            1, 2
+        ).reshape(B, N, C)
 
         # Select important blocks based on compressed attention scores
-        k_slc, v_slc, _ = self.selection(
-            q_slc, k_for_slc, v_for_slc, attn_cmp_softmax, (H, W)
+        k_slc, v_slc, _ = (
+            self.selection(
+                q_slc,
+                k_for_slc,
+                v_for_slc,
+                attn_cmp_softmax,
+                (H, W),
+            )
         )
 
         N_slc = k_slc.shape[1]
-        k_slc = k_slc.view(B, N_slc, self.num_heads, self.head_dim).transpose(1, 2)
-        v_slc = v_slc.view(B, N_slc, self.num_heads, self.head_dim).transpose(1, 2)
+        k_slc = k_slc.view(
+            B,
+            N_slc,
+            self.num_heads,
+            self.head_dim,
+        ).transpose(1, 2)
+        v_slc = v_slc.view(
+            B,
+            N_slc,
+            self.num_heads,
+            self.head_dim,
+        ).transpose(1, 2)
 
         # Compute selected attention
-        attn_slc = (q_slc @ k_slc.transpose(-2, -1)) * self.scale
-        attn_slc = attn_slc.softmax(dim=-1)
-        o_slc = (attn_slc @ v_slc)
-        o_slc = o_slc.transpose(1, 2).reshape(B, N, C)
+        attn_slc = (
+            q_slc
+            @ k_slc.transpose(-2, -1)
+        ) * self.scale
+        attn_slc = attn_slc.softmax(
+            dim=-1
+        )
+        o_slc = attn_slc @ v_slc
+        o_slc = o_slc.transpose(
+            1, 2
+        ).reshape(B, N, C)
         o_slc = self.proj_slc(o_slc)
 
         # =================================================================
         # Branch 3: Sliding Window Attention (Local Context)
         # =================================================================
         o_win = self.window_attn(x)
-        o_win = o_win.flatten(2).transpose(1, 2)  # (B, N, C)
+        o_win = o_win.flatten(
+            2
+        ).transpose(
+            1, 2
+        )  # (B, N, C)
 
         # =================================================================
         # Gated Aggregation
         # =================================================================
         # Compute per-token gates
-        gates = self.gate(x_seq)  # (B, N, 3)
+        gates = self.gate(
+            x_seq
+        )  # (B, N, 3)
         g_cmp = gates[:, :, 0:1]
         g_slc = gates[:, :, 1:2]
         g_win = gates[:, :, 2:3]
 
         # Weighted combination
-        out = g_cmp * o_cmp + g_slc * o_slc + g_win * o_win
+        out = (
+            g_cmp * o_cmp
+            + g_slc * o_slc
+            + g_win * o_win
+        )
 
         # Reshape back to spatial
-        out = out.transpose(1, 2).view(B, C, H, W)
+        out = out.transpose(1, 2).view(
+            B, C, H, W
+        )
 
         return out
 
@@ -584,7 +930,13 @@ class NSABlock(nn.Module):
 
         # Local feature extraction (depthwise conv)
         self.norm1 = nn.BatchNorm2d(dim)
-        self.dw_conv = nn.Conv2d(dim, dim, kernel_size=3, padding=1, groups=dim)
+        self.dw_conv = nn.Conv2d(
+            dim,
+            dim,
+            kernel_size=3,
+            padding=1,
+            groups=dim,
+        )
 
         # NSA attention
         self.norm2 = nn.BatchNorm2d(dim)
@@ -600,14 +952,18 @@ class NSABlock(nn.Module):
 
         # FFN
         self.norm3 = nn.LayerNorm(dim)
-        hidden_dim = int(dim * mlp_ratio)
+        hidden_dim = int(
+            dim * mlp_ratio
+        )
         self.ffn = nn.Sequential(
             nn.Linear(dim, hidden_dim),
             nn.GELU(),
             nn.Linear(hidden_dim, dim),
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor
+    ) -> torch.Tensor:
         """
         Args:
             x: Input features (B, C, H, W)
@@ -615,16 +971,24 @@ class NSABlock(nn.Module):
             Output features (B, C, H, W)
         """
         # Local features
-        x = x + self.dw_conv(self.norm1(x))
+        x = x + self.dw_conv(
+            self.norm1(x)
+        )
 
         # NSA attention
         x = x + self.nsa(self.norm2(x))
 
         # FFN
         B, C, H, W = x.shape
-        x_flat = x.flatten(2).transpose(1, 2)  # (B, N, C)
-        x_flat = x_flat + self.ffn(self.norm3(x_flat))
-        x = x_flat.transpose(1, 2).view(B, C, H, W)
+        x_flat = x.flatten(2).transpose(
+            1, 2
+        )  # (B, N, C)
+        x_flat = x_flat + self.ffn(
+            self.norm3(x_flat)
+        )
+        x = x_flat.transpose(1, 2).view(
+            B, C, H, W
+        )
 
         return x
 
@@ -658,28 +1022,48 @@ class NSAStage(nn.Module):
         # Downsampling
         self.downsample = None
         if downsample:
-            self.downsample = nn.Sequential(
-                ConvBNReLU(in_dim, out_dim, kernel_size=3, stride=2, padding=1),
+            self.downsample = (
+                nn.Sequential(
+                    ConvBNReLU(
+                        in_dim,
+                        out_dim,
+                        kernel_size=3,
+                        stride=2,
+                        padding=1,
+                    ),
+                )
             )
         elif in_dim != out_dim:
-            self.downsample = ConvBNReLU(in_dim, out_dim, kernel_size=1, stride=1, padding=0)
+            self.downsample = (
+                ConvBNReLU(
+                    in_dim,
+                    out_dim,
+                    kernel_size=1,
+                    stride=1,
+                    padding=0,
+                )
+            )
 
         # NSA blocks
-        self.blocks = nn.ModuleList([
-            NSABlock(
-                dim=out_dim,
-                num_heads=num_heads,
-                mlp_ratio=mlp_ratio,
-                compress_block_size=compress_block_size,
-                compress_stride=compress_stride,
-                select_block_size=select_block_size,
-                num_select=num_select,
-                window_size=window_size,
-            )
-            for _ in range(depth)
-        ])
+        self.blocks = nn.ModuleList(
+            [
+                NSABlock(
+                    dim=out_dim,
+                    num_heads=num_heads,
+                    mlp_ratio=mlp_ratio,
+                    compress_block_size=compress_block_size,
+                    compress_stride=compress_stride,
+                    select_block_size=select_block_size,
+                    num_select=num_select,
+                    window_size=window_size,
+                )
+                for _ in range(depth)
+            ]
+        )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor
+    ) -> torch.Tensor:
         if self.downsample is not None:
             x = self.downsample(x)
         for block in self.blocks:
@@ -701,22 +1085,40 @@ class NSAEncoder(nn.Module):
     def __init__(
         self,
         in_channels: int = 1,
-        embed_dims: tuple = (32, 64, 96),
+        embed_dims: tuple = (
+            32,
+            64,
+            96,
+        ),
         depths: tuple = (1, 1, 1),
         num_heads: tuple = (2, 2, 4),
         mlp_ratios: tuple = (2, 2, 2),
-        compress_block_sizes: tuple = (4, 4, 4),
-        compress_strides: tuple = (2, 2, 2),
-        select_block_sizes: tuple = (4, 4, 4),
+        compress_block_sizes: tuple = (
+            4,
+            4,
+            4,
+        ),
+        compress_strides: tuple = (
+            2,
+            2,
+            2,
+        ),
+        select_block_sizes: tuple = (
+            4,
+            4,
+            4,
+        ),
         num_selects: tuple = (4, 4, 4),
         window_sizes: tuple = (7, 7, 7),
     ):
         super().__init__()
 
         # Patch embedding
-        self.patch_embed = PatchEmbedding(
-            in_channels=in_channels,
-            embed_dim=embed_dims[0],
+        self.patch_embed = (
+            PatchEmbedding(
+                in_channels=in_channels,
+                embed_dim=embed_dims[0],
+            )
         )
 
         # Stage 1: No downsampling (already done in patch embed)
@@ -726,9 +1128,15 @@ class NSAEncoder(nn.Module):
             depth=depths[0],
             num_heads=num_heads[0],
             mlp_ratio=mlp_ratios[0],
-            compress_block_size=compress_block_sizes[0],
-            compress_stride=compress_strides[0],
-            select_block_size=select_block_sizes[0],
+            compress_block_size=compress_block_sizes[
+                0
+            ],
+            compress_stride=compress_strides[
+                0
+            ],
+            select_block_size=select_block_sizes[
+                0
+            ],
             num_select=num_selects[0],
             window_size=window_sizes[0],
             downsample=False,
@@ -741,9 +1149,15 @@ class NSAEncoder(nn.Module):
             depth=depths[1],
             num_heads=num_heads[1],
             mlp_ratio=mlp_ratios[1],
-            compress_block_size=compress_block_sizes[1],
-            compress_stride=compress_strides[1],
-            select_block_size=select_block_sizes[1],
+            compress_block_size=compress_block_sizes[
+                1
+            ],
+            compress_stride=compress_strides[
+                1
+            ],
+            select_block_size=select_block_sizes[
+                1
+            ],
             num_select=num_selects[1],
             window_size=window_sizes[1],
             downsample=True,
@@ -756,15 +1170,23 @@ class NSAEncoder(nn.Module):
             depth=depths[2],
             num_heads=num_heads[2],
             mlp_ratio=mlp_ratios[2],
-            compress_block_size=compress_block_sizes[2],
-            compress_stride=compress_strides[2],
-            select_block_size=select_block_sizes[2],
+            compress_block_size=compress_block_sizes[
+                2
+            ],
+            compress_stride=compress_strides[
+                2
+            ],
+            select_block_size=select_block_sizes[
+                2
+            ],
             num_select=num_selects[2],
             window_size=window_sizes[2],
             downsample=True,
         )
 
-    def forward(self, x: torch.Tensor) -> tuple:
+    def forward(
+        self, x: torch.Tensor
+    ) -> tuple:
         """
         Args:
             x: Input image (B, C, H, W)
@@ -772,9 +1194,15 @@ class NSAEncoder(nn.Module):
             Multi-scale features (f1, f2, f3)
         """
         x = self.patch_embed(x)
-        f1 = self.stage1(x)   # 1/4 resolution
-        f2 = self.stage2(f1)  # 1/8 resolution
-        f3 = self.stage3(f2)  # 1/16 resolution
+        f1 = self.stage1(
+            x
+        )  # 1/4 resolution
+        f2 = self.stage2(
+            f1
+        )  # 1/8 resolution
+        f3 = self.stage3(
+            f2
+        )  # 1/16 resolution
         return f1, f2, f3
 
 
@@ -791,36 +1219,74 @@ class SegmentationDecoder(nn.Module):
 
     def __init__(
         self,
-        encoder_dims: tuple = (32, 64, 96),
+        encoder_dims: tuple = (
+            32,
+            64,
+            96,
+        ),
         decoder_dim: int = 32,
         num_classes: int = 2,
     ):
         super().__init__()
 
         # Lateral connections
-        self.lateral3 = nn.Conv2d(encoder_dims[2], decoder_dim, kernel_size=1)
-        self.lateral2 = nn.Conv2d(encoder_dims[1], decoder_dim, kernel_size=1)
-        self.lateral1 = nn.Conv2d(encoder_dims[0], decoder_dim, kernel_size=1)
+        self.lateral3 = nn.Conv2d(
+            encoder_dims[2],
+            decoder_dim,
+            kernel_size=1,
+        )
+        self.lateral2 = nn.Conv2d(
+            encoder_dims[1],
+            decoder_dim,
+            kernel_size=1,
+        )
+        self.lateral1 = nn.Conv2d(
+            encoder_dims[0],
+            decoder_dim,
+            kernel_size=1,
+        )
 
         # Smoothing convolutions
         self.smooth3 = nn.Sequential(
-            nn.Conv2d(decoder_dim, decoder_dim, kernel_size=3, padding=1, groups=decoder_dim),
+            nn.Conv2d(
+                decoder_dim,
+                decoder_dim,
+                kernel_size=3,
+                padding=1,
+                groups=decoder_dim,
+            ),
             nn.BatchNorm2d(decoder_dim),
             nn.GELU(),
         )
         self.smooth2 = nn.Sequential(
-            nn.Conv2d(decoder_dim, decoder_dim, kernel_size=3, padding=1, groups=decoder_dim),
+            nn.Conv2d(
+                decoder_dim,
+                decoder_dim,
+                kernel_size=3,
+                padding=1,
+                groups=decoder_dim,
+            ),
             nn.BatchNorm2d(decoder_dim),
             nn.GELU(),
         )
         self.smooth1 = nn.Sequential(
-            nn.Conv2d(decoder_dim, decoder_dim, kernel_size=3, padding=1, groups=decoder_dim),
+            nn.Conv2d(
+                decoder_dim,
+                decoder_dim,
+                kernel_size=3,
+                padding=1,
+                groups=decoder_dim,
+            ),
             nn.BatchNorm2d(decoder_dim),
             nn.GELU(),
         )
 
         # Segmentation head
-        self.head = nn.Conv2d(decoder_dim, num_classes, kernel_size=1)
+        self.head = nn.Conv2d(
+            decoder_dim,
+            num_classes,
+            kernel_size=1,
+        )
 
     def forward(
         self,
@@ -840,19 +1306,34 @@ class SegmentationDecoder(nn.Module):
         p3 = self.lateral3(f3)
         p3 = self.smooth3(p3)
 
-        p2 = self.lateral2(f2) + F.interpolate(
-            p3, size=f2.shape[2:], mode='bilinear', align_corners=False
+        p2 = self.lateral2(
+            f2
+        ) + F.interpolate(
+            p3,
+            size=f2.shape[2:],
+            mode="bilinear",
+            align_corners=False,
         )
         p2 = self.smooth2(p2)
 
-        p1 = self.lateral1(f1) + F.interpolate(
-            p2, size=f1.shape[2:], mode='bilinear', align_corners=False
+        p1 = self.lateral1(
+            f1
+        ) + F.interpolate(
+            p2,
+            size=f1.shape[2:],
+            mode="bilinear",
+            align_corners=False,
         )
         p1 = self.smooth1(p1)
 
         # Segmentation output
         out = self.head(p1)
-        out = F.interpolate(out, size=target_size, mode='bilinear', align_corners=False)
+        out = F.interpolate(
+            out,
+            size=target_size,
+            mode="bilinear",
+            align_corners=False,
+        )
 
         return out
 
@@ -880,13 +1361,29 @@ class NSAPupilSeg(nn.Module):
         self,
         in_channels: int = 1,
         num_classes: int = 2,
-        embed_dims: tuple = (32, 64, 96),
+        embed_dims: tuple = (
+            32,
+            64,
+            96,
+        ),
         depths: tuple = (1, 1, 1),
         num_heads: tuple = (2, 2, 4),
         mlp_ratios: tuple = (2, 2, 2),
-        compress_block_sizes: tuple = (4, 4, 4),
-        compress_strides: tuple = (2, 2, 2),
-        select_block_sizes: tuple = (4, 4, 4),
+        compress_block_sizes: tuple = (
+            4,
+            4,
+            4,
+        ),
+        compress_strides: tuple = (
+            2,
+            2,
+            2,
+        ),
+        select_block_sizes: tuple = (
+            4,
+            4,
+            4,
+        ),
         num_selects: tuple = (4, 4, 4),
         window_sizes: tuple = (7, 7, 7),
         decoder_dim: int = 32,
@@ -906,10 +1403,12 @@ class NSAPupilSeg(nn.Module):
             window_sizes=window_sizes,
         )
 
-        self.decoder = SegmentationDecoder(
-            encoder_dims=embed_dims,
-            decoder_dim=decoder_dim,
-            num_classes=num_classes,
+        self.decoder = (
+            SegmentationDecoder(
+                encoder_dims=embed_dims,
+                decoder_dim=decoder_dim,
+                num_classes=num_classes,
+            )
         )
 
         self._initialize_weights()
@@ -918,30 +1417,53 @@ class NSAPupilSeg(nn.Module):
         """Initialize model weights."""
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                nn.init.kaiming_normal_(
+                    m.weight,
+                    mode="fan_out",
+                    nonlinearity="relu",
+                )
                 if m.bias is not None:
-                    nn.init.zeros_(m.bias)
-            elif isinstance(m, nn.BatchNorm2d):
+                    nn.init.zeros_(
+                        m.bias
+                    )
+            elif isinstance(
+                m, nn.BatchNorm2d
+            ):
                 nn.init.ones_(m.weight)
                 nn.init.zeros_(m.bias)
-            elif isinstance(m, nn.Linear):
-                nn.init.trunc_normal_(m.weight, std=0.02)
+            elif isinstance(
+                m, nn.Linear
+            ):
+                nn.init.trunc_normal_(
+                    m.weight, std=0.02
+                )
                 if m.bias is not None:
-                    nn.init.zeros_(m.bias)
-            elif isinstance(m, nn.LayerNorm):
+                    nn.init.zeros_(
+                        m.bias
+                    )
+            elif isinstance(
+                m, nn.LayerNorm
+            ):
                 nn.init.ones_(m.weight)
                 nn.init.zeros_(m.bias)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor
+    ) -> torch.Tensor:
         """
         Args:
             x: Input image (B, C, H, W)
         Returns:
             Segmentation logits (B, num_classes, H, W)
         """
-        target_size = (x.shape[2], x.shape[3])
+        target_size = (
+            x.shape[2],
+            x.shape[3],
+        )
         f1, f2, f3 = self.encoder(x)
-        out = self.decoder(f1, f2, f3, target_size)
+        out = self.decoder(
+            f1, f2, f3, target_size
+        )
         return out
 
 
@@ -958,10 +1480,14 @@ class CombinedLoss(nn.Module):
     - Surface Loss: Boundary-aware optimization
     """
 
-    def __init__(self, epsilon: float = 1e-5):
+    def __init__(
+        self, epsilon: float = 1e-5
+    ):
         super().__init__()
         self.epsilon = epsilon
-        self.nll = nn.NLLLoss(reduction='none')
+        self.nll = nn.NLLLoss(
+            reduction="none"
+        )
 
     def forward(
         self,
@@ -982,38 +1508,92 @@ class CombinedLoss(nn.Module):
             (total_loss, ce_loss, dice_loss, surface_loss)
         """
         probs = F.softmax(logits, dim=1)
-        log_probs = F.log_softmax(logits, dim=1)
+        log_probs = F.log_softmax(
+            logits, dim=1
+        )
 
         # Weighted Cross Entropy
-        ce_loss = self.nll(log_probs, target)
-        weighted_ce = (ce_loss * (1.0 + spatial_weights)).mean()
+        ce_loss = self.nll(
+            log_probs, target
+        )
+        weighted_ce = (
+            ce_loss
+            * (1.0 + spatial_weights)
+        ).mean()
 
         # Dice Loss
-        target_onehot = F.one_hot(target, num_classes=2).permute(0, 3, 1, 2).float()
-        probs_flat = probs.flatten(start_dim=2)
-        target_flat = target_onehot.flatten(start_dim=2)
+        target_onehot = (
+            F.one_hot(
+                target, num_classes=2
+            )
+            .permute(0, 3, 1, 2)
+            .float()
+        )
+        probs_flat = probs.flatten(
+            start_dim=2
+        )
+        target_flat = (
+            target_onehot.flatten(
+                start_dim=2
+            )
+        )
 
-        intersection = (probs_flat * target_flat).sum(dim=2)
-        cardinality = (probs_flat + target_flat).sum(dim=2)
-        class_weights = 1.0 / (target_flat.sum(dim=2) ** 2).clamp(min=self.epsilon)
+        intersection = (
+            probs_flat * target_flat
+        ).sum(dim=2)
+        cardinality = (
+            probs_flat + target_flat
+        ).sum(dim=2)
+        class_weights = 1.0 / (
+            target_flat.sum(dim=2) ** 2
+        ).clamp(min=self.epsilon)
 
         dice = (
-            2.0 * (class_weights * intersection).sum(dim=1)
-            / (class_weights * cardinality).sum(dim=1)
+            2.0
+            * (
+                class_weights
+                * intersection
+            ).sum(dim=1)
+            / (
+                class_weights
+                * cardinality
+            ).sum(dim=1)
         )
-        dice_loss = (1.0 - dice.clamp(min=self.epsilon)).mean()
+        dice_loss = (
+            1.0
+            - dice.clamp(
+                min=self.epsilon
+            )
+        ).mean()
 
         # Surface Loss
         surface_loss = (
-            (probs.flatten(start_dim=2) * dist_map.flatten(start_dim=2))
+            (
+                probs.flatten(
+                    start_dim=2
+                )
+                * dist_map.flatten(
+                    start_dim=2
+                )
+            )
             .mean(dim=2)
             .mean(dim=1)
             .mean()
         )
 
-        total_loss = weighted_ce + alpha * dice_loss + (1.0 - alpha) * surface_loss
+        total_loss = (
+            weighted_ce
+            + alpha * dice_loss
+            + (1.0 - alpha)
+            * surface_loss
+        )
 
-        return total_loss, weighted_ce, dice_loss, surface_loss
+        return (
+            total_loss,
+            weighted_ce,
+            dice_loss,
+            surface_loss,
+        )
 
 
 # =============================================================================
@@ -1022,7 +1602,7 @@ class CombinedLoss(nn.Module):
 
 
 def create_nsa_pupil_seg(
-    size: str = 'small',
+    size: str = "small",
     in_channels: int = 1,
     num_classes: int = 2,
 ) -> NSAPupilSeg:
@@ -1037,70 +1617,152 @@ def create_nsa_pupil_seg(
         Configured NSAPupilSeg model
     """
     configs = {
-        'pico': {
-            'embed_dims': (4, 4, 4),
-            'depths': (1, 1, 1),
-            'num_heads': (1, 1, 1),
-            'mlp_ratios': (1.0, 1.0, 1.0),
-            'compress_block_sizes': (4, 4, 4),
-            'compress_strides': (4, 4, 4),
-            'select_block_sizes': (4, 4, 4),
-            'num_selects': (1, 1, 1),
-            'window_sizes': (3, 3, 3),
-            'decoder_dim': 4,
+        "pico": {
+            "embed_dims": (4, 4, 4),
+            "depths": (1, 1, 1),
+            "num_heads": (1, 1, 1),
+            "mlp_ratios": (
+                1.0,
+                1.0,
+                1.0,
+            ),
+            "compress_block_sizes": (
+                4,
+                4,
+                4,
+            ),
+            "compress_strides": (
+                4,
+                4,
+                4,
+            ),
+            "select_block_sizes": (
+                4,
+                4,
+                4,
+            ),
+            "num_selects": (1, 1, 1),
+            "window_sizes": (3, 3, 3),
+            "decoder_dim": 4,
         },
-        'nano': {
-            'embed_dims': (4, 8, 12),
-            'depths': (1, 1, 1),
-            'num_heads': (1, 1, 1),
-            'mlp_ratios': (1.0, 1.0, 1.0),
-            'compress_block_sizes': (4, 4, 4),
-            'compress_strides': (4, 4, 4),
-            'select_block_sizes': (4, 4, 4),
-            'num_selects': (1, 1, 1),
-            'window_sizes': (3, 3, 3),
-            'decoder_dim': 4,
+        "nano": {
+            "embed_dims": (4, 8, 12),
+            "depths": (1, 1, 1),
+            "num_heads": (1, 1, 1),
+            "mlp_ratios": (
+                1.0,
+                1.0,
+                1.0,
+            ),
+            "compress_block_sizes": (
+                4,
+                4,
+                4,
+            ),
+            "compress_strides": (
+                4,
+                4,
+                4,
+            ),
+            "select_block_sizes": (
+                4,
+                4,
+                4,
+            ),
+            "num_selects": (1, 1, 1),
+            "window_sizes": (3, 3, 3),
+            "decoder_dim": 4,
         },
-        'tiny': {
-            'embed_dims': (8, 12, 16),
-            'depths': (1, 1, 1),
-            'num_heads': (1, 1, 1),
-            'mlp_ratios': (1.5, 1.5, 1.5),
-            'compress_block_sizes': (4, 4, 4),
-            'compress_strides': (4, 4, 4),
-            'select_block_sizes': (4, 4, 4),
-            'num_selects': (1, 1, 1),
-            'window_sizes': (3, 3, 3),
-            'decoder_dim': 8,
+        "tiny": {
+            "embed_dims": (8, 12, 16),
+            "depths": (1, 1, 1),
+            "num_heads": (1, 1, 1),
+            "mlp_ratios": (
+                1.5,
+                1.5,
+                1.5,
+            ),
+            "compress_block_sizes": (
+                4,
+                4,
+                4,
+            ),
+            "compress_strides": (
+                4,
+                4,
+                4,
+            ),
+            "select_block_sizes": (
+                4,
+                4,
+                4,
+            ),
+            "num_selects": (1, 1, 1),
+            "window_sizes": (3, 3, 3),
+            "decoder_dim": 8,
         },
-        'small': {
-            'embed_dims': (12, 24, 32),
-            'depths': (1, 1, 1),
-            'num_heads': (1, 1, 2),
-            'mlp_ratios': (1.5, 1.5, 1.5),
-            'compress_block_sizes': (4, 4, 4),
-            'compress_strides': (4, 4, 4),
-            'select_block_sizes': (4, 4, 4),
-            'num_selects': (1, 1, 1),
-            'window_sizes': (3, 3, 3),
-            'decoder_dim': 12,
+        "small": {
+            "embed_dims": (12, 24, 32),
+            "depths": (1, 1, 1),
+            "num_heads": (1, 1, 2),
+            "mlp_ratios": (
+                1.5,
+                1.5,
+                1.5,
+            ),
+            "compress_block_sizes": (
+                4,
+                4,
+                4,
+            ),
+            "compress_strides": (
+                4,
+                4,
+                4,
+            ),
+            "select_block_sizes": (
+                4,
+                4,
+                4,
+            ),
+            "num_selects": (1, 1, 1),
+            "window_sizes": (3, 3, 3),
+            "decoder_dim": 12,
         },
-        'medium': {
-            'embed_dims': (16, 32, 48),
-            'depths': (1, 1, 1),
-            'num_heads': (1, 2, 2),
-            'mlp_ratios': (1.5, 1.5, 1.5),
-            'compress_block_sizes': (4, 4, 4),
-            'compress_strides': (3, 3, 3),
-            'select_block_sizes': (4, 4, 4),
-            'num_selects': (2, 2, 2),
-            'window_sizes': (3, 3, 3),
-            'decoder_dim': 16,
+        "medium": {
+            "embed_dims": (16, 32, 48),
+            "depths": (1, 1, 1),
+            "num_heads": (1, 2, 2),
+            "mlp_ratios": (
+                1.5,
+                1.5,
+                1.5,
+            ),
+            "compress_block_sizes": (
+                4,
+                4,
+                4,
+            ),
+            "compress_strides": (
+                3,
+                3,
+                3,
+            ),
+            "select_block_sizes": (
+                4,
+                4,
+                4,
+            ),
+            "num_selects": (2, 2, 2),
+            "window_sizes": (3, 3, 3),
+            "decoder_dim": 16,
         },
     }
 
     if size not in configs:
-        raise ValueError(f"Unknown size: {size}. Choose from {list(configs.keys())}")
+        raise ValueError(
+            f"Unknown size: {size}. Choose from {list(configs.keys())}"
+        )
 
     return NSAPupilSeg(
         in_channels=in_channels,
@@ -1114,29 +1776,52 @@ def create_nsa_pupil_seg(
 # =============================================================================
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Test model creation and forward pass
-    print("Testing NSA Pupil Segmentation Model")
+    print(
+        "Testing NSA Pupil Segmentation Model"
+    )
     print("=" * 60)
 
     # Create models of different sizes
-    for size in ['pico', 'nano', 'tiny', 'small', 'medium']:
-        model = create_nsa_pupil_seg(size=size)
+    for size in [
+        "pico",
+        "nano",
+        "tiny",
+        "small",
+        "medium",
+    ]:
+        model = create_nsa_pupil_seg(
+            size=size
+        )
 
         # Count parameters
-        n_params = sum(p.numel() for p in model.parameters())
+        n_params = sum(
+            p.numel()
+            for p in model.parameters()
+        )
 
         # Test forward pass
-        x = torch.randn(2, 1, 400, 640)  # OpenEDS image size
+        x = torch.randn(
+            2, 1, 400, 640
+        )  # OpenEDS image size
 
         model.eval()
         with torch.no_grad():
             out = model(x)
 
-        print(f"\n{size.upper()} Model:")
-        print(f"  Parameters: {n_params:,}")
-        print(f"  Input shape: {x.shape}")
-        print(f"  Output shape: {out.shape}")
+        print(
+            f"\n{size.upper()} Model:"
+        )
+        print(
+            f"  Parameters: {n_params:,}"
+        )
+        print(
+            f"  Input shape: {x.shape}"
+        )
+        print(
+            f"  Output shape: {out.shape}"
+        )
 
     print("\n" + "=" * 60)
     print("All tests passed!")

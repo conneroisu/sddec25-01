@@ -10,7 +10,12 @@ from model import DSASegmentationModel
 
 def render_model(
     output_path: str = "model_architecture_dsa",
-    input_size: tuple = (1, 1, 256, 256),
+    input_size: tuple = (
+        1,
+        1,
+        256,
+        256,
+    ),
     depth: int = 3,
     expand_nested: bool = True,
     graph_dir: str = "TB",
@@ -47,12 +52,25 @@ def render_model(
         filename=output_path,
     )
 
-    print(f"Model architecture (DSA) saved to {output_path}.png")
+    print(
+        f"Model architecture (DSA) saved to {output_path}.png"
+    )
 
-    total_params = sum(p.numel() for p in model.parameters())
-    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"Total parameters: {total_params:,}")
-    print(f"Trainable parameters: {trainable_params:,}")
+    total_params = sum(
+        p.numel()
+        for p in model.parameters()
+    )
+    trainable_params = sum(
+        p.numel()
+        for p in model.parameters()
+        if p.requires_grad
+    )
+    print(
+        f"Total parameters: {total_params:,}"
+    )
+    print(
+        f"Trainable parameters: {trainable_params:,}"
+    )
 
     return model_graph
 
@@ -105,7 +123,12 @@ if __name__ == "__main__":
 
     render_model(
         output_path=args.output,
-        input_size=(1, 1, args.height, args.width),
+        input_size=(
+            1,
+            1,
+            args.height,
+            args.width,
+        ),
         depth=args.depth,
         expand_nested=not args.no_expand,
         graph_dir=args.direction,
