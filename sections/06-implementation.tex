@@ -27,18 +27,18 @@ parallelization trade-offs.
 \subsubsection{Single Model
 	Performance}\label{subsubsec:single-model-performance}
 
-Baseline U-Net single unified model performance:
+Baseline U-Net single unified model performance:\footnote{Specific performance metrics redacted per client request.}
 
 \begin{itemize}
-	\item \textbf{Mean Total Latency}: $\sim$600 ms
-	\item \textbf{Mean DPU Time}: $\sim$500 ms
-	\item \textbf{Mean Preprocess}: 49 ms
-	\item \textbf{Mean Postprocess}: 51 ms
-	\item \textbf{Memory Usage}: $\sim$50 MB
+	\item \textbf{Mean Total Latency}: \{REDACTED\}
+	\item \textbf{Mean DPU Time}: \{REDACTED\}
+	\item \textbf{Mean Preprocess}: \{REDACTED\}
+	\item \textbf{Mean Postprocess}: \{REDACTED\}
+	\item \textbf{Memory Usage}: \{REDACTED\}
 \end{itemize}
 
 Single model provides stable baseline with low variance. DPU execution
-dominates (89.6\% of latency), with pre/postprocessing contributing approximately 10\%.
+dominates (roughly $\sim$85\% of latency), with pre/postprocessing contributing approximately 10\%.
 
 \subsubsection{Split Model Performance (4
 	Segments)}\label{subsubsec:split-model-performance}
@@ -46,10 +46,10 @@ dominates (89.6\% of latency), with pre/postprocessing contributing approximatel
 Parallelized U-Net (four segments) characteristics:
 
 \begin{itemize}
-	\item \textbf{Mean Total Latency}: 850 ms
-	\item \textbf{Mean DPU Time}: $\sim$750 ms
-	\item \textbf{Mean Preprocess}: $\sim$49 ms
-	\item \textbf{Mean Postprocess}: $\sim$51 ms
+	\item \textbf{Mean Total Latency}: \{REDACTED\}
+	\item \textbf{Mean DPU Time}: \{REDACTED\}
+	\item \textbf{Mean Preprocess}: \{REDACTED\}
+	\item \textbf{Mean Postprocess}: \{REDACTED\}
 \end{itemize}
 
 \textbf{Important Note:} Initial benchmarks (prior to output validation) showed
