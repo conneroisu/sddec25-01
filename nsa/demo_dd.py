@@ -164,13 +164,16 @@ class VisionAssistDemoDD:
         if self.verbose:
             print(f"Loading NSA model (size={self.model_size}) from {self.model_path}...")
 
-        # Determine device (CUDA if available, else CPU)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.execution_provider = (
-            "CUDAExecutionProvider"
-            if self.device.type == "cuda"
-            else "CPUExecutionProvider"
-        )
+        # Determine device (CUDA > MPS > CPU)
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda")
+            self.execution_provider = "CUDAExecutionProvider"
+        elif torch.backends.mps.is_available():
+            self.device = torch.device("mps")
+            self.execution_provider = "MPSExecutionProvider"
+        else:
+            self.device = torch.device("cpu")
+            self.execution_provider = "CPUExecutionProvider"
 
         if self.verbose:
             print(f"Using device: {self.device}")
@@ -284,6 +287,10 @@ class VisionAssistDemoDD:
 
         # Extract region
         eye_crop = frame[y_min:y_max, x_min:x_max]
+
+        # Validate the crop is not empty
+        if eye_crop.size == 0:
+            return None, None
 
         return eye_crop, (x_min, y_min, bbox_w, bbox_h)
 
@@ -575,7 +582,7 @@ class VisionAssistDemoDD:
             )
 
         # Draw execution provider (below inference time)
-        provider_short = "GPU" if "CUDA" in self.execution_provider else "CPU"
+        provider_short = "GPU" if self.device.type in ("cuda", "mps") else "CPU"
         cv2.putText(
             annotated,
             f"Device: {provider_short}",
