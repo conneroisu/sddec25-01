@@ -617,9 +617,7 @@ Alternative approaches evaluated:
 
 \subsection{Current Implementation Status:}
 Benchmarking evaluated single-model and split-model implementations.
-Single model: 534.65 ms latency (1.87 FPS) with 98.8\% IoU accuracy.
-Split model (4 segments): 4918.27 ms latency (0.20 FPS), revealing the
-single model is 9.20x faster than the split architecture.
+The single model is roughly 9x faster than the split architecture.
 
 \textbf{Important Finding:} Initial benchmarks (prior to output validation)
 showed smaller differences. Upon validating outputs, we discovered the
