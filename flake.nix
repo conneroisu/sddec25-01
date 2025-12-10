@@ -146,7 +146,7 @@
               # Additional utilities
               pandoc # Document conversion (Markdown ↔ LaTeX)
               ghostscript # PostScript/PDF manipulation
-              poppler_utils # PDF utilities (pdfinfo, pdftotext, etc.)
+              poppler-utils # PDF utilities (pdfinfo, pdftotext, etc.)
               watchexec # File watcher alternative to latexmk -pvc
               pyrefly
 
