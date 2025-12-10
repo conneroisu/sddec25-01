@@ -22,11 +22,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-# =============================================================================
-# Core Building Blocks
-# =============================================================================
-
-
 class ConvBNReLU(nn.Module):
     """Convolution + BatchNorm + Activation block."""
 
@@ -112,11 +107,6 @@ class PatchEmbedding(nn.Module):
         x = self.conv1(x)
         x = self.conv2(x)
         return x
-
-
-# =============================================================================
-# Token Compression Module
-# =============================================================================
 
 
 class TokenCompression(nn.Module):
@@ -272,11 +262,6 @@ class TokenCompression(nn.Module):
         )
 
         return k_cmp, v_cmp
-
-
-# =============================================================================
-# Token Selection Module
-# =============================================================================
 
 
 class TokenSelection(nn.Module):
@@ -437,11 +422,6 @@ class TokenSelection(nn.Module):
         )
 
         return k_slc, v_slc, indices
-
-
-# =============================================================================
-# Sliding Window Attention
-# =============================================================================
 
 
 class SlidingWindowAttention(nn.Module):
@@ -633,11 +613,7 @@ class SlidingWindowAttention(nn.Module):
         return x
 
 
-# =============================================================================
 # Native Sparse Attention (NSA) - Core Module
-# =============================================================================
-
-
 class SpatialNSA(nn.Module):
     """
     Native Sparse Attention adapted for 2D spatial features.
@@ -736,9 +712,7 @@ class SpatialNSA(nn.Module):
             1, 2
         )  # (B, N, C)
 
-        # =================================================================
         # Branch 1: Compressed Attention (Global Coarse-Grained)
-        # =================================================================
         qkv_cmp = self.qkv_cmp(x_seq)
         qkv_cmp = qkv_cmp.reshape(
             B,
@@ -798,9 +772,7 @@ class SpatialNSA(nn.Module):
         ).reshape(B, N, C)
         o_cmp = self.proj_cmp(o_cmp)
 
-        # =================================================================
         # Branch 2: Selected Attention (Fine-Grained Important)
-        # =================================================================
         qkv_slc = self.qkv_slc(x_seq)
         qkv_slc = qkv_slc.reshape(
             B,
@@ -864,9 +836,7 @@ class SpatialNSA(nn.Module):
         ).reshape(B, N, C)
         o_slc = self.proj_slc(o_slc)
 
-        # =================================================================
         # Branch 3: Sliding Window Attention (Local Context)
-        # =================================================================
         o_win = self.window_attn(x)
         o_win = o_win.flatten(
             2
@@ -874,10 +844,7 @@ class SpatialNSA(nn.Module):
             1, 2
         )  # (B, N, C)
 
-        # =================================================================
-        # Gated Aggregation
-        # =================================================================
-        # Compute per-token gates
+        # Gated Aggregation - Compute per-token gates
         gates = self.gate(
             x_seq
         )  # (B, N, 3)
@@ -898,11 +865,6 @@ class SpatialNSA(nn.Module):
         )
 
         return out
-
-
-# =============================================================================
-# NSA Block (Attention + FFN)
-# =============================================================================
 
 
 class NSABlock(nn.Module):
@@ -993,11 +955,6 @@ class NSABlock(nn.Module):
         return x
 
 
-# =============================================================================
-# NSA Stage (Multiple Blocks + Optional Downsampling)
-# =============================================================================
-
-
 class NSAStage(nn.Module):
     """
     Stage containing multiple NSA blocks with optional downsampling.
@@ -1069,11 +1026,6 @@ class NSAStage(nn.Module):
         for block in self.blocks:
             x = block(x)
         return x
-
-
-# =============================================================================
-# NSA Encoder
-# =============================================================================
 
 
 class NSAEncoder(nn.Module):
@@ -1206,11 +1158,6 @@ class NSAEncoder(nn.Module):
         return f1, f2, f3
 
 
-# =============================================================================
-# Segmentation Decoder
-# =============================================================================
-
-
 class SegmentationDecoder(nn.Module):
     """
     FPN-style decoder with skip connections for precise segmentation.
@@ -1338,11 +1285,6 @@ class SegmentationDecoder(nn.Module):
         return out
 
 
-# =============================================================================
-# Complete NSA Pupil Segmentation Model
-# =============================================================================
-
-
 class NSAPupilSeg(nn.Module):
     """
     Native Sparse Attention model for Pupil Segmentation.
@@ -1467,11 +1409,6 @@ class NSAPupilSeg(nn.Module):
         return out
 
 
-# =============================================================================
-# Loss Function (same as src/ for compatibility)
-# =============================================================================
-
-
 def focal_surface_loss(
     probs: torch.Tensor,
     dist_map: torch.Tensor,
@@ -1489,7 +1426,11 @@ def focal_surface_loss(
     """
     focal_weight = (1 - probs) ** gamma
     return (
-        (focal_weight * probs * dist_map)
+        (
+            focal_weight
+            * probs
+            * dist_map
+        )
         .flatten(start_dim=2)
         .mean(dim=2)
         .mean(dim=1)
@@ -1515,7 +1456,9 @@ def boundary_dice_loss(
         Boundary dice loss scalar
     """
     # Extract boundary via morphological gradient
-    target_float = target.float().unsqueeze(1)
+    target_float = (
+        target.float().unsqueeze(1)
+    )
     padding = kernel_size // 2
     dilated = F.max_pool2d(
         target_float,
@@ -1529,12 +1472,22 @@ def boundary_dice_loss(
         stride=1,
         padding=padding,
     )
-    boundary = (dilated - eroded).squeeze(1)  # (B, H, W)
+    boundary = (
+        dilated - eroded
+    ).squeeze(
+        1
+    )  # (B, H, W)
 
     # Compute Dice only on boundary pixels
-    probs_pupil = probs[:, 1]  # pupil class probabilities (B, H, W)
-    probs_boundary = probs_pupil * boundary
-    target_boundary = target.float() * boundary
+    probs_pupil = probs[
+        :, 1
+    ]  # pupil class probabilities (B, H, W)
+    probs_boundary = (
+        probs_pupil * boundary
+    )
+    target_boundary = (
+        target.float() * boundary
+    )
 
     intersection = (
         probs_boundary * target_boundary
@@ -1568,8 +1521,12 @@ class CombinedLoss(nn.Module):
         super().__init__()
         self.epsilon = epsilon
         self.focal_gamma = focal_gamma
-        self.boundary_weight = boundary_weight
-        self.boundary_kernel_size = boundary_kernel_size
+        self.boundary_weight = (
+            boundary_weight
+        )
+        self.boundary_kernel_size = (
+            boundary_kernel_size
+        )
         self.nll = nn.NLLLoss(
             reduction="none"
         )
@@ -1604,9 +1561,14 @@ class CombinedLoss(nn.Module):
             log_probs, target
         )
         # Apply spatial weights and optional eye weight
-        weight_factor = 1.0 + spatial_weights
+        weight_factor = (
+            1.0 + spatial_weights
+        )
         if eye_weight is not None:
-            weight_factor = weight_factor * eye_weight
+            weight_factor = (
+                weight_factor
+                * eye_weight
+            )
         weighted_ce = (
             ce_loss * weight_factor
         ).mean()
@@ -1657,10 +1619,12 @@ class CombinedLoss(nn.Module):
         ).mean()
 
         # Focal Surface Loss (replaces standard surface loss)
-        surface_loss = focal_surface_loss(
-            probs,
-            dist_map,
-            gamma=self.focal_gamma,
+        surface_loss = (
+            focal_surface_loss(
+                probs,
+                dist_map,
+                gamma=self.focal_gamma,
+            )
         )
 
         # Boundary Dice Loss
@@ -1673,12 +1637,16 @@ class CombinedLoss(nn.Module):
 
         # Total loss with updated weighting
         # Use max(1 - alpha, 0.2) for surface loss weight
-        surface_weight = max(1.0 - alpha, 0.2)
+        surface_weight = max(
+            1.0 - alpha, 0.2
+        )
         total_loss = (
             weighted_ce
             + alpha * dice_loss
-            + surface_weight * surface_loss
-            + self.boundary_weight * bdice_loss
+            + surface_weight
+            * surface_loss
+            + self.boundary_weight
+            * bdice_loss
         )
 
         return (
@@ -1688,11 +1656,6 @@ class CombinedLoss(nn.Module):
             surface_loss,
             bdice_loss,
         )
-
-
-# =============================================================================
-# Factory function for easy model creation
-# =============================================================================
 
 
 def create_nsa_pupil_seg(
@@ -1863,11 +1826,6 @@ def create_nsa_pupil_seg(
         num_classes=num_classes,
         **configs[size],
     )
-
-
-# =============================================================================
-# Testing / Verification
-# =============================================================================
 
 
 if __name__ == "__main__":
