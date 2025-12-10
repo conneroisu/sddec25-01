@@ -268,10 +268,11 @@
                   Our original approach involved pipelining the U-Net neural network algorithm into four equal parts
                   to run concurrently. However, through rigorous testing and output validation, we discovered that the
                   Vitis AI model compiler incorrectly scaled the last two split segments by a factor of two, requiring
-                  input tensor rescaling for correct output. Our performance analysis showed the Single Model (534.65 ms,
-                  1.87 FPS, 42.99 MB) is 9.20x faster than the Split Model with 4 segments (4918.27 ms, 0.20 FPS,
-                  134.00 MB), demonstrating that the DPU architecture does not benefit from model splitting for this
-                  use case.
+                  input tensor rescaling for correct output. Our performance analysis showed the Single Model is 9.20x 
+                  faster than the Split Model with 4 segments demonstrating that the DPU architecture does not benefit 
+                  from model splitting for this use case as main processing bottleneck is the single model inference 
+                  constraint imposed by the DPU synthesized on the FPGA fabric. Client also imposed that the fabric 
+                  and model could not be changed.
                 </p>
                 <p>Key contributions from our research include:</p>
                 <ul>
