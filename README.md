@@ -8,7 +8,7 @@ Eduroam Accessible Site: <https://sddec25-01.sd.ece.iastate.edu/>
 
 ---
 
-> **Note on Project Description:** The initial project description submitted to Iowa State University by our client ([see approved projects list](https://sddec25-01.sd.ece.iastate.edu/documents/approved-projects-sddec25.pdf)) stated: *"This project will break up an existing U-Net model into code segments that can then be pipelined. The result will be slightly higher latency but also higher throughput of the algorithm."* This description represents the client's original proposal to Iowa State and has not been edited or verified by our team. Our actual research findings differ significantly from this initial description—our analysis demonstrated that model splitting on the DPU architecture does not provide the performance benefits originally anticipated.
+> **Note on Project Description:** The initial project description submitted to Iowa State University by our client ([see approved projects list](https://sddec25-01.sd.ece.iastate.edu/documents/approved-projects-sddec25.pdf)) stated: *"This project will break up an existing U-Net model into code segments that can then be pipelined. The result will be slightly higher latency but also higher throughput of the algorithm."* This description represents the client's original proposal to Iowa State and has not been edited or construed by our team. Our actual research findings differ significantly from this initial description—our analysis demonstrated that model splitting on the DPU architecture does not provide the performance benefits originally anticipated. Additionally, we found the project description misleading and incorrect causing this very note :)
 
 ## Development
 
