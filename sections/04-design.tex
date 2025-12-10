@@ -491,13 +491,44 @@ well-suited for our eye tracking application:
     processing cores
 \end{itemize}
 
+\subsubsection{Fundamental Characteristics of Pupil Segmentation}
+
+Through development, we identified several critical observations about the
+pupil segmentation task that fundamentally shape architectural requirements:
+
+\begin{enumerate}
+  \item \textbf{Demands Highly Precise Pixel Localization:} Pupil segmentation
+    requires sub-pixel accuracy for reliable gaze tracking. Unlike coarse
+    object detection or region-based segmentation, pupil boundary errors
+    of even a few pixels significantly degrade eye tracking
+    precision~\cite{ronneberger2015,fuhl2024ellseg}.
+
+  \item \textbf{Spatially Constrained Output:} The pupil is exclusively
+    located within the boundaries of the eye region. This spatial constraint
+    is not explicitly leveraged by general semantic segmentation architectures,
+    which process the entire image uniformly without prior knowledge of
+    anatomical structure~\cite{li2021condseg}.
+
+  \item \textbf{Training Domain Limitations:} OpenEDS~\cite{openeds2019}
+    represents only the VR domain with controlled near-infrared illumination
+    and healthy participants. The dataset lacks real-world deformations,
+    variable lighting conditions, and pathological eye characteristics
+    present in medical assistive technology contexts, limiting the model's
+    ability to generalize to the client's actual deployment
+    environment~\cite{lakshminarayanan2023health,provost2022eye}.
+\end{enumerate}
+
+These observations were not considered in the baseline U-Net implementation
+provided by previous teams, representing opportunities for future optimization.
+
 \subsubsection{Architectural Trade-offs for Constrained Output Space}
 
-While U-Net provides excellent performance for general semantic segmentation,
-our specific task has a highly constrained output space: pupil detection
-produces exactly one connected blob-like region in the eye image. U-Net's
-general-purpose architecture computes per-pixel probabilities without
-explicit knowledge of this single-component constraint.
+Given the fundamental characteristics above, U-Net's general-purpose
+architecture is overengineered for pupil detection. Our specific task has
+a highly constrained output space: pupil detection produces exactly one
+connected blob-like region in the eye image. U-Net's general-purpose
+architecture computes per-pixel probabilities without explicit knowledge
+of this single-component constraint or the spatial eye boundary.
 
 This generality has computational implications:
 

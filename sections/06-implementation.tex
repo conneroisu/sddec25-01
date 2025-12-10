@@ -609,19 +609,35 @@ from the dataset.
 
 \paragraph{Limitations and Domain Considerations}
 
+\textbf{Critical Observation:} OpenEDS is exclusively from the VR domain and
+contains no real-world deformations, variable lighting conditions, or
+pathological eye characteristics that would enable the model to generalize
+to the client's actual medical assistive technology deployment
+environment~\cite{lakshminarayanan2023health,provost2022eye}. This domain
+mismatch represents a fundamental limitation not addressed by the baseline
+implementation.
+
 \begin{itemize}
 	\item \textbf{VR vs.\ Medical Domain}: OpenEDS targets VR headset
 	      applications with healthy volunteers, while VisionAssist serves
 	      medical assistive technology users who may have different eye
-	      characteristics due to underlying conditions
+	      characteristics due to underlying conditions affecting pupil
+	      appearance, size, and reactivity
 	\item \textbf{Controlled Illumination}: VR headset near-infrared
 	      lighting provides consistent illumination unlike variable ambient
-	      lighting in wheelchair environments
+	      lighting in wheelchair environments (indoor/outdoor transitions,
+	      direct sunlight, artificial lighting variations)
 	\item \textbf{Population Differences}: Dataset participants were
 	      healthy adults; medical users may include patients with conditions
-	      affecting eye appearance (e.g., medication effects, fatigue patterns)
+	      affecting eye appearance (e.g., medication effects, fatigue patterns,
+	      nystagmus, ptosis, or other neurological manifestations)
 	\item \textbf{Hardware Configuration}: Fixed VR camera geometry
-	      differs from wheelchair-mounted camera positioning and field of view
+	      differs from wheelchair-mounted camera positioning and field of view,
+	      introducing perspective distortions not represented in training data
+	\item \textbf{Lack of Real-World Deformations}: Dataset lacks motion blur
+	      from wheelchair movement, head position variations, partial occlusions
+	      from eyelids or eyelashes, and environmental reflections common in
+	      uncontrolled medical settings~\cite{sedighsarvestani2012eyelid,stefan2007eyelid}
 \end{itemize}
 
 \paragraph{Scalable Practices Rationale}
