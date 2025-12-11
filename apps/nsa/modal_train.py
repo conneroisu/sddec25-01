@@ -61,13 +61,13 @@ VOLUME_PATH = "/data/sddec25-01"
 
 
 @app.function(
-    # gpu="L4",
-    # cpu=16.0,
-    cpu=1.0,
-    # memory=32768,
+    gpu="A100-80GB:1",
+    cpu=16.0,
+    # cpu=4.0,
+    # memory=64000,
     image=train_image,
-    # timeout=3600 * 16,
-    timeout=5400,
+    timeout=3600 * 16,
+    # timeout=3600 * 5,
     volumes={
         VOLUME_PATH: dataset_volume
     },
@@ -85,6 +85,7 @@ def train(
     weight_decay: float = 0.01,
     num_workers: int = 8,
     seed: int = 42,
+    warmup_epochs: int = 5,
 ):
     """
     Train NSA Pupil Segmentation model on Modal.
@@ -97,6 +98,7 @@ def train(
         weight_decay: AdamW weight decay
         num_workers: DataLoader workers
         seed: Random seed for reproducibility
+        warmup_epochs: Number of epochs for learning rate warmup
     """
     import os
     import math
@@ -1382,26 +1384,10 @@ def train(
             "embed_dims": (4, 4, 4),
             "depths": (1, 1, 1),
             "num_heads": (1, 1, 1),
-            "mlp_ratios": (
-                1.0,
-                1.0,
-                1.0,
-            ),
-            "compress_block_sizes": (
-                4,
-                4,
-                4,
-            ),
-            "compress_strides": (
-                4,
-                4,
-                4,
-            ),
-            "select_block_sizes": (
-                4,
-                4,
-                4,
-            ),
+            "mlp_ratios": ( 1.0, 1.0, 1.0,),
+            "compress_block_sizes": ( 4, 4, 4,),
+            "compress_strides": ( 4, 4, 4,),
+            "select_block_sizes": ( 4, 4, 4,),
             "num_selects": (1, 1, 1),
             "window_sizes": (3, 3, 3),
             "decoder_dim": 4,
@@ -1413,8 +1399,7 @@ def train(
             "mlp_ratios": ( 1.0, 1.0, 1.0,),
             "compress_block_sizes": ( 4, 4, 4,),
             "compress_strides": ( 4, 4, 4,),
-            "select_block_sizes": ( 4, 4, 4,
-            ),
+            "select_block_sizes": ( 4, 4, 4,),
             "num_selects": (1, 1, 1),
             "window_sizes": (3, 3, 3),
             "decoder_dim": 4,
@@ -1840,13 +1825,13 @@ def train(
                 eye_mask_aug,
                 eye_weight_aug,
             )
-
-    # Dataset
     class IrisDataset(Dataset):
         def __init__(self, hf_dataset):
             self.dataset = hf_dataset
             self.normalize_mean = 0.5
             self.normalize_std = 0.5
+            # Set format to return torch tensors directly
+            self.dataset.set_format("torch")
 
         def __len__(self):
             return len(self.dataset)
@@ -1854,95 +1839,32 @@ def train(
         def __getitem__(self, idx):
             sample = self.dataset[idx]
 
-            image = np.array(
-                sample["image"],
-                dtype=np.uint8,
-            ).reshape(
-                IMAGE_HEIGHT,
-                IMAGE_WIDTH,
-            )
-            label = np.array(
-                sample["label"],
-                dtype=np.uint8,
-            ).reshape(
-                IMAGE_HEIGHT,
-                IMAGE_WIDTH,
-            )
-            spatial_weights = np.array(
-                sample[
-                    "spatial_weights"
-                ],
-                dtype=np.float32,
-            ).reshape(
-                IMAGE_HEIGHT,
-                IMAGE_WIDTH,
-            )
-            dist_map = np.array(
-                sample["dist_map"],
-                dtype=np.float32,
-            ).reshape(
-                2,
-                IMAGE_HEIGHT,
-                IMAGE_WIDTH,
-            )
-            eye_mask = np.array(
-                sample["eye_mask"],
-                dtype=np.uint8,
-            ).reshape(
-                IMAGE_HEIGHT,
-                IMAGE_WIDTH,
-            )
-            eye_weight = np.array(
-                sample["eye_weight"],
-                dtype=np.float32,
-            ).reshape(
-                IMAGE_HEIGHT,
-                IMAGE_WIDTH,
-            )
+            # Data is already torch tensors from set_format("torch")
+            image = sample["image"].reshape(
+                IMAGE_HEIGHT, IMAGE_WIDTH
+            ).float() / 255.0
+            image = (image - self.normalize_mean) / self.normalize_std
+            img_tensor = image.unsqueeze(0)
 
-            image = (
-                image.astype(np.float32)
-                / 255.0
-            )
-            image = (
-                image
-                - self.normalize_mean
-            ) / self.normalize_std
-            img_tensor = (
-                torch.from_numpy(
-                    image
-                ).unsqueeze(0)
-            )
+            label_tensor = sample["label"].reshape(
+                IMAGE_HEIGHT, IMAGE_WIDTH
+            ).long()
 
-            label_tensor = (
-                torch.from_numpy(
-                    label.astype(
-                        np.int64
-                    )
-                )
-            )
-            spatial_weights_tensor = (
-                torch.from_numpy(
-                    spatial_weights
-                )
-            )
-            dist_map_tensor = (
-                torch.from_numpy(
-                    dist_map
-                )
-            )
-            eye_mask_tensor = (
-                torch.from_numpy(
-                    eye_mask.astype(
-                        np.int64
-                    )
-                )
-            )
-            eye_weight_tensor = (
-                torch.from_numpy(
-                    eye_weight
-                )
-            )
+            spatial_weights_tensor = sample["spatial_weights"].reshape(
+                IMAGE_HEIGHT, IMAGE_WIDTH
+            ).float()
+
+            dist_map_tensor = sample["dist_map"].reshape(
+                2, IMAGE_HEIGHT, IMAGE_WIDTH
+            ).float()
+
+            eye_mask_tensor = sample["eye_mask"].reshape(
+                IMAGE_HEIGHT, IMAGE_WIDTH
+            ).long()
+
+            eye_weight_tensor = sample["eye_weight"].reshape(
+                IMAGE_HEIGHT, IMAGE_WIDTH
+            ).float()
 
             return (
                 img_tensor,
@@ -2533,6 +2455,10 @@ def train(
             "Dataset cached to volume!"
         )
 
+    # Pre-shuffle train dataset once for deterministic ordering
+    # (avoids per-epoch shuffle overhead in DataLoader)
+    hf_dataset["train"] = hf_dataset["train"].shuffle(seed=seed)
+
     print(
         f"Train samples: {len(hf_dataset['train'])}"
     )
@@ -2572,10 +2498,16 @@ def train(
         lr=learning_rate,
         weight_decay=weight_decay,
     )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+    def warmup_cosine_schedule(epoch):
+        if epoch < warmup_epochs:
+            return (epoch + 1) / warmup_epochs
+        else:
+            progress = (epoch - warmup_epochs) / max(1, epochs - warmup_epochs)
+            return 0.5 * (1.0 + math.cos(math.pi * progress))
+
+    scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer,
-        T_max=epochs,
-        eta_min=learning_rate * 0.01,
+        lr_lambda=warmup_cosine_schedule,
     )
 
     use_amp = torch.cuda.is_available()
@@ -2601,16 +2533,11 @@ def train(
     trainloader = DataLoader(
         train_dataset,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False,  # Dataset pre-shuffled above
         num_workers=num_workers,
         pin_memory=True,
-        persistent_workers=num_workers
-        > 0,
-        prefetch_factor=(
-            2
-            if num_workers > 0
-            else None
-        ),
+        persistent_workers=num_workers > 0,
+        prefetch_factor=num_workers,
         drop_last=True,
     )
     validloader = DataLoader(
@@ -2619,13 +2546,8 @@ def train(
         shuffle=False,
         num_workers=num_workers,
         pin_memory=True,
-        persistent_workers=num_workers
-        > 0,
-        prefetch_factor=(
-            2
-            if num_workers > 0
-            else None
-        ),
+        persistent_workers=num_workers > 0,
+        prefetch_factor=num_workers,
     )
 
     # Alpha schedule
@@ -2680,6 +2602,7 @@ def train(
     print(f"  Weight Decay: {weight_decay}")
     print(f"  Parameters: {nparams:,}")
     print(f"  AMP: {use_amp}")
+    print(f"  Warmup Epochs: {warmup_epochs}")
     print("=" * 80)
 
     with mlflow.start_run(
@@ -2714,6 +2637,7 @@ def train(
                     valid_dataset
                 ),
                 "augmentation": "kornia_gpu",
+                "warmup_epochs": warmup_epochs,
             }
         )
 
@@ -2765,14 +2689,15 @@ def train(
                 trainloader,
                 desc=f"Epoch {epoch+1}/{epochs} [Train]",
             )
-            for (
+            optimizer.zero_grad()
+            for batch_idx, (
                 images,
                 labels,
                 spatial_weights,
                 dist_maps,
                 eye_masks,
                 eye_weights,
-            ) in pbar:
+            ) in enumerate(pbar):
                 images = images.to(
                     device,
                     non_blocking=True,
@@ -2815,7 +2740,6 @@ def train(
                     eye_weights,
                 )
 
-                optimizer.zero_grad()
                 with torch.amp.autocast(
                     "cuda",
                     enabled=use_amp,
@@ -2838,18 +2762,27 @@ def train(
                         eye_weights,
                     )
 
-                scaler.scale(
-                    loss
-                ).backward()
-                scaler.unscale_(
-                    optimizer
-                )
-                torch.nn.utils.clip_grad_norm_(
-                    model.parameters(),
-                    max_norm=1.0,
-                )
-                scaler.step(optimizer)
-                scaler.update()
+                if scaler is not None:
+                    scaler.scale(
+                        loss
+                    ).backward()
+                    scaler.unscale_(
+                        optimizer
+                    )
+                    torch.nn.utils.clip_grad_norm_(
+                        model.parameters(),
+                        max_norm=1.0,
+                    )
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    loss.backward()
+                    torch.nn.utils.clip_grad_norm_(
+                        model.parameters(),
+                        max_norm=1.0,
+                    )
+                    optimizer.step()
+                optimizer.zero_grad()
 
                 train_loss_sum += (
                     loss.detach()
@@ -3087,12 +3020,12 @@ def train(
                 valid_union,
             )
 
-            scheduler.step()
             current_lr = (
                 optimizer.param_groups[
                     0
                 ]["lr"]
             )
+            scheduler.step()
 
             # Store metrics
             train_metrics[
@@ -3318,6 +3251,7 @@ def main(
     weight_decay: float = 0.01,
     num_workers: int = 8,
     seed: int = 42,
+    warmup_epochs: int = 5,
 ):
     """
     Local entrypoint for Modal training.
@@ -3326,6 +3260,7 @@ def main(
         modal run modal_train.py
         modal run modal_train.py --model-size tiny --epochs 10
         modal run modal_train.py --model-size medium --batch-size 4 --epochs 50
+        modal run modal_train.py --warmup-epochs 3
     """
     print(
         f"Starting NSA training on Modal..."
@@ -3345,6 +3280,7 @@ def main(
         weight_decay=weight_decay,
         num_workers=num_workers,
         seed=seed,
+        warmup_epochs=warmup_epochs,
     )
 
     print("\nTraining complete!")
