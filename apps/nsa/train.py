@@ -246,14 +246,13 @@ def compute_iou_cpu(
     )
 
 
-# Dataset Class
 class IrisDataset(Dataset):
-    """Dataset class for OpenEDS precomputed dataset."""
-
     def __init__(self, hf_dataset):
         self.dataset = hf_dataset
         self.normalize_mean = 0.5
         self.normalize_std = 0.5
+        # Set format to return torch tensors directly
+        self.dataset.set_format("torch")
 
     def __len__(self):
         return len(self.dataset)
@@ -261,28 +260,41 @@ class IrisDataset(Dataset):
     def __getitem__(self, idx):
         sample = self.dataset[idx]
 
-        # Reshape flat arrays to images
-        image = np.array(sample["image"], dtype=np.uint8).reshape(IMAGE_HEIGHT, IMAGE_WIDTH)
-        label = np.array(sample["label"], dtype=np.uint8).reshape(IMAGE_HEIGHT, IMAGE_WIDTH)
-        spatial_weights = np.array(sample["spatial_weights"], dtype=np.float32).reshape(IMAGE_HEIGHT, IMAGE_WIDTH)
-        dist_map = np.array(sample["dist_map"], dtype=np.float32).reshape(2, IMAGE_HEIGHT, IMAGE_WIDTH)
-        eye_mask = np.array(sample["eye_mask"], dtype=np.uint8).reshape(IMAGE_HEIGHT, IMAGE_WIDTH)
-        eye_weight = np.array(sample["eye_weight"], dtype=np.float32).reshape(IMAGE_HEIGHT, IMAGE_WIDTH)
-
-        # Normalize image and convert to tensor
-        image = image.astype(np.float32) / 255.0
+        # Data is already torch tensors from set_format("torch")
+        image = sample["image"].reshape(
+            IMAGE_HEIGHT, IMAGE_WIDTH
+        ).float() / 255.0
         image = (image - self.normalize_mean) / self.normalize_std
-        img_tensor = torch.from_numpy(image).unsqueeze(0)  # (1, H, W)
+        img_tensor = image.unsqueeze(0)
 
-        # Convert other arrays to tensors
-        label_tensor = torch.from_numpy(label.astype(np.int64))
-        spatial_weights_tensor = torch.from_numpy(spatial_weights)
-        dist_map_tensor = torch.from_numpy(dist_map)
-        eye_mask_tensor = torch.from_numpy(eye_mask.astype(np.int64))
-        eye_weight_tensor = torch.from_numpy(eye_weight)
+        label_tensor = sample["label"].reshape(
+            IMAGE_HEIGHT, IMAGE_WIDTH
+        ).long()
 
-        return (img_tensor, label_tensor, spatial_weights_tensor, dist_map_tensor,
-                eye_mask_tensor, eye_weight_tensor)
+        spatial_weights_tensor = sample["spatial_weights"].reshape(
+            IMAGE_HEIGHT, IMAGE_WIDTH
+        ).float()
+
+        dist_map_tensor = sample["dist_map"].reshape(
+            2, IMAGE_HEIGHT, IMAGE_WIDTH
+        ).float()
+
+        eye_mask_tensor = sample["eye_mask"].reshape(
+            IMAGE_HEIGHT, IMAGE_WIDTH
+        ).long()
+
+        eye_weight_tensor = sample["eye_weight"].reshape(
+            IMAGE_HEIGHT, IMAGE_WIDTH
+        ).float()
+
+        return (
+            img_tensor,
+            label_tensor,
+            spatial_weights_tensor,
+            dist_map_tensor,
+            eye_mask_tensor,
+            eye_weight_tensor,
+        )
 
 
 # Training Function
